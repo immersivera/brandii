@@ -7,6 +7,7 @@ import { LibraryPage } from './pages/LibraryPage';
 import { ResultPage } from './pages/ResultPage';
 import { BrandKitPage } from './pages/BrandKitPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { ImageGeneratorPage } from './pages/ImageGeneratorPage';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
       <Route path="/library" element={<LibraryPage />} />
       <Route path="/result" element={<ResultPage />} />
       <Route path="/kit/:id" element={<BrandKitPage />} />
+      <Route path="/kit/:id/create" element={<ImageGeneratorPage />} />
     </Routes>
   );
 }
