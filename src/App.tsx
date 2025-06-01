@@ -8,7 +8,6 @@ import { ResultPage } from './pages/ResultPage';
 import { BrandKitPage } from './pages/BrandKitPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ImageGeneratorPage } from './pages/ImageGeneratorPage';
-import { ImageGalleryPage } from './pages/ImageGalleryPage';
 
 function App() {
   return (
@@ -21,7 +20,6 @@ function App() {
       <Route path="/result" element={<ResultPage />} />
       <Route path="/kit/:id" element={<BrandKitPage />} />
       <Route path="/kit/:id/create" element={<ImageGeneratorPage />} />
-      <Route path="/kit/:id/gallery" element={<ImageGalleryPage />} />
     </Routes>
   );
 }
