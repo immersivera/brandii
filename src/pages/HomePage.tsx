@@ -112,20 +112,37 @@ export const HomePage: React.FC = () => {
               </Button>
             </motion.div>
           </div>
-          
+        </div>
+      </section>
+
+      {/* Powered by Bolt Section */}
+      <section className="py-12 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div 
-            className="mt-16 max-w-5xl mx-auto"
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
+            className="flex flex-col items-center justify-center text-center"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            viewport={{ once: true }}
           >
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-xl overflow-hidden">
+            <a 
+              href="https://bolt.new" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+            >
               <img 
-                src="https://images.pexels.com/photos/4125349/pexels-photo-4125349.jpeg?auto=compress&cs=tinysrgb&w=1200" 
-                alt="Brandii Dashboard Preview" 
-                className="w-full h-auto object-cover object-top"
+                src="/black_circle_360x360.png" 
+                alt="Bolt.new" 
+                className="h-8 w-8 dark:invert"
               />
-            </div>
+              <span className="text-lg font-medium text-gray-600 dark:text-gray-300">
+                Built with Bolt.new
+              </span>
+            </a>
+            <p className="mt-3 text-sm text-gray-500 dark:text-gray-400 max-w-md">
+              Powered by the next generation of web development tools
+            </p>
           </motion.div>
         </div>
       </section>
