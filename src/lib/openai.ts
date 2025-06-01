@@ -70,26 +70,19 @@ export async function generateBrandSuggestion(prompt: string): Promise<AIBrandSu
   return JSON.parse(completion.choices[0].message.content);
 }
 
-export async function generateLogoImages(
-  name: string,
-  logoStyle: string,
-  adjective: string,
-  industry: string,
-  description: string,
-  colors: {
-    primary: string;
-    secondary: string;
-    accent: string;
-    background: string;
-    text: string;
-  },
-  typography: {
-    headingFont: string;
-    bodyFont: string;
-  }
-): Promise<string[]> {
-  const prompt = `
-Create a high-resolution, ${adjective} **${logoStyle}** logo for a **${industry}** brand named "${name}".
+export async function generateLogoImages(brandName: string, style: string, colors: { primary: string }): Promise<string[]> {
+  const styleDescriptions = {
+    wordmark: `a minimalist, modern wordmark logo design for "${brandName}" using the color ${colors.primary}. The design should be clean, professional, and versatile.`,
+    lettermark: `a sophisticated lettermark logo using the letter "${brandName[0]}" in ${colors.primary}. The design should be bold and memorable.`,
+    abstract: `an abstract, geometric logo mark that represents "${brandName}" using ${colors.primary}. The design should be unique and contemporary.`,
+    mascot: `a friendly, character-based logo design for "${brandName}" incorporating ${colors.primary}. The mascot should be approachable and memorable.`,
+    combination: `a combination mark logo for "${brandName}" that combines a wordmark with a distinctive symbol, using ${colors.primary}. The design should be balanced and professional.`,
+    emblem: `an emblem-style logo for "${brandName}" with contained typography and imagery, using ${colors.primary}. The design should be classic and authoritative.`
+  };
+
+  // const prompt = styleDescriptions[style as keyof typeof styleDescriptions] || styleDescriptions.wordmark;
+   const prompt = `
+Create a high-resolution, ${adjective} **${logoStyle}** logo for a **${industry}** brand named “${name}”.
 
 **Brand essence:** ${description}
 
@@ -106,7 +99,7 @@ Create a high-resolution, ${adjective} **${logoStyle}** logo for a **${industry}
 
 **Stylistic guidance**  
 • Reflect the ${adjective} personality of the brand.  
-• Use the ${logoStyle} approach (e.g. wordmark, lettermark, emblem ...).  
+• Use the ${logoStyle} approach (e.g.\ wordmark, lettermark, emblem …​).  
 • Ensure strong contrast against ${colors.background}.  
 • No mock-ups, watermarks, or realistic stationery shots—return a clean, centered logo on a transparent background.
   `.trim();
@@ -115,13 +108,10 @@ Create a high-resolution, ${adjective} **${logoStyle}** logo for a **${industry}
     console.log("Generating logo with prompt:", prompt.substring(0, 100) + "...");
 
     const response = await openai.images.generate({
-      model: "dall-e-3",
+      model: "gpt-image-1",
       prompt,
       n: 2,
       size: "1024x1024",
-      quality: "hd",
-      style: "natural",
-      response_format: "b64_json"
     });
 
     if (!response.data || response.data.length === 0 || !response.data[0].b64_json) {
