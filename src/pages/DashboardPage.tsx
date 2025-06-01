@@ -35,7 +35,7 @@ export const DashboardPage: React.FC = () => {
     // First try to get the selected logo
     if (brandKit.logo_selected_asset_id) {
       const selectedAsset = brandKit.generated_assets.find(
-        asset => asset.id === brandKit.logo.selected_asset_id
+        asset => asset.id === brandKit.logo_selected_asset_id
       );
       console.log('logo selected', selectedAsset)
       if (selectedAsset?.image_data) return selectedAsset.image_data;
