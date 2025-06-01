@@ -22,7 +22,6 @@ export const BrandKitPage: React.FC = () => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [selectedLogo, setSelectedLogo] = useState<string | null>(null);
   const [editedValues, setEditedValues] = useState<Partial<BrandKit>>({});
 
   useEffect(() => {
@@ -34,9 +33,6 @@ export const BrandKitPage: React.FC = () => {
         if (kit) {
           setBrandKit(kit);
           setEditedValues(kit);
-          if (kit.generated_assets && kit.generated_assets.length > 0) {
-            setSelectedLogo(kit.generated_assets[0].image_data);
-          }
         } else {
           toast.error('Brand kit not found');
           navigate('/library');
@@ -103,6 +99,39 @@ export const BrandKitPage: React.FC = () => {
     }));
   };
 
+  const handleLogoSelect = async (assetId: string) => {
+    if (!brandKit || !id) return;
+
+    try {
+      const updatedBrandKit = await updateBrandKit(id, {
+        logo_selected_asset_id: assetId
+      });
+      setBrandKit(updatedBrandKit);
+      toast.success('Logo selection updated');
+    } catch (error) {
+      console.error('Error updating logo selection:', error);
+      toast.error('Failed to update logo selection');
+    }
+  };
+
+  const getSelectedLogoData = () => {
+    if (!brandKit?.generated_assets?.length) return null;
+
+    // First try to get the selected logo
+    if (brandKit.logo_selected_asset_id) {
+      const selectedAsset = brandKit.generated_assets.find(
+        asset => asset.id === brandKit.logo_selected_asset_id
+      );
+      if (selectedAsset?.image_data) return selectedAsset.image_data;
+    }
+
+    // Otherwise get the first logo asset
+    const firstLogoAsset = brandKit.generated_assets.find(
+      asset => asset.type === 'logo'
+    );
+    return firstLogoAsset?.image_data || null;
+  };
+
   const handleDownload = async () => {
     if (!brandKit) return;
 
@@ -113,7 +142,7 @@ export const BrandKitPage: React.FC = () => {
         ...brandKit,
         logo: {
           ...brandKit.logo,
-          image: selectedLogo || undefined
+          image: getSelectedLogoData()
         }
       };
       
@@ -197,6 +226,7 @@ export const BrandKitPage: React.FC = () => {
   }
 
   const currentValues = isEditing ? editedValues : brandKit;
+  const selectedLogoData = getSelectedLogoData();
 
   return (
     <Layout>
@@ -346,9 +376,9 @@ export const BrandKitPage: React.FC = () => {
                     </div>
                     
                     <div className="w-full md:w-auto flex justify-center">
-                      {selectedLogo ? (
+                      {selectedLogoData ? (
                         <img 
-                          src={selectedLogo} 
+                          src={selectedLogoData} 
                           alt="Selected logo"
                           className="w-32 h-32 object-contain rounded-xl"
                         />
@@ -507,22 +537,22 @@ export const BrandKitPage: React.FC = () => {
                   {brandKit.generated_assets && brandKit.generated_assets.length > 0 ? (
                     <div className="space-y-6">
                       <div className="grid grid-cols-2 gap-4">
-                        {brandKit.generated_assets.map((asset, index) => (
+                        {brandKit.generated_assets.map((asset) => (
                           <div
                             key={asset.id}
                             className={`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
-                              selectedLogo === asset.image_data
+                              brandKit.logo_selected_asset_id === asset.id
                                 ? 'border-brand-600 shadow-lg'
                                 : 'border-gray-200 dark:border-gray-700'
                             }`}
-                            onClick={() => setSelectedLogo(asset.image_data)}
+                            onClick={() => handleLogoSelect(asset.id)}
                           >
                             <img
                               src={asset.image_data}
-                              alt={`Logo concept ${index + 1}`}
+                              alt={`Logo concept`}
                               className="w-full h-auto"
                             />
-                            {selectedLogo === asset.image_data && (
+                            {brandKit.logo_selected_asset_id === asset.id && (
                               <div className="absolute inset-0 bg-brand-600/10 flex items-center justify-center">
                                 <div className="bg-brand-600 text-white px-3 py-1 rounded-full text-sm">
                                   Selected
