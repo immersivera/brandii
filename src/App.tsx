@@ -5,12 +5,14 @@ import { CreatePage } from './pages/CreatePage';
 import { LibraryPage } from './pages/LibraryPage';
 import { ResultPage } from './pages/ResultPage';
 import { BrandKitPage } from './pages/BrandKitPage';
+import { DashboardPage } from './pages/DashboardPage';
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/create" element={<CreatePage />} />
+      <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/library" element={<LibraryPage />} />
       <Route path="/result" element={<ResultPage />} />
       <Route path="/kit/:id" element={<BrandKitPage />} />
