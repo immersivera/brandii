@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardFooter } from '../components/ui/Card';
@@ -7,6 +8,7 @@ import { ArrowLeft, Download, Copy, Share2, RefreshCw } from 'lucide-react';
 import { useBrand } from '../context/BrandContext';
 import { useNavigate } from 'react-router-dom';
 import { generateBrandKitZip } from '../lib/download';
+import { BRAND_TYPES, BRAND_ADJECTIVES } from '../lib/constants';
 import toast from 'react-hot-toast';
 
 export const ResultPage: React.FC = () => {
@@ -89,6 +91,10 @@ export const ResultPage: React.FC = () => {
     }
   };
 
+  // Get the display names for industry and personality
+  const industryName = BRAND_TYPES.find(t => t.id === brandDetails.industry)?.name || 'Not specified';
+  const personalityName = BRAND_ADJECTIVES.find(a => a.id === brandDetails.adjective)?.name || 'Not specified';
+
   return (
     <Layout>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
@@ -157,7 +163,7 @@ export const ResultPage: React.FC = () => {
                             Industry
                           </h3>
                           <p className="text-gray-900 dark:text-white">
-                            {brandDetails.industry || 'Not specified'}
+                            {industryName}
                           </p>
                         </div>
                         <div>
@@ -165,7 +171,7 @@ export const ResultPage: React.FC = () => {
                             Personality
                           </h3>
                           <p className="text-gray-900 dark:text-white">
-                            {brandDetails.adjective || 'Not specified'}
+                            {personalityName}
                           </p>
                         </div>
                       </div>
