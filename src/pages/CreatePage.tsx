@@ -8,16 +8,17 @@ import { Textarea } from '../components/ui/Textarea';
 import { Select } from '../components/ui/Select';
 import { Card, CardContent } from '../components/ui/Card';
 import { useBrand } from '../context/BrandContext';
-import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles, Loader } from 'lucide-react';
 import { BRAND_TYPES, BRAND_ADJECTIVES, LOGO_STYLES } from '../lib/constants';
 import { ColorPicker } from '../components/ui/ColorPicker';
 import { saveBrandKit } from '../lib/supabase';
-import { generateBrandSuggestion } from '../lib/openai';
+import { generateBrandSuggestion, generateLogoImages } from '../lib/openai';
 import toast from 'react-hot-toast';
 
 export const CreatePage: React.FC = () => {
   const { brandDetails, updateBrandDetails, nextStep, prevStep } = useBrand();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingLogos, setIsGeneratingLogos] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const navigate = useNavigate();
 
@@ -55,6 +56,17 @@ export const CreatePage: React.FC = () => {
 
   const handleComplete = async () => {
     try {
+      setIsGeneratingLogos(true);
+      
+      const logoUrls = await generateLogoImages(
+        brandDetails.name,
+        brandDetails.logoStyle || 'wordmark',
+        { primary: brandDetails.colors.primary }
+      );
+      
+      updateBrandDetails({ logoOptions: logoUrls });
+      
+      setIsGeneratingLogos(false);
       setIsSaving(true);
       
       const brandKitData = {
@@ -80,8 +92,9 @@ export const CreatePage: React.FC = () => {
 
       navigate('/result');
     } catch (error) {
-      console.error('Error saving brand kit:', error);
-    } finally {
+      console.error('Error completing brand kit:', error);
+      toast.error('Failed to complete brand kit');
+      setIsGeneratingLogos(false);
       setIsSaving(false);
     }
   };
@@ -339,12 +352,19 @@ export const CreatePage: React.FC = () => {
                   </h3>
                   
                   <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-8 flex items-center justify-center">
-                    <div 
-                      className="text-3xl font-bold"
-                      style={{ color: brandDetails.colors.primary }}
-                    >
-                      {brandDetails.name}
-                    </div>
+                    {isGeneratingLogos ? (
+                      <div className="flex flex-col items-center gap-4">
+                        <Loader className="h-8 w-8 animate-spin text-brand-600" />
+                        <p className="text-sm text-gray-500">Generating logo options...</p>
+                      </div>
+                    ) : (
+                      <div 
+                        className="text-3xl font-bold"
+                        style={{ color: brandDetails.colors.primary }}
+                      >
+                        {brandDetails.name}
+                      </div>
+                    )}
                   </div>
                   
                   <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
@@ -366,8 +386,8 @@ export const CreatePage: React.FC = () => {
                 <Button
                   onClick={handleComplete}
                   rightIcon={<Sparkles className="h-4 w-4" />}
-                  isLoading={isSaving}
-                  disabled={isSaving}
+                  isLoading={isSaving || isGeneratingLogos}
+                  disabled={isSaving || isGeneratingLogos}
                 >
                   Complete
                 </Button>
