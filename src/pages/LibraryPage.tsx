@@ -25,10 +25,10 @@ export const LibraryPage: React.FC = () => {
       try {
         const kits = await fetchBrandKits();
         setBrandKits(kits);
-        setIsLoading(false);
       } catch (error) {
         console.error('Failed to fetch brand kits:', error);
         toast.error('Failed to load brand kits');
+      } finally {
         setIsLoading(false);
       }
     };
@@ -95,7 +95,7 @@ export const LibraryPage: React.FC = () => {
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
-                    setCurrentPage(1); // Reset to first page on search
+                    setCurrentPage(1);
                   }}
                   leftIcon={<Search className="h-4 w-4 text-gray-500" />}
                   className="w-full md:w-auto h-8"
@@ -163,12 +163,25 @@ export const LibraryPage: React.FC = () => {
                       <Card hover interactive className="h-full">
                         <CardContent className="p-0">
                           <div className="relative">
-                            {brandKit.generated_assets && brandKit.generated_assets.length > 0 ? (
-                              <img
-                                src={brandKit.generated_assets[0].image_data}
-                                alt={brandKit.name}
-                                className="h-32 w-full object-cover rounded-t-xl"
-                              />
+                            {brandKit.generated_assets?.some(asset => asset.type === 'logo') ? (
+                              <div 
+                                className="h-32 w-full bg-gradient-to-br rounded-t-xl flex items-center justify-center"
+                                style={{ 
+                                  background: `linear-gradient(135deg, ${brandKit.colors.primary}, ${brandKit.colors.secondary})`
+                                }}
+                              >
+                                <span 
+                                  className="text-4xl font-bold font-display"
+                                  style={{ 
+                                    color: brandKit.colors.primary.startsWith('#f') || 
+                                           brandKit.colors.primary.startsWith('#e') || 
+                                           brandKit.colors.primary.startsWith('#d') || 
+                                           brandKit.colors.primary.startsWith('#c') ? '#000' : '#fff'
+                                  }}
+                                >
+                                  {brandKit.name.charAt(0)}
+                                </span>
+                              </div>
                             ) : (
                               <div 
                                 className="h-32 w-full rounded-t-xl"
@@ -176,9 +189,9 @@ export const LibraryPage: React.FC = () => {
                               >
                                 <div className="h-full w-full flex items-center justify-center p-4" style={{ 
                                   color: brandKit.colors.primary.startsWith('#f') || 
-                                       brandKit.colors.primary.startsWith('#e') || 
-                                       brandKit.colors.primary.startsWith('#d') || 
-                                       brandKit.colors.primary.startsWith('#c') ? '#000' : '#fff'
+                                         brandKit.colors.primary.startsWith('#e') || 
+                                         brandKit.colors.primary.startsWith('#d') || 
+                                         brandKit.colors.primary.startsWith('#c') ? '#000' : '#fff'
                                 }}>
                                   <span className="text-3xl font-bold font-display">
                                     {brandKit.name.charAt(0)}
