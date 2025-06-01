@@ -1,18 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
-import { Card, CardContent } from '../components/ui/Card';
-import { ArrowLeft, Download, Plus } from 'lucide-react';
+import { ArrowLeft, Download, Plus, X, Calendar, Clock } from 'lucide-react';
 import { BrandKit, fetchBrandKitById } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import Masonry from 'react-masonry-css';
 
 export const GalleryPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState<any | null>(null);
+
+  const breakpointColumns = {
+    default: 4,
+    1536: 4,
+    1280: 3,
+    1024: 3,
+    768: 2,
+    640: 1
+  };
 
   useEffect(() => {
     const loadBrandKit = async () => {
@@ -46,10 +56,28 @@ export const GalleryPage: React.FC = () => {
     document.body.removeChild(link);
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }).format(date);
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-US', {
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: true,
+    }).format(date);
+  };
+
   if (isLoading) {
     return (
       <Layout>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
+        <div className="min-h-screen bg-white dark:bg-gray-900 py-12">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-center items-center py-20">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-600"></div>
@@ -66,9 +94,9 @@ export const GalleryPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
+      <div className="min-h-screen bg-white dark:bg-gray-900 py-12">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-[1920px] mx-auto">
             <div className="flex items-center justify-between mb-8">
               <div>
                 <Button
@@ -97,53 +125,140 @@ export const GalleryPage: React.FC = () => {
             </div>
 
             {imageAssets.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    No images have been generated yet
-                  </p>
-                  <Button
-                    onClick={() => navigate(`/kit/${id}/create`)}
-                    leftIcon={<Plus className="h-4 w-4" />}
-                  >
-                    Generate Your First Image
-                  </Button>
-                </CardContent>
-              </Card>
+              <div className="text-center py-20">
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  No images have been generated yet
+                </p>
+                <Button
+                  onClick={() => navigate(`/kit/${id}/create`)}
+                  leftIcon={<Plus className="h-4 w-4" />}
+                >
+                  Generate Your First Image
+                </Button>
+              </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <Masonry
+                breakpointCols={breakpointColumns}
+                className="flex -ml-4 w-auto"
+                columnClassName="pl-4 bg-clip-padding"
+              >
                 {imageAssets.map((asset, index) => (
                   <motion.div
                     key={asset.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.1 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                    className="mb-4"
                   >
-                    <Card hover>
-                      <CardContent className="p-4">
-                        <img
-                          src={asset.image_data}
-                          alt={`Generated image ${index + 1}`}
-                          className="w-full h-48 object-cover rounded-lg mb-4"
-                        />
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDownload(asset.image_data!, index)}
-                          leftIcon={<Download className="h-4 w-4" />}
-                          className="w-full"
-                        >
-                          Download Image
-                        </Button>
-                      </CardContent>
-                    </Card>
+                    <div 
+                      className="relative group cursor-pointer overflow-hidden rounded-xl"
+                      onClick={() => setSelectedImage(asset)}
+                    >
+                      <img
+                        src={asset.image_data}
+                        alt={`Generated image ${index + 1}`}
+                        className="w-full h-auto object-cover rounded-xl transition-transform duration-300 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                        <div className="w-full flex justify-between items-center">
+                          <span className="text-white text-sm">
+                            {formatDate(asset.created_at)}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownload(asset.image_data, index);
+                            }}
+                            leftIcon={<Download className="h-4 w-4" />}
+                            className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+                          >
+                            Download
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   </motion.div>
                 ))}
-              </div>
+              </Masonry>
             )}
           </div>
         </div>
       </div>
+
+      {/* Image Modal */}
+      <AnimatePresence>
+        {selectedImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setSelectedImage(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white dark:bg-gray-900 rounded-xl shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex h-full">
+                {/* Image Section */}
+                <div className="w-2/3 bg-black p-4 flex items-center justify-center">
+                  <img
+                    src={selectedImage.image_data}
+                    alt="Selected image"
+                    className="max-w-full max-h-[80vh] object-contain rounded-lg"
+                  />
+                </div>
+
+                {/* Details Section */}
+                <div className="w-1/3 p-6 flex flex-col">
+                  <div className="flex justify-between items-start mb-6">
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                      Image Details
+                    </h3>
+                    <button
+                      onClick={() => setSelectedImage(null)}
+                      className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-6 flex-grow">
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                        Created
+                      </h4>
+                      <div className="space-y-2">
+                        <div className="flex items-center text-gray-600 dark:text-gray-300">
+                          <Calendar className="h-4 w-4 mr-2" />
+                          <span>{formatDate(selectedImage.created_at)}</span>
+                        </div>
+                        <div className="flex items-center text-gray-600 dark:text-gray-300">
+                          <Clock className="h-4 w-4 mr-2" />
+                          <span>{formatTime(selectedImage.created_at)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    className="w-full mt-6"
+                    leftIcon={<Download className="h-4 w-4" />}
+                    onClick={() => handleDownload(selectedImage.image_data, imageAssets.indexOf(selectedImage))}
+                  >
+                    Download Image
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Layout>
   );
 };
