@@ -58,12 +58,19 @@ export const CreatePage: React.FC = () => {
     try {
       setIsGeneratingLogos(true);
       
-      // Generate logo images
-      const logoUrls = await generateLogoImages(
-        brandDetails.name,
-        brandDetails.logoStyle || 'wordmark',
-        { primary: brandDetails.colors.primary }
-      );
+      // Generate logo images with enhanced options
+      const logoUrls = await generateLogoImages({
+        brandName: brandDetails.name,
+        style: brandDetails.logoStyle || 'wordmark',
+        colors: {
+          primary: brandDetails.colors.primary,
+          secondary: brandDetails.colors.secondary,
+          accent: brandDetails.colors.accent
+        },
+        description: brandDetails.description,
+        industry: brandDetails.industry,
+        personality: brandDetails.adjective
+      });
       
       // Save the generated logos in brand details
       updateBrandDetails({ logoOptions: logoUrls });
