@@ -4,9 +4,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardFooter } from '../components/ui/Card';
-import { ArrowLeft, Download, Copy, Share2, Trash2 } from 'lucide-react';
-import { BrandKit, fetchBrandKitById, deleteBrandKit } from '../lib/supabase';
+import { ArrowLeft, Download, Copy, Share2, Trash2, Save, Edit2, X } from 'lucide-react';
+import { BrandKit, fetchBrandKitById, deleteBrandKit, updateBrandKit } from '../lib/supabase';
 import { generateBrandKitZip } from '../lib/download';
+import { Input } from '../components/ui/Input';
+import { Textarea } from '../components/ui/Textarea';
+import { ColorPicker } from '../components/ui/ColorPicker';
+import { Select } from '../components/ui/Select';
+import { BRAND_TYPES, LOGO_STYLES, FONT_PAIRINGS } from '../lib/constants';
 import toast from 'react-hot-toast';
 
 export const BrandKitPage: React.FC = () => {
@@ -15,7 +20,10 @@ export const BrandKitPage: React.FC = () => {
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [selectedLogo, setSelectedLogo] = useState<string | null>(null);
+  const [editedValues, setEditedValues] = useState<Partial<BrandKit>>({});
 
   useEffect(() => {
     const loadBrandKit = async () => {
@@ -25,7 +33,7 @@ export const BrandKitPage: React.FC = () => {
         const kit = await fetchBrandKitById(id);
         if (kit) {
           setBrandKit(kit);
-          // Set the first generated asset as selected logo if available
+          setEditedValues(kit);
           if (kit.generated_assets && kit.generated_assets.length > 0) {
             setSelectedLogo(kit.generated_assets[0].image_data);
           }
@@ -44,13 +52,63 @@ export const BrandKitPage: React.FC = () => {
     loadBrandKit();
   }, [id, navigate]);
 
+  const handleSave = async () => {
+    if (!brandKit || !id) return;
+
+    try {
+      setIsSaving(true);
+      const updatedBrandKit = await updateBrandKit(id, editedValues);
+      setBrandKit(updatedBrandKit);
+      setIsEditing(false);
+      toast.success('Brand kit updated successfully');
+    } catch (error) {
+      console.error('Error updating brand kit:', error);
+      toast.error('Failed to update brand kit');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    if (brandKit) {
+      setEditedValues(brandKit);
+    }
+    setIsEditing(false);
+  };
+
+  const handleInputChange = (field: keyof BrandKit, value: any) => {
+    setEditedValues(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleColorChange = (colorKey: string, value: string) => {
+    setEditedValues(prev => ({
+      ...prev,
+      colors: {
+        ...prev.colors,
+        [colorKey]: value
+      }
+    }));
+  };
+
+  const handleTypographyChange = (field: string, value: string) => {
+    setEditedValues(prev => ({
+      ...prev,
+      typography: {
+        ...prev.typography,
+        [field]: value
+      }
+    }));
+  };
+
   const handleDownload = async () => {
     if (!brandKit) return;
 
     try {
       setIsDownloading(true);
       
-      // Update brand kit with selected logo
       const brandKitWithLogo = {
         ...brandKit,
         logo: {
@@ -138,6 +196,8 @@ export const BrandKitPage: React.FC = () => {
     return null;
   }
 
+  const currentValues = isEditing ? editedValues : brandKit;
+
   return (
     <Layout>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
@@ -159,34 +219,71 @@ export const BrandKitPage: React.FC = () => {
                   >
                     Back to Library
                   </Button>
-                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                    {brandKit.name}
-                  </h1>
+                  {isEditing ? (
+                    <Input
+                      value={currentValues.name}
+                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      className="text-2xl font-bold mb-2"
+                    />
+                  ) : (
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                      {currentValues.name}
+                    </h1>
+                  )}
                   <p className="text-gray-600 dark:text-gray-400">
                     Created on {new Date(brandKit.created_at).toLocaleDateString()}
                   </p>
                 </div>
                 
                 <div className="flex space-x-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleDelete}
-                    leftIcon={<Trash2 className="h-4 w-4" />}
-                    className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                  >
-                    Delete
-                  </Button>
-                  
-                  <Button
-                    size="sm"
-                    onClick={handleDownload}
-                    leftIcon={<Download className="h-4 w-4" />}
-                    isLoading={isDownloading}
-                    disabled={isDownloading}
-                  >
-                    Download
-                  </Button>
+                  {isEditing ? (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCancel}
+                        leftIcon={<X className="h-4 w-4" />}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleSave}
+                        leftIcon={<Save className="h-4 w-4" />}
+                        isLoading={isSaving}
+                      >
+                        Save Changes
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsEditing(true)}
+                        leftIcon={<Edit2 className="h-4 w-4" />}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(brandKit.id)}
+                        leftIcon={<Trash2 className="h-4 w-4" />}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      >
+                        Delete
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleDownload}
+                        leftIcon={<Download className="h-4 w-4" />}
+                        isLoading={isDownloading}
+                      >
+                        Download
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
               
@@ -194,26 +291,56 @@ export const BrandKitPage: React.FC = () => {
                 <CardContent className="p-6">
                   <div className="flex flex-col md:flex-row items-start gap-6">
                     <div className="flex-1">
-                      <p className="text-gray-600 dark:text-gray-400 mb-4">
-                        {brandKit.description}
-                      </p>
+                      {isEditing ? (
+                        <Textarea
+                          value={currentValues.description}
+                          onChange={(e) => handleInputChange('description', e.target.value)}
+                          className="mb-4"
+                        />
+                      ) : (
+                        <p className="text-gray-600 dark:text-gray-400 mb-4">
+                          {currentValues.description}
+                        </p>
+                      )}
                       
                       <div className="grid grid-cols-2 gap-4 mb-6">
                         <div>
                           <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
                             Type
                           </h3>
-                          <p className="text-gray-900 dark:text-white capitalize">
-                            {brandKit.type || 'Not specified'}
-                          </p>
+                          {isEditing ? (
+                            <Select
+                              options={BRAND_TYPES.map(type => ({
+                                value: type.id,
+                                label: type.name
+                              }))}
+                              value={currentValues.type}
+                              onChange={(value) => handleInputChange('type', value)}
+                            />
+                          ) : (
+                            <p className="text-gray-900 dark:text-white capitalize">
+                              {currentValues.type || 'Not specified'}
+                            </p>
+                          )}
                         </div>
                         <div>
                           <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
                             Logo Style
                           </h3>
-                          <p className="text-gray-900 dark:text-white capitalize">
-                            {brandKit.logo.type}
-                          </p>
+                          {isEditing ? (
+                            <Select
+                              options={LOGO_STYLES.map(style => ({
+                                value: style.id,
+                                label: style.name
+                              }))}
+                              value={currentValues.logo.type}
+                              onChange={(value) => handleInputChange('logo', { ...currentValues.logo, type: value })}
+                            />
+                          ) : (
+                            <p className="text-gray-900 dark:text-white capitalize">
+                              {currentValues.logo.type}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -228,18 +355,18 @@ export const BrandKitPage: React.FC = () => {
                       ) : (
                         <div 
                           className="w-32 h-32 rounded-xl flex items-center justify-center"
-                          style={{ backgroundColor: brandKit.colors.primary }}
+                          style={{ backgroundColor: currentValues.colors.primary }}
                         >
                           <span 
                             className="text-4xl font-bold"
                             style={{ 
-                              color: brandKit.colors.primary.startsWith('#f') || 
-                                     brandKit.colors.primary.startsWith('#e') || 
-                                     brandKit.colors.primary.startsWith('#d') || 
-                                     brandKit.colors.primary.startsWith('#c') ? '#000' : '#fff'
+                              color: currentValues.colors.primary.startsWith('#f') || 
+                                     currentValues.colors.primary.startsWith('#e') || 
+                                     currentValues.colors.primary.startsWith('#d') || 
+                                     currentValues.colors.primary.startsWith('#c') ? '#000' : '#fff'
                             }}
                           >
-                            {brandKit.name.charAt(0)}
+                            {currentValues.name.charAt(0)}
                           </span>
                         </div>
                       )}
@@ -278,20 +405,30 @@ export const BrandKitPage: React.FC = () => {
                     </h3>
                     
                     <div className="space-y-4">
-                      {Object.entries(brandKit.colors).map(([key, color]) => (
+                      {Object.entries(currentValues.colors).map(([key, color]) => (
                         <div key={key} className="flex items-center">
-                          <div 
-                            className="w-12 h-12 rounded-md mr-4"
-                            style={{ backgroundColor: color }}
-                          ></div>
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-900 dark:text-white capitalize">
-                              {key}
-                            </h4>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                              {color}
-                            </p>
-                          </div>
+                          {isEditing ? (
+                            <ColorPicker
+                              color={color}
+                              onChange={(newColor) => handleColorChange(key, newColor)}
+                              label={key}
+                            />
+                          ) : (
+                            <>
+                              <div 
+                                className="w-12 h-12 rounded-md mr-4"
+                                style={{ backgroundColor: color }}
+                              ></div>
+                              <div>
+                                <h4 className="text-sm font-medium text-gray-900 dark:text-white capitalize">
+                                  {key}
+                                </h4>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                  {color}
+                                </p>
+                              </div>
+                            </>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -305,33 +442,57 @@ export const BrandKitPage: React.FC = () => {
                     </h3>
                     
                     <div className="space-y-6">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                          Heading Font
-                        </h4>
-                        <p className="text-2xl font-display font-semibold text-gray-900 dark:text-white">
-                          {brandKit.typography.headingFont}
-                        </p>
-                        <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                          ABCDEFGHIJKLMNOPQRSTUVWXYZ<br />
-                          abcdefghijklmnopqrstuvwxyz<br />
-                          1234567890
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                          Body Font
-                        </h4>
-                        <p className="text-base text-gray-900 dark:text-white">
-                          {brandKit.typography.bodyFont}
-                        </p>
-                        <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                          ABCDEFGHIJKLMNOPQRSTUVWXYZ<br />
-                          abcdefghijklmnopqrstuvwxyz<br />
-                          1234567890
-                        </div>
-                      </div>
+                      {isEditing ? (
+                        <>
+                          <Select
+                            label="Heading Font"
+                            options={FONT_PAIRINGS.map(font => ({
+                              value: font.heading,
+                              label: font.heading
+                            }))}
+                            value={currentValues.typography.headingFont}
+                            onChange={(value) => handleTypographyChange('headingFont', value)}
+                          />
+                          <Select
+                            label="Body Font"
+                            options={FONT_PAIRINGS.map(font => ({
+                              value: font.body,
+                              label: font.body
+                            }))}
+                            value={currentValues.typography.bodyFont}
+                            onChange={(value) => handleTypographyChange('bodyFont', value)}
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                              Heading Font
+                            </h4>
+                            <p className="text-2xl font-display font-semibold text-gray-900 dark:text-white">
+                              {currentValues.typography.headingFont}
+                            </p>
+                            <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                              ABCDEFGHIJKLMNOPQRSTUVWXYZ<br />
+                              abcdefghijklmnopqrstuvwxyz<br />
+                              1234567890
+                            </div>
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                              Body Font
+                            </h4>
+                            <p className="text-base text-gray-900 dark:text-white">
+                              {currentValues.typography.bodyFont}
+                            </p>
+                            <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                              ABCDEFGHIJKLMNOPQRSTUVWXYZ<br />
+                              abcdefghijklmnopqrstuvwxyz<br />
+                              1234567890
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -381,22 +542,22 @@ export const BrandKitPage: React.FC = () => {
                       <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 flex items-center justify-center bg-white dark:bg-gray-800 h-40">
                         <div 
                           className="text-3xl font-bold"
-                          style={{ color: brandKit.colors.primary }}
+                          style={{ color: currentValues.colors.primary }}
                         >
-                          {brandKit.name}
+                          {currentValues.name}
                         </div>
                       </div>
                       
                       <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 flex items-center justify-center bg-white dark:bg-gray-800 h-40">
                         <div 
                           className="flex flex-col items-center"
-                          style={{ color: brandKit.colors.primary }}
+                          style={{ color: currentValues.colors.primary }}
                         >
                           <div className="text-5xl font-bold mb-1">
-                            {brandKit.name.charAt(0)}
+                            {currentValues.name.charAt(0)}
                           </div>
                           <div className="text-sm font-medium">
-                            {brandKit.name}
+                            {currentValues.name}
                           </div>
                         </div>
                       </div>
