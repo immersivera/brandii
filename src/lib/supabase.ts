@@ -32,7 +32,6 @@ export type GeneratedAsset = {
   image_data?: string;
   type: 'logo' | 'image';
   created_at: string;
-  selected?: boolean;
 };
 
 export type BrandKit = {
@@ -54,12 +53,12 @@ export type BrandKit = {
     type: string;
     text: string;
     image?: string;
-    selected_asset_id?: string;
   };
   typography: {
     headingFont: string;
     bodyFont: string;
   };
+  logo_selected_asset_id?: string;
   generated_assets?: GeneratedAsset[];
 };
 
@@ -166,14 +165,10 @@ export async function fetchBrandKitById(id: string): Promise<BrandKit | null> {
 }
 
 export async function updateBrandKit(id: string, updates: Partial<BrandKit>): Promise<BrandKit> {
-  // Remove generated_assets from updates as it's a relation, not a column
-  const { generated_assets, ...brandKitUpdates } = updates;
-
-  // Update the brand kit without the generated_assets field
   const { data, error } = await supabase
     .from('brand_kits')
     .update({
-      ...brandKitUpdates,
+      ...updates,
       updated_at: new Date().toISOString()
     })
     .eq('id', id)
@@ -247,20 +242,14 @@ export async function saveBrandKit(brandKit: Omit<BrandKit, 'id' | 'created_at' 
       // Set the first generated asset as the selected logo
       if (assets.length > 0) {
         await updateBrandKit(savedBrandKit.id, {
-          logo: {
-            ...savedBrandKit.logo,
-            selected_asset_id: assets[0].id
-          }
+          logo_selected_asset_id: assets[0].id
         });
       }
       
       return {
         ...savedBrandKit,
         generated_assets: assets,
-        logo: {
-          ...savedBrandKit.logo,
-          selected_asset_id: assets[0].id
-        }
+        logo_selected_asset_id: assets[0].id
       };
     } catch (error) {
       console.error('Error saving generated assets:', error);
