@@ -8,7 +8,7 @@ import { Textarea } from '../components/ui/Textarea';
 import { Select } from '../components/ui/Select';
 import { Card, CardContent } from '../components/ui/Card';
 import { useBrand } from '../context/BrandContext';
-import { ArrowLeft, ArrowRight, Sparkles, Loader } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles, Loader, RefreshCw } from 'lucide-react';
 import { BRAND_TYPES, BRAND_ADJECTIVES, LOGO_STYLES } from '../lib/constants';
 import { ColorPicker } from '../components/ui/ColorPicker';
 import { saveBrandKit, fetchBrandKitById } from '../lib/supabase';
@@ -16,7 +16,7 @@ import { generateBrandSuggestion, generateLogoImages } from '../lib/openai';
 import toast from 'react-hot-toast';
 
 export const CreatePage: React.FC = () => {
-  const { brandDetails, updateBrandDetails, setStep } = useBrand();
+  const { brandDetails, updateBrandDetails, setStep, resetBrandDetails } = useBrand();
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingLogos, setIsGeneratingLogos] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -127,6 +127,13 @@ export const CreatePage: React.FC = () => {
     
     // If no existing assets or user wants new ones, proceed with generation
     handleComplete();
+  };
+
+  const handleStartOver = () => {
+    if (window.confirm('Are you sure you want to start over? All current progress will be lost.')) {
+      resetBrandDetails();
+      setStep(1);
+    }
   };
 
   const steps = [
@@ -410,13 +417,23 @@ export const CreatePage: React.FC = () => {
               </Card>
               
               <div className="pt-4 flex justify-between">
-                <Button
-                  variant="outline"
-                  onClick={() => setStep(2)}
-                  leftIcon={<ArrowLeft className="h-4 w-4" />}
-                >
-                  Previous
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleStartOver}
+                    leftIcon={<RefreshCw className="h-4 w-4" />}
+                  >
+                    Start Over
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => setStep(2)}
+                    leftIcon={<ArrowLeft className="h-4 w-4" />}
+                  >
+                    Previous
+                  </Button>
+                </div>
                 
                 <Button
                   onClick={handleCompleteClick}
