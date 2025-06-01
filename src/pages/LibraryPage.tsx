@@ -98,7 +98,7 @@ export const LibraryPage: React.FC = () => {
                     setCurrentPage(1); // Reset to first page on search
                   }}
                   leftIcon={<Search className="h-4 w-4 text-gray-500" />}
-                  className="w-full md:w-auto h-4"
+                  className="w-full md:w-auto h-8"
                 />
                 
                 <Button
