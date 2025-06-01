@@ -29,6 +29,24 @@ export const DashboardPage: React.FC = () => {
     loadBrandKits();
   }, []);
 
+  const getLogoForBrandKit = (brandKit: BrandKit) => {
+    if (!brandKit.generated_assets?.length) return null;
+
+    // Try to get the selected logo first
+    if (brandKit.logo_selected_asset_id) {
+      const selectedAsset = brandKit.generated_assets.find(
+        asset => asset.id === brandKit.logo_selected_asset_id && asset.type === 'logo'
+      );
+      if (selectedAsset?.image_data) return selectedAsset.image_data;
+    }
+
+    // Fallback to the first logo if no selected logo is found
+    const firstLogoAsset = brandKit.generated_assets.find(
+      asset => asset.type === 'logo'
+    );
+    return firstLogoAsset?.image_data || null;
+  };
+
   if (isLoading) {
     return (
       <Layout>
@@ -73,9 +91,7 @@ export const DashboardPage: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {brandKits.map((brandKit, index) => {
-                const selectedLogo = brandKit.generated_assets?.find(
-                  asset => asset.id === brandKit.logo_selected_asset_id
-                );
+                const logoImage = getLogoForBrandKit(brandKit);
 
                 return (
                   <motion.div
@@ -97,9 +113,9 @@ export const DashboardPage: React.FC = () => {
                             backgroundColor: brandKit.colors.background
                           }}
                         >
-                          {selectedLogo ? (
+                          {logoImage ? (
                             <img 
-                              src={selectedLogo.image_data}
+                              src={logoImage}
                               alt={brandKit.name}
                               className="h-32 w-32 object-contain"
                             />
