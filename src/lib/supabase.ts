@@ -3,13 +3,9 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export interface UserProfile {
+export type UserProfile = {
   id: string;
   username: string | null;
   email: string;
@@ -18,209 +14,376 @@ export interface UserProfile {
   bio: string | null;
   website: string | null;
   social_links: {
-    github: string;
     twitter: string;
+    github: string;
     linkedin: string;
-  } | null;
+  };
   preferences: {
-    darkMode: boolean | null;
     emailNotifications: boolean;
-  } | null;
+    darkMode: boolean | null;
+  };
   created_at: string;
   updated_at: string;
-}
+};
 
-export interface BrandKit {
+export type GeneratedAsset = {
+  id: string;
+  brand_kit_id: string;
+  image_data?: string;
+  type: 'logo' | 'image';
+  created_at: string;
+};
+
+export type BrandKit = {
   id: string;
   user_id: string;
   name: string;
-  description: string | null;
-  type: string | null;
+  description: string;
+  type: string;
   created_at: string;
   updated_at: string;
   colors: {
-    text: string;
-    accent: string;
     primary: string;
     secondary: string;
+    accent: string;
     background: string;
+    text: string;
   };
   logo: {
+    type: string;
     text: string;
-    type: 'wordmark';
+    image?: string;
   };
   typography: {
-    bodyFont: string;
     headingFont: string;
+    bodyFont: string;
   };
-  logo_selected_asset_id: string | null;
-}
+  logo_selected_asset_id?: string;
+  generated_assets?: GeneratedAsset[];
+};
 
-export interface GeneratedAsset {
-  id: string;
-  brand_kit_id: string;
-  image_data: string;
-  created_at: string;
-  type: 'logo' | 'image';
-}
+export type PaginatedResponse<T> = {
+  data: T[];
+  totalCount: number;
+};
 
-export async function initializeAnonymousUser(): Promise<string> {
-  const anonymousId = 'anon_' + Math.random().toString(36).substring(2, 15);
+export async function initializeAnonymousUser() {
+  const storedToken = localStorage.getItem('brandii-user-token');
   
-  try {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+  if (!storedToken) {
+    const token = generateUniqueId();
+    localStorage.setItem('brandii-user-token', token);
+    return token;
+  }
+  
+  return storedToken;
+}
 
-    // Store the anonymous ID in localStorage
-    localStorage.setItem('anonymousId', anonymousId);
-    
-    return anonymousId;
-  } catch (error) {
-    console.error('Error initializing anonymous user:', error);
+export async function fetchUserProfile(): Promise<UserProfile | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session?.user) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('*')
+    .eq('id', session.user.id)
+    .single();
+
+  if (error) {
+    console.error('Error fetching user profile:', error);
     throw error;
   }
+
+  return data;
+}
+
+export async function updateUserProfile(updates: Partial<UserProfile>): Promise<UserProfile> {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session?.user) {
+    throw new Error('No authenticated user found');
+  }
+
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .update(updates)
+    .eq('id', session.user.id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating user profile:', error);
+    throw error;
+  }
+
+  return data;
 }
 
 export async function fetchBrandKits(
   page: number = 1,
-  limit: number = 10,
-  search?: string
-): Promise<{ data: BrandKit[]; count: number }> {
-  try {
-    let query = supabase
-      .from('brand_kits')
-      .select('*', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range((page - 1) * limit, page * limit - 1);
-
-    if (search) {
-      query = query.ilike('name', `%${search}%`);
-    }
-
-    const { data, error, count } = await query;
-
-    if (error) throw error;
-
-    return {
-      data: data as BrandKit[],
-      count: count || 0,
-    };
-  } catch (error) {
-    console.error('Error fetching brand kits:', error);
-    throw error;
+  limit: number = 6,
+  searchQuery: string = ''
+): Promise<PaginatedResponse<BrandKit>> {
+  const userId = localStorage.getItem('brandii-user-token');
+  
+  if (!userId) {
+    return { data: [], totalCount: 0 };
   }
+
+  const offset = (page - 1) * limit;
+
+  // First get the total count
+  const countQuery = supabase
+    .from('brand_kits')
+    .select('id', { count: 'exact' })
+    .eq('user_id', userId);
+
+  // Add search filter if provided
+  if (searchQuery) {
+    countQuery.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+  }
+
+  const { count: totalCount, error: countError } = await countQuery;
+
+  if (countError) {
+    console.error('Error fetching brand kits count:', countError);
+    throw countError;
+  }
+
+  // Then fetch the paginated data with minimal generated_assets data
+  const dataQuery = supabase
+    .from('brand_kits')
+    .select(`
+      *,
+      generated_assets!generated_assets_brand_kit_id_fkey (
+        id,
+        type,
+        created_at
+      )
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  // Add search filter if provided
+  if (searchQuery) {
+    dataQuery.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+  }
+
+  const { data: brandKits, error: dataError } = await dataQuery;
+
+  if (dataError) {
+    console.error('Error fetching brand kits:', dataError);
+    throw dataError;
+  }
+
+  return {
+    data: brandKits || [],
+    totalCount: totalCount || 0
+  };
 }
 
 export async function fetchBrandKitById(id: string): Promise<BrandKit | null> {
-  try {
-    const { data, error } = await supabase
-      .from('brand_kits')
-      .select('*')
-      .eq('id', id)
-      .single();
+  const { data: brandKit, error: brandKitError } = await supabase
+    .from('brand_kits')
+    .select(`
+      *,
+      generated_assets!generated_assets_brand_kit_id_fkey (*)
+    `)
+    .eq('id', id)
+    .single();
 
-    if (error) throw error;
-
-    return data as BrandKit;
-  } catch (error) {
-    console.error('Error fetching brand kit:', error);
-    throw error;
+  if (brandKitError) {
+    console.error('Error fetching brand kit:', brandKitError);
+    throw brandKitError;
   }
+
+  return brandKit;
 }
 
-export async function saveBrandKit(brandKit: Partial<BrandKit>): Promise<BrandKit> {
-  try {
-    const { data, error } = await supabase
-      .from('brand_kits')
-      .insert([brandKit])
-      .select()
-      .single();
+export async function updateBrandKit(id: string, updates: Partial<BrandKit>): Promise<BrandKit> {
+  // Exclude the generated_assets field from updates as it's a relationship, not a column
+  const { generated_assets, ...updateData } = updates;
 
-    if (error) throw error;
+  const { data, error } = await supabase
+    .from('brand_kits')
+    .update({
+      ...updateData,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id)
+    .select(`
+      *,
+      generated_assets!generated_assets_brand_kit_id_fkey (*)
+    `)
+    .single();
 
-    return data as BrandKit;
-  } catch (error) {
-    console.error('Error saving brand kit:', error);
-    throw error;
-  }
-}
-
-export async function updateBrandKit(
-  id: string,
-  updates: Partial<BrandKit>
-): Promise<BrandKit> {
-  try {
-    const { data, error } = await supabase
-      .from('brand_kits')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return data as BrandKit;
-  } catch (error) {
+  if (error) {
     console.error('Error updating brand kit:', error);
     throw error;
   }
+
+  return data;
+}
+
+export async function saveGeneratedAssets(
+  brandKitId: string, 
+  imageDataArray: string[], 
+  type: 'logo' | 'image' = 'logo'
+): Promise<GeneratedAsset[]> {
+  const assets = imageDataArray.map(imageData => ({
+    brand_kit_id: brandKitId,
+    image_data: imageData,
+    type
+  }));
+
+  const { data, error } = await supabase
+    .from('generated_assets')
+    .insert(assets)
+    .select();
+
+  if (error) {
+    console.error('Error saving generated assets:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+export async function saveBrandKit(brandKit: Omit<BrandKit, 'id' | 'created_at' | 'updated_at' | 'user_id'>, generatedLogoImages?: string[]): Promise<BrandKit> {
+  const userId = localStorage.getItem('brandii-user-token');
+  
+  if (!userId) {
+    throw new Error('No user token found');
+  }
+
+  const newBrandKit = {
+    ...brandKit,
+    user_id: userId,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data: savedBrandKit, error: brandKitError } = await supabase
+    .from('brand_kits')
+    .insert([newBrandKit])
+    .select()
+    .single();
+
+  if (brandKitError) {
+    console.error('Error saving brand kit:', brandKitError);
+    throw brandKitError;
+  }
+
+  if (generatedLogoImages && generatedLogoImages.length > 0) {
+    try {
+      const assets = await saveGeneratedAssets(savedBrandKit.id, generatedLogoImages, 'logo');
+      
+      // Set the first generated asset as the selected logo
+      if (assets.length > 0) {
+        await updateBrandKit(savedBrandKit.id, {
+          logo_selected_asset_id: assets[0].id
+        });
+      }
+      
+      return {
+        ...savedBrandKit,
+        generated_assets: assets,
+        logo_selected_asset_id: assets[0].id
+      };
+    } catch (error) {
+      console.error('Error saving generated assets:', error);
+      return savedBrandKit;
+    }
+  }
+
+  return savedBrandKit;
 }
 
 export async function deleteBrandKit(id: string): Promise<boolean> {
-  try {
-    const { error } = await supabase
-      .from('brand_kits')
-      .delete()
-      .eq('id', id);
+  const userId = localStorage.getItem('brandii-user-token');
+  
+  if (!userId) {
+    throw new Error('No user token found');
+  }
 
-    if (error) throw error;
+  const { error } = await supabase
+    .from('brand_kits')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId);
 
-    return true;
-  } catch (error) {
+  if (error) {
     console.error('Error deleting brand kit:', error);
     throw error;
   }
+
+  return true;
 }
 
-export async function saveGeneratedAsset(
-  brandKitId: string,
-  imageData: string,
-  type: 'logo' | 'image' = 'logo'
-): Promise<GeneratedAsset> {
-  try {
-    const { data, error } = await supabase
-      .from('generated_assets')
-      .insert([
-        {
-          brand_kit_id: brandKitId,
-          image_data: imageData,
-          type,
-        },
-      ])
-      .select()
-      .single();
+export async function registerUser(email: string, password: string) {
+  const { data: { user }, error } = await supabase.auth.signUp({
+    email,
+    password,
+  });
 
-    if (error) throw error;
-
-    return data as GeneratedAsset;
-  } catch (error) {
-    console.error('Error saving generated asset:', error);
+  if (error) {
     throw error;
   }
+
+  if (user) {
+    const currentToken = localStorage.getItem('brandii-user-token');
+    
+    if (currentToken) {
+      // Transfer anonymous creations to the new user
+      const { error: updateError } = await supabase
+        .from('brand_kits')
+        .update({ user_id: user.id })
+        .eq('user_id', currentToken);
+
+      if (updateError) {
+        console.error('Error transferring brand kits:', updateError);
+      }
+    }
+
+    localStorage.setItem('brandii-user-token', user.id);
+  }
+
+  return user;
 }
 
-export async function deleteGeneratedAsset(assetId: string): Promise<boolean> {
-  try {
-    const { error } = await supabase
-      .from('generated_assets')
-      .delete()
-      .eq('id', assetId);
+export async function loginUser(email: string, password: string) {
+  const { data: { user }, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
-    if (error) throw error;
-
-    return true;
-  } catch (error) {
-    console.error('Error deleting asset:', error);
+  if (error) {
     throw error;
   }
+
+  if (user) {
+    localStorage.setItem('brandii-user-token', user.id);
+  }
+
+  return user;
+}
+
+export async function logoutUser() {
+  const { error } = await supabase.auth.signOut();
+
+  if (error) {
+    throw error;
+  }
+
+  // Generate new anonymous token
+  const newToken = await initializeAnonymousUser();
+  localStorage.setItem('brandii-user-token', newToken);
+}
+
+function generateUniqueId(): string {
+  return `anon_${Math.random().toString(36).substring(2, 9)}_${Date.now()}`;
 }
