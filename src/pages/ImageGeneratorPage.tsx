@@ -5,10 +5,17 @@ import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Textarea } from '../components/ui/Textarea';
-import { ArrowLeft, Sparkles, Download, X, Calendar, Clock } from 'lucide-react';
+import { Switch } from '../components/ui/Switch';
+import { ArrowLeft, ArrowRight, Sparkles, Download, X, Calendar, Clock, Settings } from 'lucide-react';
 import { BrandKit, fetchBrandKitById, saveGeneratedAssets } from '../lib/supabase';
 import { generateImageAssets } from '../lib/openai';
 import toast from 'react-hot-toast';
+
+const steps = [
+  { id: 1, name: 'Prompt' },
+  { id: 2, name: 'Settings' },
+  { id: 3, name: 'Generate' }
+];
 
 export const ImageGeneratorPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -21,6 +28,7 @@ export const ImageGeneratorPage: React.FC = () => {
   const [includeBrandAssets, setIncludeBrandAssets] = useState(true);
   const [includeLogo, setIncludeLogo] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState(1);
 
   useEffect(() => {
     const loadBrandKit = async () => {
@@ -49,14 +57,12 @@ export const ImageGeneratorPage: React.FC = () => {
   const getBrandAssetsPrompt = () => {
     if (!brandKit || !includeBrandAssets) return '';
 
-    let assetsPrompt = `
+    return `
       Use the following brand assets in the image:
       Colors: Primary ${brandKit.colors.primary}, Secondary ${brandKit.colors.secondary}, Accent ${brandKit.colors.accent}
       Style: Match the brand's ${brandKit.type} industry style and maintain consistency with the brand's visual identity.
       Typography: Use fonts similar to ${brandKit.typography.headingFont} for headings and ${brandKit.typography.bodyFont} for body text if text is included.
     `;
-
-    return assetsPrompt;
   };
 
   const getSelectedLogo = () => {
@@ -102,21 +108,143 @@ export const ImageGeneratorPage: React.FC = () => {
   };
 
   const formatDate = () => {
-    const date = new Date();
     return new Intl.DateTimeFormat('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
-    }).format(date);
+    }).format(new Date());
   };
 
   const formatTime = () => {
-    const date = new Date();
     return new Intl.DateTimeFormat('en-US', {
       hour: 'numeric',
       minute: 'numeric',
       hour12: true,
-    }).format(date);
+    }).format(new Date());
+  };
+
+  const nextStep = () => {
+    if (currentStep < steps.length) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <div className="space-y-6">
+            <Textarea
+              label="Image Prompt"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Describe the image you want to generate..."
+              className="h-32"
+            />
+            <div className="flex justify-end">
+              <Button
+                onClick={nextStep}
+                rightIcon={<ArrowRight className="h-4 w-4" />}
+                disabled={!prompt.trim()}
+              >
+                Next Step
+              </Button>
+            </div>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <Switch
+                checked={includeBrandAssets}
+                onChange={setIncludeBrandAssets}
+                label="Include Brand Assets"
+                description="Use brand colors, typography, and style in the generation"
+              />
+
+              {includeBrandAssets && brandKit?.logo_selected_asset_id && (
+                <Switch
+                  checked={includeLogo}
+                  onChange={setIncludeLogo}
+                  label="Include Brand Logo"
+                  description="Incorporate your brand logo into the generated images"
+                  className="ml-6"
+                  disabled={!includeBrandAssets}
+                />
+              )}
+            </div>
+            <div className="flex justify-between">
+              <Button
+                variant="outline"
+                onClick={prevStep}
+                leftIcon={<ArrowLeft className="h-4 w-4" />}
+              >
+                Previous Step
+              </Button>
+              <Button
+                onClick={nextStep}
+                rightIcon={<ArrowRight className="h-4 w-4" />}
+              >
+                Next Step
+              </Button>
+            </div>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="space-y-6">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-2">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+                Generation Settings
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Prompt: {prompt}
+              </p>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {includeBrandAssets && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand-100 text-brand-800 dark:bg-brand-900 dark:text-brand-200">
+                    Brand Assets
+                  </span>
+                )}
+                {includeLogo && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand-100 text-brand-800 dark:bg-brand-900 dark:text-brand-200">
+                    Logo Included
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="flex justify-between">
+              <Button
+                variant="outline"
+                onClick={prevStep}
+                leftIcon={<ArrowLeft className="h-4 w-4" />}
+              >
+                Previous Step
+              </Button>
+              <Button
+                onClick={handleGenerate}
+                leftIcon={<Sparkles className="h-4 w-4" />}
+                isLoading={isGenerating}
+                disabled={isGenerating || !prompt.trim()}
+              >
+                Generate Images
+              </Button>
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
   };
 
   if (isLoading) {
@@ -134,10 +262,6 @@ export const ImageGeneratorPage: React.FC = () => {
   }
 
   if (!brandKit) return null;
-
-  const hasLogo = brandKit.logo_selected_asset_id && brandKit.generated_assets?.some(
-    asset => asset.id === brandKit.logo_selected_asset_id
-  );
 
   return (
     <Layout>
@@ -164,67 +288,68 @@ export const ImageGeneratorPage: React.FC = () => {
               </div>
             </div>
 
+            <div className="mb-8">
+              <nav aria-label="Progress">
+                <ol role="list" className="flex items-center">
+                  {steps.map((step, stepIdx) => (
+                    <li
+                      key={step.name}
+                      className={cn(
+                        stepIdx !== steps.length - 1 ? 'pr-8 sm:pr-20' : '',
+                        'relative'
+                      )}
+                    >
+                      <div className="flex items-center">
+                        <div
+                          className={cn(
+                            'relative flex h-8 w-8 items-center justify-center rounded-full',
+                            currentStep > step.id
+                              ? 'bg-brand-600'
+                              : currentStep === step.id
+                              ? 'bg-brand-600'
+                              : 'bg-gray-200 dark:bg-gray-700'
+                          )}
+                        >
+                          <span className="text-white text-sm font-medium">
+                            {step.id}
+                          </span>
+                        </div>
+                        {stepIdx !== steps.length - 1 && (
+                          <div
+                            className={cn(
+                              'absolute top-4 w-full h-0.5 -translate-y-1/2',
+                              currentStep > step.id
+                                ? 'bg-brand-600'
+                                : 'bg-gray-200 dark:bg-gray-700'
+                            )}
+                            style={{ left: '100%', width: '3rem' }}
+                          />
+                        )}
+                      </div>
+                      <span
+                        className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-400"
+                      >
+                        {step.name}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </nav>
+            </div>
+
             <Card className="mb-8">
               <CardContent className="p-6">
-                <div className="space-y-6">
-                  <Textarea
-                    label="Image Prompt"
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="Describe the image you want to generate..."
-                    className="h-32"
-                  />
-
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="includeBrandAssets"
-                        checked={includeBrandAssets}
-                        onChange={(e) => {
-                          setIncludeBrandAssets(e.target.checked);
-                          if (!e.target.checked) {
-                            setIncludeLogo(false);
-                          }
-                        }}
-                        className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
-                      />
-                      <label 
-                        htmlFor="includeBrandAssets"
-                        className="text-sm text-gray-700 dark:text-gray-300"
-                      >
-                        Include brand colors, typography, and style in the generation
-                      </label>
-                    </div>
-
-                    {includeBrandAssets && hasLogo && (
-                      <div className="flex items-center space-x-2 ml-6">
-                        <input
-                          type="checkbox"
-                          id="includeLogo"
-                          checked={includeLogo}
-                          onChange={(e) => setIncludeLogo(e.target.checked)}
-                          className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
-                        />
-                        <label 
-                          htmlFor="includeLogo"
-                          className="text-sm text-gray-700 dark:text-gray-300"
-                        >
-                          Include brand logo in the generated images
-                        </label>
-                      </div>
-                    )}
-                  </div>
-
-                  <Button
-                    onClick={handleGenerate}
-                    leftIcon={<Sparkles className="h-4 w-4" />}
-                    isLoading={isGenerating}
-                    disabled={isGenerating || !prompt.trim()}
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentStep}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.2 }}
                   >
-                    Generate Images
-                  </Button>
-                </div>
+                    {renderStepContent()}
+                  </motion.div>
+                </AnimatePresence>
               </CardContent>
             </Card>
 
