@@ -29,6 +29,24 @@ export const DashboardPage: React.FC = () => {
     loadBrandKits();
   }, []);
 
+  const getLogoImage = (brandKit: BrandKit) => {
+    if (!brandKit.generated_assets?.length) return null;
+
+    // First try to get the selected logo
+    if (brandKit.logo.selected_asset_id) {
+      const selectedAsset = brandKit.generated_assets.find(
+        asset => asset.id === brandKit.logo.selected_asset_id
+      );
+      if (selectedAsset?.image_data) return selectedAsset.image_data;
+    }
+
+    // Otherwise get the first logo asset
+    const firstLogoAsset = brandKit.generated_assets.find(
+      asset => asset.type === 'logo'
+    );
+    return firstLogoAsset?.image_data || null;
+  };
+
   if (isLoading) {
     return (
       <Layout>
@@ -81,24 +99,41 @@ export const DashboardPage: React.FC = () => {
                 >
                   <Card hover interactive className="h-full">
                     <CardContent className="p-0">
-                      <div 
-                        className="h-32 w-full rounded-t-xl bg-gradient-to-br flex items-center justify-center"
-                        style={{ 
-                          background: `linear-gradient(135deg, ${brandKit.colors.primary}, ${brandKit.colors.secondary})`
-                        }}
-                      >
-                        <span 
-                          className="text-4xl font-bold font-display"
-                          style={{ 
-                            color: brandKit.colors.primary.startsWith('#f') || 
-                                   brandKit.colors.primary.startsWith('#e') || 
-                                   brandKit.colors.primary.startsWith('#d') || 
-                                   brandKit.colors.primary.startsWith('#c') ? '#000' : '#fff'
-                          }}
-                        >
-                          {brandKit.name.charAt(0)}
-                        </span>
-                      </div>
+                      {(() => {
+                        const logoImage = getLogoImage(brandKit);
+                        if (logoImage) {
+                          return (
+                            <img 
+                              src={logoImage} 
+                              alt={brandKit.name}
+                              className="h-32 w-full object-contain rounded-t-xl bg-gradient-to-br"
+                              style={{ 
+                                background: `linear-gradient(135deg, ${brandKit.colors.primary}, ${brandKit.colors.secondary})`
+                              }}
+                            />
+                          );
+                        }
+                        return (
+                          <div 
+                            className="h-32 w-full rounded-t-xl bg-gradient-to-br flex items-center justify-center"
+                            style={{ 
+                              background: `linear-gradient(135deg, ${brandKit.colors.primary}, ${brandKit.colors.secondary})`
+                            }}
+                          >
+                            <span 
+                              className="text-4xl font-bold font-display"
+                              style={{ 
+                                color: brandKit.colors.primary.startsWith('#f') || 
+                                       brandKit.colors.primary.startsWith('#e') || 
+                                       brandKit.colors.primary.startsWith('#d') || 
+                                       brandKit.colors.primary.startsWith('#c') ? '#000' : '#fff'
+                              }}
+                            >
+                              {brandKit.name.charAt(0)}
+                            </span>
+                          </div>
+                        );
+                      })()}
                       
                       <div className="p-6">
                         <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">
