@@ -26,6 +26,13 @@ export type UserProfile = {
   updated_at: string;
 };
 
+export type GeneratedAsset = {
+  id: string;
+  brand_kit_id: string;
+  image_data: string;
+  created_at: string;
+};
+
 export type BrandKit = {
   id: string;
   user_id: string;
@@ -44,12 +51,13 @@ export type BrandKit = {
   logo: {
     type: string;
     text: string;
-    symbol?: string;
+    image?: string;
   };
   typography: {
     headingFont: string;
     bodyFont: string;
   };
+  generated_assets?: GeneratedAsset[];
 };
 
 export async function initializeAnonymousUser() {
@@ -114,21 +122,92 @@ export async function fetchBrandKits(): Promise<BrandKit[]> {
     return [];
   }
 
-  const { data, error } = await supabase
+  const { data: brandKits, error: brandKitsError } = await supabase
     .from('brand_kits')
     .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
+  if (brandKitsError) {
+    console.error('Error fetching brand kits:', brandKitsError);
+    throw brandKitsError;
+  }
+
+  // Fetch generated assets for each brand kit
+  const brandKitsWithAssets = await Promise.all(
+    brandKits.map(async (kit) => {
+      const { data: assets, error: assetsError } = await supabase
+        .from('generated_assets')
+        .select('*')
+        .eq('brand_kit_id', kit.id);
+
+      if (assetsError) {
+        console.error('Error fetching generated assets:', assetsError);
+        return kit;
+      }
+
+      return {
+        ...kit,
+        generated_assets: assets || []
+      };
+    })
+  );
+
+  return brandKitsWithAssets || [];
+}
+
+export async function fetchBrandKitById(id: string): Promise<BrandKit | null> {
+  const { data: brandKit, error: brandKitError } = await supabase
+    .from('brand_kits')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (brandKitError) {
+    console.error('Error fetching brand kit:', brandKitError);
+    throw brandKitError;
+  }
+
+  if (!brandKit) {
+    return null;
+  }
+
+  const { data: assets, error: assetsError } = await supabase
+    .from('generated_assets')
+    .select('*')
+    .eq('brand_kit_id', id);
+
+  if (assetsError) {
+    console.error('Error fetching generated assets:', assetsError);
+    return brandKit;
+  }
+
+  return {
+    ...brandKit,
+    generated_assets: assets || []
+  };
+}
+
+export async function saveGeneratedAssets(brandKitId: string, imageDataArray: string[]): Promise<GeneratedAsset[]> {
+  const assets = imageDataArray.map(imageData => ({
+    brand_kit_id: brandKitId,
+    image_data: imageData
+  }));
+
+  const { data, error } = await supabase
+    .from('generated_assets')
+    .insert(assets)
+    .select();
+
   if (error) {
-    console.error('Error fetching brand kits:', error);
+    console.error('Error saving generated assets:', error);
     throw error;
   }
 
-  return data || [];
+  return data;
 }
 
-export async function saveBrandKit(brandKit: Omit<BrandKit, 'id' | 'created_at' | 'updated_at' | 'user_id'>): Promise<BrandKit> {
+export async function saveBrandKit(brandKit: Omit<BrandKit, 'id' | 'created_at' | 'updated_at' | 'user_id'>, generatedLogoImages?: string[]): Promise<BrandKit> {
   const userId = localStorage.getItem('brandii-user-token');
   
   if (!userId) {
@@ -142,18 +221,31 @@ export async function saveBrandKit(brandKit: Omit<BrandKit, 'id' | 'created_at' 
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await supabase
+  const { data: savedBrandKit, error: brandKitError } = await supabase
     .from('brand_kits')
     .insert([newBrandKit])
     .select()
     .single();
 
-  if (error) {
-    console.error('Error saving brand kit:', error);
-    throw error;
+  if (brandKitError) {
+    console.error('Error saving brand kit:', brandKitError);
+    throw brandKitError;
   }
 
-  return data;
+  if (generatedLogoImages && generatedLogoImages.length > 0) {
+    try {
+      const assets = await saveGeneratedAssets(savedBrandKit.id, generatedLogoImages);
+      return {
+        ...savedBrandKit,
+        generated_assets: assets
+      };
+    } catch (error) {
+      console.error('Error saving generated assets:', error);
+      return savedBrandKit;
+    }
+  }
+
+  return savedBrandKit;
 }
 
 export async function deleteBrandKit(id: string): Promise<boolean> {

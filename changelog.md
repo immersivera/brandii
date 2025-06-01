@@ -12,6 +12,7 @@
   - Brand creation wizard with multi-step form
   - Brand kit results page
   - Brand library page
+  - Brand kit detail view page
 - Components:
   - UI component library (Button, Card, Input, etc.)
   - Color picker component
@@ -24,3 +25,8 @@
   - Helper functions for CSS class management
 - Mock Supabase integration for brand kit storage
 - Responsive design for all viewports
+- Brand kit features:
+  - View detailed brand information
+  - Download brand assets
+  - Share brand kits
+  - Delete brand kits
