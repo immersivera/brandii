@@ -129,7 +129,7 @@ export async function fetchBrandKits(): Promise<BrandKit[]> {
     .from('brand_kits')
     .select(`
       *,
-      generated_assets (
+      generated_assets!generated_assets_brand_kit_id_fkey (
         id,
         type,
         created_at,
@@ -152,7 +152,7 @@ export async function fetchBrandKitById(id: string): Promise<BrandKit | null> {
     .from('brand_kits')
     .select(`
       *,
-      generated_assets (*)
+      generated_assets!generated_assets_brand_kit_id_fkey (*)
     `)
     .eq('id', id)
     .single();
@@ -179,7 +179,7 @@ export async function updateBrandKit(id: string, updates: Partial<BrandKit>): Pr
     .eq('id', id)
     .select(`
       *,
-      generated_assets (*)
+      generated_assets!generated_assets_brand_kit_id_fkey (*)
     `)
     .single();
 
