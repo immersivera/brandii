@@ -29,9 +29,10 @@ export type UserProfile = {
 export type GeneratedAsset = {
   id: string;
   brand_kit_id: string;
-  image_data?: string; // Made optional since we don't always fetch it
+  image_data?: string;
   type: 'logo' | 'image';
   created_at: string;
+  selected?: boolean;
 };
 
 export type BrandKit = {
@@ -53,6 +54,7 @@ export type BrandKit = {
     type: string;
     text: string;
     image?: string;
+    selected_asset_id?: string;
   };
   typography: {
     headingFont: string;
@@ -123,7 +125,6 @@ export async function fetchBrandKits(): Promise<BrandKit[]> {
     return [];
   }
 
-  // Only fetch essential fields from generated_assets to prevent timeout
   const { data: brandKits, error: brandKitsError } = await supabase
     .from('brand_kits')
     .select(`
@@ -131,7 +132,8 @@ export async function fetchBrandKits(): Promise<BrandKit[]> {
       generated_assets (
         id,
         type,
-        created_at
+        created_at,
+        image_data
       )
     `)
     .eq('user_id', userId)
@@ -241,9 +243,24 @@ export async function saveBrandKit(brandKit: Omit<BrandKit, 'id' | 'created_at' 
   if (generatedLogoImages && generatedLogoImages.length > 0) {
     try {
       const assets = await saveGeneratedAssets(savedBrandKit.id, generatedLogoImages, 'logo');
+      
+      // Set the first generated asset as the selected logo
+      if (assets.length > 0) {
+        await updateBrandKit(savedBrandKit.id, {
+          logo: {
+            ...savedBrandKit.logo,
+            selected_asset_id: assets[0].id
+          }
+        });
+      }
+      
       return {
         ...savedBrandKit,
-        generated_assets: assets
+        generated_assets: assets,
+        logo: {
+          ...savedBrandKit.logo,
+          selected_asset_id: assets[0].id
+        }
       };
     } catch (error) {
       console.error('Error saving generated assets:', error);
