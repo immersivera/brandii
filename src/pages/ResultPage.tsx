@@ -6,7 +6,6 @@ import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardFooter } from '../components/ui/Card';
 import { ArrowLeft, Download, Copy, Share2, RefreshCw } from 'lucide-react';
 import { useBrand } from '../context/BrandContext';
-import { useNavigate } from 'react-router-dom';
 import { generateBrandKitZip } from '../lib/download';
 import { BRAND_TYPES, BRAND_ADJECTIVES } from '../lib/constants';
 import toast from 'react-hot-toast';
