@@ -5,7 +5,7 @@ import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardFooter } from '../components/ui/Card';
 import { ArrowLeft, Download, Copy, Share2, Trash2 } from 'lucide-react';
-import { BrandKit, fetchBrandKits, deleteBrandKit } from '../lib/supabase';
+import { BrandKit, fetchBrandKitById, deleteBrandKit } from '../lib/supabase';
 import { generateBrandKitZip } from '../lib/download';
 import toast from 'react-hot-toast';
 
@@ -15,14 +15,20 @@ export const BrandKitPage: React.FC = () => {
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [selectedLogo, setSelectedLogo] = useState<string | null>(null);
 
   useEffect(() => {
     const loadBrandKit = async () => {
+      if (!id) return;
+      
       try {
-        const kits = await fetchBrandKits();
-        const kit = kits.find(k => k.id === id);
+        const kit = await fetchBrandKitById(id);
         if (kit) {
           setBrandKit(kit);
+          // Set the first generated asset as selected logo if available
+          if (kit.generated_assets && kit.generated_assets.length > 0) {
+            setSelectedLogo(kit.generated_assets[0].image_data);
+          }
         } else {
           toast.error('Brand kit not found');
           navigate('/library');
@@ -43,7 +49,17 @@ export const BrandKitPage: React.FC = () => {
 
     try {
       setIsDownloading(true);
-      const zipBlob = await generateBrandKitZip(brandKit);
+      
+      // Update brand kit with selected logo
+      const brandKitWithLogo = {
+        ...brandKit,
+        logo: {
+          ...brandKit.logo,
+          image: selectedLogo || undefined
+        }
+      };
+      
+      const zipBlob = await generateBrandKitZip(brandKitWithLogo);
       
       const url = URL.createObjectURL(zipBlob);
       const link = document.createElement('a');
@@ -203,22 +219,30 @@ export const BrandKitPage: React.FC = () => {
                     </div>
                     
                     <div className="w-full md:w-auto flex justify-center">
-                      <div 
-                        className="w-32 h-32 rounded-xl flex items-center justify-center"
-                        style={{ backgroundColor: brandKit.colors.primary }}
-                      >
-                        <span 
-                          className="text-4xl font-bold"
-                          style={{ 
-                            color: brandKit.colors.primary.startsWith('#f') || 
-                                   brandKit.colors.primary.startsWith('#e') || 
-                                   brandKit.colors.primary.startsWith('#d') || 
-                                   brandKit.colors.primary.startsWith('#c') ? '#000' : '#fff'
-                          }}
+                      {selectedLogo ? (
+                        <img 
+                          src={selectedLogo} 
+                          alt="Selected logo"
+                          className="w-32 h-32 object-contain rounded-xl"
+                        />
+                      ) : (
+                        <div 
+                          className="w-32 h-32 rounded-xl flex items-center justify-center"
+                          style={{ backgroundColor: brandKit.colors.primary }}
                         >
-                          {brandKit.name.charAt(0)}
-                        </span>
-                      </div>
+                          <span 
+                            className="text-4xl font-bold"
+                            style={{ 
+                              color: brandKit.colors.primary.startsWith('#f') || 
+                                     brandKit.colors.primary.startsWith('#e') || 
+                                     brandKit.colors.primary.startsWith('#d') || 
+                                     brandKit.colors.primary.startsWith('#c') ? '#000' : '#fff'
+                            }}
+                          >
+                            {brandKit.name.charAt(0)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -316,33 +340,68 @@ export const BrandKitPage: React.FC = () => {
               <Card>
                 <CardContent className="p-6">
                   <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-                    Logo Preview
+                    Logo Concepts
                   </h3>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 flex items-center justify-center bg-white dark:bg-gray-800 h-40">
-                      <div 
-                        className="text-3xl font-bold"
-                        style={{ color: brandKit.colors.primary }}
-                      >
-                        {brandKit.name}
+                  {brandKit.generated_assets && brandKit.generated_assets.length > 0 ? (
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-2 gap-4">
+                        {brandKit.generated_assets.map((asset, index) => (
+                          <div
+                            key={asset.id}
+                            className={`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
+                              selectedLogo === asset.image_data
+                                ? 'border-brand-600 shadow-lg'
+                                : 'border-gray-200 dark:border-gray-700'
+                            }`}
+                            onClick={() => setSelectedLogo(asset.image_data)}
+                          >
+                            <img
+                              src={asset.image_data}
+                              alt={`Logo concept ${index + 1}`}
+                              className="w-full h-auto"
+                            />
+                            {selectedLogo === asset.image_data && (
+                              <div className="absolute inset-0 bg-brand-600/10 flex items-center justify-center">
+                                <div className="bg-brand-600 text-white px-3 py-1 rounded-full text-sm">
+                                  Selected
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
+                      
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Click on a logo concept to select it. The selected logo will be included in your brand kit download.
+                      </p>
                     </div>
-                    
-                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 flex items-center justify-center bg-white dark:bg-gray-800 h-40">
-                      <div 
-                        className="flex flex-col items-center"
-                        style={{ color: brandKit.colors.primary }}
-                      >
-                        <div className="text-5xl font-bold mb-1">
-                          {brandKit.name.charAt(0)}
-                        </div>
-                        <div className="text-sm font-medium">
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 flex items-center justify-center bg-white dark:bg-gray-800 h-40">
+                        <div 
+                          className="text-3xl font-bold"
+                          style={{ color: brandKit.colors.primary }}
+                        >
                           {brandKit.name}
                         </div>
                       </div>
+                      
+                      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 flex items-center justify-center bg-white dark:bg-gray-800 h-40">
+                        <div 
+                          className="flex flex-col items-center"
+                          style={{ color: brandKit.colors.primary }}
+                        >
+                          <div className="text-5xl font-bold mb-1">
+                            {brandKit.name.charAt(0)}
+                          </div>
+                          <div className="text-sm font-medium">
+                            {brandKit.name}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
