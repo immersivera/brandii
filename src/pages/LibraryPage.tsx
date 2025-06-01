@@ -198,27 +198,24 @@ export const LibraryPage: React.FC = () => {
                                   <img 
                                     src={logoImage} 
                                     alt={brandKit.name}
-                                    className="h-32 w-full object-contain rounded-t-xl bg-gradient-to-br"
+                                    className="h-32 w-full object-contain rounded-t-xl"
                                     style={{ 
-                                      background: `linear-gradient(135deg, ${brandKit.colors.primary}, ${brandKit.colors.secondary})`
+                                      backgroundColor: brandKit.colors.background
                                     }}
                                   />
                                 );
                               }
                               return (
                                 <div 
-                                  className="h-32 w-full rounded-t-xl bg-gradient-to-br flex items-center justify-center"
+                                  className="h-32 w-full rounded-t-xl flex items-center justify-center"
                                   style={{ 
-                                    background: `linear-gradient(135deg, ${brandKit.colors.primary}, ${brandKit.colors.secondary})`
+                                    backgroundColor: brandKit.colors.background
                                   }}
                                 >
                                   <span 
                                     className="text-4xl font-bold font-display"
                                     style={{ 
-                                      color: brandKit.colors.primary.startsWith('#f') || 
-                                             brandKit.colors.primary.startsWith('#e') || 
-                                             brandKit.colors.primary.startsWith('#d') || 
-                                             brandKit.colors.primary.startsWith('#c') ? '#000' : '#fff'
+                                      color: brandKit.colors.text
                                     }}
                                   >
                                     {brandKit.name.charAt(0)}
