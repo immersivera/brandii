@@ -86,13 +86,9 @@ export async function generateLogoImages(brandName: string, style: string, color
     const response = await openai.images.generate({
       model: "gpt-image-1",
       prompt,
-      n: 4,
+      n: 2,
       size: "1024x1024",
-      quality: "standard",
-      style: "natural",
-      response_format: "url"
     });
-console.log('imageurlOpenai', response)
     return response.data.map(image => image.url);
   } catch (error) {
     console.error('Error generating logo images:', error);
