@@ -3,19 +3,24 @@ import { motion } from 'framer-motion';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardFooter } from '../components/ui/Card';
-import { ArrowLeft, Download, Copy, Share2 } from 'lucide-react';
+import { ArrowLeft, Download, Copy, Share2, RefreshCw } from 'lucide-react';
 import { useBrand } from '../context/BrandContext';
 import { useNavigate } from 'react-router-dom';
 import { generateBrandKitZip } from '../lib/download';
 import toast from 'react-hot-toast';
 
 export const ResultPage: React.FC = () => {
-  const { brandDetails } = useBrand();
+  const { brandDetails, resetBrandDetails } = useBrand();
   const navigate = useNavigate();
   const [isDownloading, setIsDownloading] = useState(false);
   const [selectedLogo, setSelectedLogo] = useState<string | null>(
     brandDetails.logoOptions?.[0] || null
   );
+
+  const handleStartOver = () => {
+    resetBrandDetails();
+    navigate('/create');
+  };
 
   const handleDownload = async () => {
     try {
@@ -105,6 +110,15 @@ export const ResultPage: React.FC = () => {
                 </div>
                 
                 <div className="flex space-x-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleStartOver}
+                    leftIcon={<RefreshCw className="h-4 w-4" />}
+                  >
+                    Start Over
+                  </Button>
+                  
                   <Button
                     variant="outline"
                     size="sm"
