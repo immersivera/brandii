@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Textarea } from '../components/ui/Textarea';
-import { ArrowLeft, Sparkles, Download } from 'lucide-react';
+import { ArrowLeft, Sparkles, Download, X, Calendar, Clock } from 'lucide-react';
 import { BrandKit, fetchBrandKitById, saveGeneratedAssets } from '../lib/supabase';
 import { generateImageAssets } from '../lib/openai';
 import toast from 'react-hot-toast';
@@ -20,6 +20,7 @@ export const ImageGeneratorPage: React.FC = () => {
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
   const [includeBrandAssets, setIncludeBrandAssets] = useState(true);
   const [includeLogo, setIncludeLogo] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
     const loadBrandKit = async () => {
@@ -29,7 +30,6 @@ export const ImageGeneratorPage: React.FC = () => {
         const kit = await fetchBrandKitById(id);
         if (kit) {
           setBrandKit(kit);
-          // Set a default prompt based on brand details
           setPrompt(`Create an image for ${kit.name}, a ${kit.type} brand. ${kit.description}`);
         } else {
           toast.error('Brand kit not found');
@@ -99,6 +99,24 @@ export const ImageGeneratorPage: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const formatDate = () => {
+    const date = new Date();
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }).format(date);
+  };
+
+  const formatTime = () => {
+    const date = new Date();
+    return new Intl.DateTimeFormat('en-US', {
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: true,
+    }).format(date);
   };
 
   if (isLoading) {
@@ -222,7 +240,12 @@ export const ImageGeneratorPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {generatedImages.map((imageUrl, index) => (
-                    <Card key={index} hover>
+                    <Card 
+                      key={index} 
+                      hover 
+                      className="cursor-pointer"
+                      onClick={() => setSelectedImage(imageUrl)}
+                    >
                       <CardContent className="p-4">
                         <img
                           src={imageUrl}
@@ -232,7 +255,10 @@ export const ImageGeneratorPage: React.FC = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDownload(imageUrl, index)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownload(imageUrl, index);
+                          }}
                           leftIcon={<Download className="h-4 w-4" />}
                           className="w-full"
                         >
@@ -247,6 +273,88 @@ export const ImageGeneratorPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Image Modal */}
+      <AnimatePresence>
+        {selectedImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setSelectedImage(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white dark:bg-gray-900 rounded-xl shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex flex-col md:flex-row h-full">
+                {/* Image Section */}
+                <div className="w-full md:w-2/3 bg-black p-4 flex items-center justify-center">
+                  <img
+                    src={selectedImage}
+                    alt="Selected image"
+                    className="max-w-full max-h-[50vh] md:max-h-[80vh] object-contain rounded-lg"
+                  />
+                </div>
+
+                {/* Details Section */}
+                <div className="w-full md:w-1/3 p-6 flex flex-col">
+                  <div className="flex justify-between items-start mb-6">
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                      Image Details
+                    </h3>
+                    <button
+                      onClick={() => setSelectedImage(null)}
+                      className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-6 flex-grow">
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                        Created
+                      </h4>
+                      <div className="space-y-2">
+                        <div className="flex items-center text-gray-600 dark:text-gray-300">
+                          <Calendar className="h-4 w-4 mr-2" />
+                          <span>{formatDate()}</span>
+                        </div>
+                        <div className="flex items-center text-gray-600 dark:text-gray-300">
+                          <Clock className="h-4 w-4 mr-2" />
+                          <span>{formatTime()}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                        Prompt
+                      </h4>
+                      <p className="text-gray-600 dark:text-gray-300 text-sm">
+                        {prompt}
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button
+                    className="w-full mt-6"
+                    leftIcon={<Download className="h-4 w-4" />}
+                    onClick={() => handleDownload(selectedImage, generatedImages.indexOf(selectedImage))}
+                  >
+                    Download Image
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Layout>
   );
 };
