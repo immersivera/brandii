@@ -11,7 +11,7 @@ import { useBrand } from '../context/BrandContext';
 import { ArrowLeft, ArrowRight, Sparkles, Loader } from 'lucide-react';
 import { BRAND_TYPES, BRAND_ADJECTIVES, LOGO_STYLES } from '../lib/constants';
 import { ColorPicker } from '../components/ui/ColorPicker';
-import { saveBrandKit } from '../lib/supabase';
+import { saveBrandKit, fetchBrandKitById } from '../lib/supabase';
 import { generateBrandSuggestion, generateLogoImages } from '../lib/openai';
 import toast from 'react-hot-toast';
 
@@ -99,6 +99,27 @@ export const CreatePage: React.FC = () => {
       setIsGeneratingLogos(false);
       setIsSaving(false);
     }
+  };
+
+  const handleCompleteClick = async () => {
+    // If we have a brand kit ID, check if it has generated assets
+    if (brandDetails.id) {
+      try {
+        const existingKit = await fetchBrandKitById(brandDetails.id);
+        if (existingKit?.generated_assets?.length) {
+          // Ask user if they want to view existing assets or generate new ones
+          if (window.confirm('This brand kit already has generated logos. Would you like to view them instead of generating new ones?')) {
+            navigate(`/kit/${brandDetails.id}`);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Error checking existing brand kit:', error);
+      }
+    }
+    
+    // If no existing assets or user wants new ones, proceed with generation
+    handleComplete();
   };
 
   const steps = [
@@ -391,7 +412,7 @@ export const CreatePage: React.FC = () => {
                 </Button>
                 
                 <Button
-                  onClick={handleComplete}
+                  onClick={handleCompleteClick}
                   rightIcon={<Sparkles className="h-4 w-4" />}
                   isLoading={isSaving || isGeneratingLogos}
                   disabled={isSaving || isGeneratingLogos}
