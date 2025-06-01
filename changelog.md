@@ -1,6 +1,28 @@
 # Changelog
 
-## Version 0.2.0 (Latest)
+## Version 0.3.0 (Latest)
+
+### Added
+- Media asset generation for existing brand kits
+- Improved brand kit management interface
+- Real-time preview and customization options
+- Export to multiple formats
+- Toast notifications for better user feedback
+- Validation checks for media asset creation
+
+### Changed
+- Updated create page UI with clearer options
+- Improved error handling and user feedback
+- Enhanced brand kit library performance
+- Optimized database queries for better performance
+
+### Fixed
+- Statement timeout issues in brand kit queries
+- Missing useDebounce export
+- Navigation issues in create flow
+- Brand kit loading states
+
+## Version 0.2.0
 
 ### Added
 - Pagination in brand kit library (6 items per page)
