@@ -219,7 +219,7 @@ export const HomePage: React.FC = () => {
                 </div>
                 
                 {index < 2 && (
-                  <div className="hidden md:flex absolute top-1/2 -right-20 transform -translate-y-1/2 z-20 items-center justify-center w-24">
+                  <div className="hidden md:flex absolute top-1/2 -right-16 transform -translate-y-1/2 z-20 items-center justify-center w-24">
                     <ArrowRight className="h-8 w-8 text-brand-300 dark:text-brand-800" />
                   </div>
                 )}
