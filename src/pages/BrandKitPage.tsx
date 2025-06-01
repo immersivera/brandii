@@ -4,8 +4,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardFooter } from '../components/ui/Card';
-import { ArrowLeft, Download, Copy, Share2, Trash2 } from 'lucide-react';
-import { BrandKit, fetchBrandKitById, deleteBrandKit } from '../lib/supabase';
+import { ArrowLeft, ArrowRight, Download, Copy, Share2, Trash2, Image, Plus } from 'lucide-react';
+import { BrandKit, fetchBrandKitById, deleteBrandKit, updateBrandKit } from '../lib/supabase';
 import { generateBrandKitZip } from '../lib/download';
 import toast from 'react-hot-toast';
 
@@ -15,7 +15,6 @@ export const BrandKitPage: React.FC = () => {
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [selectedLogo, setSelectedLogo] = useState<string | null>(null);
 
   useEffect(() => {
     const loadBrandKit = async () => {
@@ -25,10 +24,6 @@ export const BrandKitPage: React.FC = () => {
         const kit = await fetchBrandKitById(id);
         if (kit) {
           setBrandKit(kit);
-          // Set the first generated asset as selected logo if available
-          if (kit.generated_assets && kit.generated_assets.length > 0) {
-            setSelectedLogo(kit.generated_assets[0].image_data);
-          }
         } else {
           toast.error('Brand kit not found');
           navigate('/library');
@@ -50,16 +45,7 @@ export const BrandKitPage: React.FC = () => {
     try {
       setIsDownloading(true);
       
-      // Update brand kit with selected logo
-      const brandKitWithLogo = {
-        ...brandKit,
-        logo: {
-          ...brandKit.logo,
-          image: selectedLogo || undefined
-        }
-      };
-      
-      const zipBlob = await generateBrandKitZip(brandKitWithLogo);
+      const zipBlob = await generateBrandKitZip(brandKit);
       
       const url = URL.createObjectURL(zipBlob);
       const link = document.createElement('a');
@@ -81,7 +67,7 @@ export const BrandKitPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDeleteBrandKit = async () => {
     if (!brandKit || !confirm('Are you sure you want to delete this brand kit?')) return;
 
     try {
@@ -120,6 +106,37 @@ export const BrandKitPage: React.FC = () => {
     }
   };
 
+  const handleSelectLogo = async (assetId: string) => {
+    if (!brandKit) return;
+
+    try {
+      const updatedBrandKit = await updateBrandKit(brandKit.id, {
+        logo_selected_asset_id: assetId
+      });
+      setBrandKit(updatedBrandKit);
+      toast.success('Logo updated successfully');
+    } catch (error) {
+      console.error('Error updating logo:', error);
+      toast.error('Failed to update logo');
+    }
+  };
+
+  const getSelectedLogo = () => {
+    if (!brandKit?.generated_assets?.length) return null;
+
+    if (brandKit.logo_selected_asset_id) {
+      const selectedAsset = brandKit.generated_assets.find(
+        asset => asset.id === brandKit.logo_selected_asset_id
+      );
+      if (selectedAsset?.image_data) return selectedAsset.image_data;
+    }
+
+    const firstLogoAsset = brandKit.generated_assets.find(
+      asset => asset.type === 'logo'
+    );
+    return firstLogoAsset?.image_data || null;
+  };
+
   if (isLoading) {
     return (
       <Layout>
@@ -134,9 +151,10 @@ export const BrandKitPage: React.FC = () => {
     );
   }
 
-  if (!brandKit) {
-    return null;
-  }
+  if (!brandKit) return null;
+
+  const logoAssets = brandKit.generated_assets?.filter(asset => asset.type === 'logo') || [];
+  const imageAssets = brandKit.generated_assets?.filter(asset => asset.type === 'image') || [];
 
   return (
     <Layout>
@@ -167,15 +185,33 @@ export const BrandKitPage: React.FC = () => {
                   </p>
                 </div>
                 
-                <div className="flex space-x-3">
+                <div className="flex flex-wrap gap-3">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleDelete}
+                    onClick={handleDeleteBrandKit}
                     leftIcon={<Trash2 className="h-4 w-4" />}
                     className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
                   >
                     Delete
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/kit/${id}/gallery`)}
+                    leftIcon={<Image className="h-4 w-4" />}
+                  >
+                    View Gallery
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/kit/${id}/create`)}
+                    leftIcon={<Plus className="h-4 w-4" />}
+                  >
+                    Create Image
                   </Button>
                   
                   <Button
@@ -219,30 +255,38 @@ export const BrandKitPage: React.FC = () => {
                     </div>
                     
                     <div className="w-full md:w-auto flex justify-center">
-                      {selectedLogo ? (
-                        <img 
-                          src={selectedLogo} 
-                          alt="Selected logo"
-                          className="w-32 h-32 object-contain rounded-xl"
-                        />
-                      ) : (
-                        <div 
-                          className="w-32 h-32 rounded-xl flex items-center justify-center"
-                          style={{ backgroundColor: brandKit.colors.primary }}
-                        >
-                          <span 
-                            className="text-4xl font-bold"
+                      {(() => {
+                        const logoImage = getSelectedLogo();
+                        if (logoImage) {
+                          return (
+                            <img 
+                              src={logoImage} 
+                              alt={brandKit.name}
+                              className="w-32 h-32 object-contain rounded-xl"
+                              style={{ 
+                                backgroundColor: brandKit.colors.background
+                              }}
+                            />
+                          );
+                        }
+                        return (
+                          <div 
+                            className="w-32 h-32 rounded-xl flex items-center justify-center"
                             style={{ 
-                              color: brandKit.colors.primary.startsWith('#f') || 
-                                     brandKit.colors.primary.startsWith('#e') || 
-                                     brandKit.colors.primary.startsWith('#d') || 
-                                     brandKit.colors.primary.startsWith('#c') ? '#000' : '#fff'
+                              backgroundColor: brandKit.colors.background
                             }}
                           >
-                            {brandKit.name.charAt(0)}
-                          </span>
-                        </div>
-                      )}
+                            <span 
+                              className="text-4xl font-bold font-display"
+                              style={{ 
+                                color: brandKit.colors.text
+                              }}
+                            >
+                              {brandKit.name.charAt(0)}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </CardContent>
@@ -343,25 +387,28 @@ export const BrandKitPage: React.FC = () => {
                     Logo Concepts
                   </h3>
                   
-                  {brandKit.generated_assets && brandKit.generated_assets.length > 0 ? (
+                  {logoAssets.length > 0 ? (
                     <div className="space-y-6">
                       <div className="grid grid-cols-2 gap-4">
-                        {brandKit.generated_assets.map((asset, index) => (
+                        {logoAssets.map((asset) => (
                           <div
                             key={asset.id}
                             className={`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
-                              selectedLogo === asset.image_data
+                              brandKit.logo_selected_asset_id === asset.id
                                 ? 'border-brand-600 shadow-lg'
                                 : 'border-gray-200 dark:border-gray-700'
                             }`}
-                            onClick={() => setSelectedLogo(asset.image_data)}
+                            onClick={() => handleSelectLogo(asset.id)}
                           >
                             <img
                               src={asset.image_data}
-                              alt={`Logo concept ${index + 1}`}
+                              alt="Logo concept"
                               className="w-full h-auto"
+                              style={{ 
+                                backgroundColor: brandKit.colors.background
+                              }}
                             />
-                            {selectedLogo === asset.image_data && (
+                            {brandKit.logo_selected_asset_id === asset.id && (
                               <div className="absolute inset-0 bg-brand-600/10 flex items-center justify-center">
                                 <div className="bg-brand-600 text-white px-3 py-1 rounded-full text-sm">
                                   Selected
@@ -373,37 +420,50 @@ export const BrandKitPage: React.FC = () => {
                       </div>
                       
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Click on a logo concept to select it. The selected logo will be included in your brand kit download.
+                        Click on a logo concept to select it as your primary logo.
                       </p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 flex items-center justify-center bg-white dark:bg-gray-800 h-40">
-                        <div 
-                          className="text-3xl font-bold"
-                          style={{ color: brandKit.colors.primary }}
-                        >
-                          {brandKit.name}
-                        </div>
-                      </div>
-                      
-                      <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 flex items-center justify-center bg-white dark:bg-gray-800 h-40">
-                        <div 
-                          className="flex flex-col items-center"
-                          style={{ color: brandKit.colors.primary }}
-                        >
-                          <div className="text-5xl font-bold mb-1">
-                            {brandKit.name.charAt(0)}
-                          </div>
-                          <div className="text-sm font-medium">
-                            {brandKit.name}
-                          </div>
-                        </div>
-                      </div>
+                    <div className="text-center py-12">
+                      <p className="text-gray-500 dark:text-gray-400">
+                        No logo concepts available
+                      </p>
                     </div>
                   )}
                 </CardContent>
               </Card>
+
+              {imageAssets.length > 0 && (
+                <div className="mt-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                      Recent Images
+                    </h3>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/kit/${id}/gallery`)}
+                      rightIcon={<ArrowRight className="h-4 w-4" />}
+                    >
+                      View All
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {imageAssets.slice(0, 3).map((asset) => (
+                      <Card key={asset.id} hover>
+                        <CardContent className="p-4">
+                          <img
+                            src={asset.image_data}
+                            alt="Generated image"
+                            className="w-full h-32 object-cover rounded-lg"
+                          />
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
             </motion.div>
           </div>
         </div>

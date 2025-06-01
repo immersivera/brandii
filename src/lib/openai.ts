@@ -112,10 +112,29 @@ export async function generateLogoImages(options: LogoGenerationOptions): Promis
       throw new Error("No image data returned from OpenAI");
     }
 
-    // Return array of base64 image data
     return response.data.map(image => `data:image/png;base64,${image.b64_json}`);
   } catch (error) {
     console.error("Error generating image with OpenAI:", error);
+    throw error;
+  }
+}
+
+export async function generateImageAssets(prompt: string): Promise<string[]> {
+  try {
+    const response = await openai.images.generate({
+      model: "gpt-image-1",
+      prompt,
+      n: 2,
+      size: "1024x1024",
+    });
+
+    if (!response.data || response.data.length === 0 || !response.data[0].b64_json) {
+      throw new Error("No image data returned from OpenAI");
+    }
+
+    return response.data.map(image => `data:image/png;base64,${image.b64_json}`);
+  } catch (error) {
+    console.error("Error generating image assets:", error);
     throw error;
   }
 }

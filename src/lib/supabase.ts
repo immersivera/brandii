@@ -29,7 +29,7 @@ export type UserProfile = {
 export type GeneratedAsset = {
   id: string;
   brand_kit_id: string;
-  image_data?: string; // Made optional since we don't always fetch it
+  image_data?: string;
   type: 'logo' | 'image';
   created_at: string;
 };
@@ -58,7 +58,13 @@ export type BrandKit = {
     headingFont: string;
     bodyFont: string;
   };
+  logo_selected_asset_id?: string;
   generated_assets?: GeneratedAsset[];
+};
+
+export type PaginatedResponse<T> = {
+  data: T[];
+  totalCount: number;
 };
 
 export async function initializeAnonymousUser() {
@@ -116,33 +122,68 @@ export async function updateUserProfile(updates: Partial<UserProfile>): Promise<
   return data;
 }
 
-export async function fetchBrandKits(): Promise<BrandKit[]> {
+export async function fetchBrandKits(
+  page: number = 1,
+  limit: number = 6,
+  searchQuery: string = ''
+): Promise<PaginatedResponse<BrandKit>> {
   const userId = localStorage.getItem('brandii-user-token');
   
   if (!userId) {
-    return [];
+    return { data: [], totalCount: 0 };
   }
 
-  // Only fetch essential fields from generated_assets to prevent timeout
-  const { data: brandKits, error: brandKitsError } = await supabase
+  const offset = (page - 1) * limit;
+
+  // First get the total count
+  const countQuery = supabase
+    .from('brand_kits')
+    .select('id', { count: 'exact' })
+    .eq('user_id', userId);
+
+  // Add search filter if provided
+  if (searchQuery) {
+    countQuery.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+  }
+
+  const { count: totalCount, error: countError } = await countQuery;
+
+  if (countError) {
+    console.error('Error fetching brand kits count:', countError);
+    throw countError;
+  }
+
+  // Then fetch the paginated data with minimal generated_assets data
+  const dataQuery = supabase
     .from('brand_kits')
     .select(`
       *,
-      generated_assets (
+      generated_assets!generated_assets_brand_kit_id_fkey (
         id,
         type,
         created_at
       )
     `)
     .eq('user_id', userId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
 
-  if (brandKitsError) {
-    console.error('Error fetching brand kits:', brandKitsError);
-    throw brandKitsError;
+  // Add search filter if provided
+  if (searchQuery) {
+    dataQuery.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
   }
 
-  return brandKits || [];
+  const { data: brandKits, error: dataError } = await dataQuery;
+
+  if (dataError) {
+    console.error('Error fetching brand kits:', dataError);
+    throw dataError;
+  }
+
+  return {
+    data: brandKits || [],
+    totalCount: totalCount || 0
+  };
 }
 
 export async function fetchBrandKitById(id: string): Promise<BrandKit | null> {
@@ -150,7 +191,7 @@ export async function fetchBrandKitById(id: string): Promise<BrandKit | null> {
     .from('brand_kits')
     .select(`
       *,
-      generated_assets (*)
+      generated_assets!generated_assets_brand_kit_id_fkey (*)
     `)
     .eq('id', id)
     .single();
@@ -161,6 +202,31 @@ export async function fetchBrandKitById(id: string): Promise<BrandKit | null> {
   }
 
   return brandKit;
+}
+
+export async function updateBrandKit(id: string, updates: Partial<BrandKit>): Promise<BrandKit> {
+  // Exclude the generated_assets field from updates as it's a relationship, not a column
+  const { generated_assets, ...updateData } = updates;
+
+  const { data, error } = await supabase
+    .from('brand_kits')
+    .update({
+      ...updateData,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id)
+    .select(`
+      *,
+      generated_assets!generated_assets_brand_kit_id_fkey (*)
+    `)
+    .single();
+
+  if (error) {
+    console.error('Error updating brand kit:', error);
+    throw error;
+  }
+
+  return data;
 }
 
 export async function saveGeneratedAssets(
@@ -215,9 +281,18 @@ export async function saveBrandKit(brandKit: Omit<BrandKit, 'id' | 'created_at' 
   if (generatedLogoImages && generatedLogoImages.length > 0) {
     try {
       const assets = await saveGeneratedAssets(savedBrandKit.id, generatedLogoImages, 'logo');
+      
+      // Set the first generated asset as the selected logo
+      if (assets.length > 0) {
+        await updateBrandKit(savedBrandKit.id, {
+          logo_selected_asset_id: assets[0].id
+        });
+      }
+      
       return {
         ...savedBrandKit,
-        generated_assets: assets
+        generated_assets: assets,
+        logo_selected_asset_id: assets[0].id
       };
     } catch (error) {
       console.error('Error saving generated assets:', error);
