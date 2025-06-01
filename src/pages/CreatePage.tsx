@@ -16,7 +16,7 @@ import { generateBrandSuggestion, generateLogoImages } from '../lib/openai';
 import toast from 'react-hot-toast';
 
 export const CreatePage: React.FC = () => {
-  const { brandDetails, updateBrandDetails, nextStep, prevStep } = useBrand();
+  const { brandDetails, updateBrandDetails, setStep } = useBrand();
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingLogos, setIsGeneratingLogos] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -45,7 +45,7 @@ export const CreatePage: React.FC = () => {
       });
       
       toast.success('Brand identity generated successfully!');
-      nextStep();
+      setStep(2);
     } catch (error) {
       console.error('Error generating brand identity:', error);
       toast.error('Failed to generate brand identity');
@@ -100,6 +100,12 @@ export const CreatePage: React.FC = () => {
       setIsSaving(false);
     }
   };
+
+  const steps = [
+    { name: 'Info', step: 1 },
+    { name: 'Design', step: 2 },
+    { name: 'Preview', step: 3 }
+  ];
 
   const renderStep = () => {
     switch (brandDetails.step) {
@@ -165,7 +171,7 @@ export const CreatePage: React.FC = () => {
                 </Button>
                 
                 <Button
-                  onClick={nextStep}
+                  onClick={() => setStep(2)}
                   rightIcon={<ArrowRight className="h-4 w-4" />}
                   disabled={!brandDetails.name || !brandDetails.description}
                 >
@@ -245,14 +251,14 @@ export const CreatePage: React.FC = () => {
               <div className="pt-4 flex justify-between">
                 <Button
                   variant="outline"
-                  onClick={prevStep}
+                  onClick={() => setStep(1)}
                   leftIcon={<ArrowLeft className="h-4 w-4" />}
                 >
                   Previous
                 </Button>
                 
                 <Button
-                  onClick={nextStep}
+                  onClick={() => setStep(3)}
                   rightIcon={<ArrowRight className="h-4 w-4" />}
                 >
                   Next Step
@@ -370,8 +376,7 @@ export const CreatePage: React.FC = () => {
                   </div>
                   
                   <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-                    This is a placeholder for your logo concept. In the full application, 
-                    you would see AI-generated logo options based on your inputs.
+                    Click "Complete" to generate AI-powered logo concepts based on your brand details.
                   </p>
                 </CardContent>
               </Card>
@@ -379,7 +384,7 @@ export const CreatePage: React.FC = () => {
               <div className="pt-4 flex justify-between">
                 <Button
                   variant="outline"
-                  onClick={prevStep}
+                  onClick={() => setStep(2)}
                   leftIcon={<ArrowLeft className="h-4 w-4" />}
                 >
                   Previous
@@ -415,17 +420,31 @@ export const CreatePage: React.FC = () => {
                 </h1>
                 
                 <div className="flex items-center space-x-1 text-sm font-medium text-gray-500 dark:text-gray-400">
-                  <span className={`${brandDetails.step >= 1 ? 'text-brand-600 dark:text-brand-400' : ''}`}>
-                    Info
-                  </span>
-                  <span>→</span>
-                  <span className={`${brandDetails.step >= 2 ? 'text-brand-600 dark:text-brand-400' : ''}`}>
-                    Design
-                  </span>
-                  <span>→</span>
-                  <span className={`${brandDetails.step >= 3 ? 'text-brand-600 dark:text-brand-400' : ''}`}>
-                    Preview
-                  </span>
+                  {steps.map((s, index) => (
+                    <React.Fragment key={s.step}>
+                      <button
+                        onClick={() => {
+                          // Only allow navigation to completed steps or the next step
+                          if (s.step <= Math.max(brandDetails.step, 1)) {
+                            setStep(s.step);
+                          }
+                        }}
+                        className={`px-2 py-1 rounded transition-colors ${
+                          s.step === brandDetails.step
+                            ? 'text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/20'
+                            : s.step < brandDetails.step
+                            ? 'text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20'
+                            : ''
+                        }`}
+                        disabled={s.step > Math.max(brandDetails.step, 1)}
+                      >
+                        {s.name}
+                      </button>
+                      {index < steps.length - 1 && (
+                        <span className="text-gray-400 dark:text-gray-600">→</span>
+                      )}
+                    </React.Fragment>
+                  ))}
                 </div>
               </div>
               
