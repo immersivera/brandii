@@ -253,6 +253,18 @@ export async function saveGeneratedAssets(
   return data;
 }
 
+export async function deleteGeneratedAsset(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('generated_assets')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error deleting generated asset:', error);
+    throw error;
+  }
+}
+
 export async function saveBrandKit(brandKit: Omit<BrandKit, 'id' | 'created_at' | 'updated_at' | 'user_id'>, generatedLogoImages?: string[]): Promise<BrandKit> {
   const userId = localStorage.getItem('brandii-user-token');
   
