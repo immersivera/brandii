@@ -18,6 +18,7 @@ export const ImageGeneratorPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+  const [includeBrandAssets, setIncludeBrandAssets] = useState(true);
 
   useEffect(() => {
     const loadBrandKit = async () => {
@@ -44,6 +45,17 @@ export const ImageGeneratorPage: React.FC = () => {
     loadBrandKit();
   }, [id, navigate]);
 
+  const getBrandAssetsPrompt = () => {
+    if (!brandKit || !includeBrandAssets) return '';
+
+    return `
+      Use the following brand assets in the image:
+      Colors: Primary ${brandKit.colors.primary}, Secondary ${brandKit.colors.secondary}, Accent ${brandKit.colors.accent}
+      Style: Match the brand's ${brandKit.type} industry style and maintain consistency with the brand's visual identity.
+      Typography: Use fonts similar to ${brandKit.typography.headingFont} for headings and ${brandKit.typography.bodyFont} for body text if text is included.
+    `;
+  };
+
   const handleGenerate = async () => {
     if (!brandKit || !prompt.trim()) {
       toast.error('Please enter a prompt');
@@ -52,7 +64,8 @@ export const ImageGeneratorPage: React.FC = () => {
 
     setIsGenerating(true);
     try {
-      const images = await generateImageAssets(prompt);
+      const fullPrompt = `${prompt}${getBrandAssetsPrompt()}`;
+      const images = await generateImageAssets(fullPrompt);
       setGeneratedImages(images);
 
       // Save the generated images
@@ -126,6 +139,22 @@ export const ImageGeneratorPage: React.FC = () => {
                     placeholder="Describe the image you want to generate..."
                     className="h-32"
                   />
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="includeBrandAssets"
+                      checked={includeBrandAssets}
+                      onChange={(e) => setIncludeBrandAssets(e.target.checked)}
+                      className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
+                    />
+                    <label 
+                      htmlFor="includeBrandAssets"
+                      className="text-sm text-gray-700 dark:text-gray-300"
+                    >
+                      Include brand colors, typography, and style in the generation
+                    </label>
+                  </div>
 
                   <Button
                     onClick={handleGenerate}
