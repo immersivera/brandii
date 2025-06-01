@@ -26,7 +26,7 @@ export interface AIBrandSuggestion {
 
 export async function generateBrandSuggestion(prompt: string): Promise<AIBrandSuggestion> {
   const completion = await openai.chat.completions.create({
-    model: "gpt-3.5-turbo",
+    model: "gpt-4.1-nano",
     messages: [
       {
         role: "system",
@@ -66,7 +66,7 @@ export async function generateBrandSuggestion(prompt: string): Promise<AIBrandSu
     ],
     response_format: { type: "json_object" }
   });
-
+  console.log(completion);
   const suggestion = JSON.parse(completion.choices[0].message.content);
   return suggestion;
 }
