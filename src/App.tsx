@@ -4,6 +4,7 @@ import { HomePage } from './pages/HomePage';
 import { CreatePage } from './pages/CreatePage';
 import { LibraryPage } from './pages/LibraryPage';
 import { ResultPage } from './pages/ResultPage';
+import { BrandKitPage } from './pages/BrandKitPage';
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
       <Route path="/create" element={<CreatePage />} />
       <Route path="/library" element={<LibraryPage />} />
       <Route path="/result" element={<ResultPage />} />
+      <Route path="/kit/:id" element={<BrandKitPage />} />
     </Routes>
   );
 }
