@@ -83,15 +83,27 @@ export async function generateLogoImages(brandName: string, style: string, color
   const prompt = styleDescriptions[style as keyof typeof styleDescriptions] || styleDescriptions.wordmark;
 
   try {
+    console.log("Generating logo with prompt:", prompt.substring(0, 100) + "...");
+
     const response = await openai.images.generate({
       model: "gpt-image-1",
       prompt,
       n: 2,
       size: "1024x1024",
     });
-    return response.data.map(image => image.url);
+
+    if (!response.data || response.data.length === 0 || !response.data[0].b64_json) {
+      console.error(
+        "No b64_json in response:",
+        JSON.stringify(response).substring(0, 200)
+      );
+      throw new Error("No image data returned from OpenAI");
+    }
+
+    // Return array of base64 image data
+    return response.data.map(image => `data:image/png;base64,${image.b64_json}`);
   } catch (error) {
-    console.error('Error generating logo images:', error);
+    console.error("Error generating image with OpenAI:", error);
     throw error;
   }
 }

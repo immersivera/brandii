@@ -33,24 +33,22 @@ export const ResultPage: React.FC = () => {
         logo: {
           type: brandDetails.logoStyle || 'wordmark',
           text: brandDetails.name,
+          image: selectedLogo || undefined
         },
         typography: brandDetails.typography,
       };
 
       const zipBlob = await generateBrandKitZip(brandKit);
       
-      // Create download link
       const url = URL.createObjectURL(zipBlob);
       const link = document.createElement('a');
       link.href = url;
       link.download = `${brandDetails.name.toLowerCase().replace(/\s+/g, '-')}-brand-kit.zip`;
       
-      // Trigger download
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       
-      // Clean up
       URL.revokeObjectURL(url);
       
       toast.success('Brand kit downloaded successfully!');
@@ -63,11 +61,27 @@ export const ResultPage: React.FC = () => {
   };
 
   const handleCopy = () => {
+    navigator.clipboard.writeText(window.location.href);
     toast.success('Link copied to clipboard');
   };
 
-  const handleShare = () => {
-    toast.success('Sharing options opened');
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${brandDetails.name} Brand Kit`,
+          text: brandDetails.description,
+          url: window.location.href,
+        });
+      } catch (error) {
+        if ((error as Error).name !== 'AbortError') {
+          console.error('Error sharing:', error);
+          toast.error('Failed to share');
+        }
+      }
+    } else {
+      handleCopy();
+    }
   };
 
   return (
@@ -144,22 +158,30 @@ export const ResultPage: React.FC = () => {
                     </div>
                     
                     <div className="w-full md:w-auto flex justify-center">
-                      <div 
-                        className="w-32 h-32 rounded-xl flex items-center justify-center"
-                        style={{ backgroundColor: brandDetails.colors.primary }}
-                      >
-                        <span 
-                          className="text-4xl font-bold"
-                          style={{ 
-                            color: brandDetails.colors.primary.startsWith('#f') || 
-                                   brandDetails.colors.primary.startsWith('#e') || 
-                                   brandDetails.colors.primary.startsWith('#d') || 
-                                   brandDetails.colors.primary.startsWith('#c') ? '#000' : '#fff'
-                          }}
+                      {selectedLogo ? (
+                        <img 
+                          src={selectedLogo} 
+                          alt="Selected logo"
+                          className="w-32 h-32 object-contain rounded-xl"
+                        />
+                      ) : (
+                        <div 
+                          className="w-32 h-32 rounded-xl flex items-center justify-center"
+                          style={{ backgroundColor: brandDetails.colors.primary }}
                         >
-                          {brandDetails.name.charAt(0)}
-                        </span>
-                      </div>
+                          <span 
+                            className="text-4xl font-bold"
+                            style={{ 
+                              color: brandDetails.colors.primary.startsWith('#f') || 
+                                     brandDetails.colors.primary.startsWith('#e') || 
+                                     brandDetails.colors.primary.startsWith('#d') || 
+                                     brandDetails.colors.primary.startsWith('#c') ? '#000' : '#fff'
+                            }}
+                          >
+                            {brandDetails.name.charAt(0)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
