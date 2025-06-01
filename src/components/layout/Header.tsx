@@ -55,7 +55,7 @@ export const Header: React.FC = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`text-sm font-medium transition-colors ${
+                className={`text-sm font-medium transition-colors relative group ${
                   location.pathname === link.path
                     ? 'text-brand-600 dark:text-brand-400'
                     : isTransparent
@@ -64,6 +64,9 @@ export const Header: React.FC = () => {
                 }`}
               >
                 {link.name}
+                <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-brand-600 dark:bg-brand-400 transition-all duration-300 group-hover:w-full ${
+                  location.pathname === link.path ? 'w-full' : ''
+                }`} />
               </Link>
             ))}
             
@@ -114,7 +117,7 @@ export const Header: React.FC = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`block px-3 py-2 rounded-md text-base font-medium ${
+                className={`block px-3 py-2 rounded-md text-base font-medium relative group ${
                   location.pathname === link.path
                     ? 'bg-brand-50 dark:bg-gray-800 text-brand-600 dark:text-brand-400'
                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -122,6 +125,9 @@ export const Header: React.FC = () => {
                 onClick={() => setIsMenuOpen(false)}
               >
                 {link.name}
+                <span className={`absolute bottom-1 left-3 w-0 h-0.5 bg-brand-600 dark:bg-brand-400 transition-all duration-300 group-hover:w-[calc(100%-24px)] ${
+                  location.pathname === link.path ? 'w-[calc(100%-24px)]' : ''
+                }`} />
               </Link>
             ))}
             
