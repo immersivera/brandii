@@ -119,14 +119,44 @@ export async function generateLogoImages(options: LogoGenerationOptions): Promis
   }
 }
 
-export async function generateImageAssets(prompt: string): Promise<string[]> {
+export async function generateImageAssets(prompt: string, logoImage?: string): Promise<string[]> {
   try {
-    const response = await openai.images.generate({
-      model: "gpt-image-1",
-      prompt,
-      n: 2,
-      size: "1024x1024",
-    });
+    let response;
+    
+    if (logoImage) {
+      // Convert base64 string to File object
+      const base64Data = logoImage.split(',')[1];
+      const byteCharacters = atob(base64Data);
+      const byteArrays = [];
+      
+      for (let offset = 0; offset < byteCharacters.length; offset += 1024) {
+        const slice = byteCharacters.slice(offset, offset + 1024);
+        const byteNumbers = new Array(slice.length);
+        for (let i = 0; i < slice.length; i++) {
+          byteNumbers[i] = slice.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        byteArrays.push(byteArray);
+      }
+      
+      const blob = new Blob(byteArrays, { type: 'image/png' });
+      const logoFile = new File([blob], 'logo.png', { type: 'image/png' });
+
+      response = await openai.images.edit({
+        model: "gpt-image-1",
+        image: logoFile,
+        prompt,
+        n: 2,
+        size: "1024x1024",
+      });
+    } else {
+      response = await openai.images.generate({
+        model: "gpt-image-1",
+        prompt,
+        n: 2,
+        size: "1024x1024",
+      });
+    }
 
     if (!response.data || response.data.length === 0 || !response.data[0].b64_json) {
       throw new Error("No image data returned from OpenAI");
