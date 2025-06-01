@@ -163,6 +163,32 @@ export async function fetchBrandKitById(id: string): Promise<BrandKit | null> {
   return brandKit;
 }
 
+export async function updateBrandKit(id: string, updates: Partial<BrandKit>): Promise<BrandKit> {
+  const { data, error } = await supabase
+    .from('brand_kits')
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id)
+    .select(`
+      *,
+      generated_assets (
+        id,
+        type,
+        created_at
+      )
+    `)
+    .single();
+
+  if (error) {
+    console.error('Error updating brand kit:', error);
+    throw error;
+  }
+
+  return data;
+}
+
 export async function saveGeneratedAssets(
   brandKitId: string, 
   imageDataArray: string[], 
