@@ -66,7 +66,36 @@ export async function generateBrandSuggestion(prompt: string): Promise<AIBrandSu
     ],
     response_format: { type: "json_object" }
   });
-  console.log(completion);
-  const suggestion = JSON.parse(completion.choices[0].message.content);
-  return suggestion;
+
+  return JSON.parse(completion.choices[0].message.content);
+}
+
+export async function generateLogoImages(brandName: string, style: string, colors: { primary: string }): Promise<string[]> {
+  const styleDescriptions = {
+    wordmark: `a minimalist, modern wordmark logo design for "${brandName}" using the color ${colors.primary}. The design should be clean, professional, and versatile.`,
+    lettermark: `a sophisticated lettermark logo using the letter "${brandName[0]}" in ${colors.primary}. The design should be bold and memorable.`,
+    abstract: `an abstract, geometric logo mark that represents "${brandName}" using ${colors.primary}. The design should be unique and contemporary.`,
+    mascot: `a friendly, character-based logo design for "${brandName}" incorporating ${colors.primary}. The mascot should be approachable and memorable.`,
+    combination: `a combination mark logo for "${brandName}" that combines a wordmark with a distinctive symbol, using ${colors.primary}. The design should be balanced and professional.`,
+    emblem: `an emblem-style logo for "${brandName}" with contained typography and imagery, using ${colors.primary}. The design should be classic and authoritative.`
+  };
+
+  const prompt = styleDescriptions[style as keyof typeof styleDescriptions] || styleDescriptions.wordmark;
+
+  try {
+    const response = await openai.images.generate({
+      model: "gpt-image-1",
+      prompt,
+      n: 4,
+      size: "1024x1024",
+      quality: "standard",
+      style: "natural",
+      response_format: "url"
+    });
+
+    return response.data.map(image => image.url);
+  } catch (error) {
+    console.error('Error generating logo images:', error);
+    throw error;
+  }
 }
