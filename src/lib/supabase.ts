@@ -165,10 +165,13 @@ export async function fetchBrandKitById(id: string): Promise<BrandKit | null> {
 }
 
 export async function updateBrandKit(id: string, updates: Partial<BrandKit>): Promise<BrandKit> {
+  // Exclude the generated_assets field from updates as it's a relationship, not a column
+  const { generated_assets, ...updateData } = updates;
+
   const { data, error } = await supabase
     .from('brand_kits')
     .update({
-      ...updates,
+      ...updateData,
       updated_at: new Date().toISOString()
     })
     .eq('id', id)
