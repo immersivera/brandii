@@ -85,24 +85,6 @@ export const LibraryPage: React.FC = () => {
     navigate('/create');
   };
 
-  const getLogoImage = (brandKit: BrandKit) => {
-    if (!brandKit.generated_assets?.length) return null;
-
-    // First try to get the selected logo
-    if (brandKit.logo_selected_asset_id) {
-      const selectedAsset = brandKit.generated_assets.find(
-        asset => asset.id === brandKit.logo_selected_asset_id
-      );
-      if (selectedAsset?.image_data) return selectedAsset.image_data;
-    }
-
-    // Otherwise get the first logo asset
-    const firstLogoAsset = brandKit.generated_assets.find(
-      asset => asset.type === 'logo'
-    );
-    return firstLogoAsset?.image_data || null;
-  };
-
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
 
   const handlePageChange = (page: number) => {
@@ -211,38 +193,21 @@ export const LibraryPage: React.FC = () => {
                       <Card hover interactive className="h-full">
                         <CardContent className="p-0">
                           <div className="relative">
-                            {(() => {
-                              const logoImage = getLogoImage(brandKit);
-                              if (logoImage) {
-                                return (
-                                  <img 
-                                    src={logoImage} 
-                                    alt={brandKit.name}
-                                    className="h-32 w-full object-contain rounded-t-xl"
-                                    style={{ 
-                                      backgroundColor: brandKit.colors.background
-                                    }}
-                                  />
-                                );
-                              }
-                              return (
-                                <div 
-                                  className="h-32 w-full rounded-t-xl flex items-center justify-center"
-                                  style={{ 
-                                    backgroundColor: brandKit.colors.background
-                                  }}
-                                >
-                                  <span 
-                                    className="text-4xl font-bold font-display"
-                                    style={{ 
-                                      color: brandKit.colors.text
-                                    }}
-                                  >
-                                    {brandKit.name.charAt(0)}
-                                  </span>
-                                </div>
-                              );
-                            })()}
+                            <div 
+                              className="h-32 w-full rounded-t-xl flex items-center justify-center"
+                              style={{ 
+                                backgroundColor: brandKit.colors.background
+                              }}
+                            >
+                              <span 
+                                className="text-4xl font-bold font-display"
+                                style={{ 
+                                  color: brandKit.colors.text
+                                }}
+                              >
+                                {brandKit.name.charAt(0)}
+                              </span>
+                            </div>
                           </div>
                           
                           <div className="p-6">

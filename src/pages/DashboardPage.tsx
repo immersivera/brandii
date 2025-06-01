@@ -16,8 +16,8 @@ export const DashboardPage: React.FC = () => {
   useEffect(() => {
     const loadBrandKits = async () => {
       try {
-        const kits = await fetchBrandKits();
-        setBrandKits(kits);
+        const { data } = await fetchBrandKits();
+        setBrandKits(data);
       } catch (error) {
         console.error('Failed to fetch brand kits:', error);
         toast.error('Failed to load brand kits');
@@ -28,24 +28,6 @@ export const DashboardPage: React.FC = () => {
 
     loadBrandKits();
   }, []);
-
-  const getLogoImage = (brandKit: BrandKit) => {
-    if (!brandKit.generated_assets?.length) return null;
-    
-    // First try to get the selected logo
-    if (brandKit?.logo_selected_asset_id) {
-      const selectedAsset = brandKit.generated_assets.find(
-        asset => asset.id === brandKit.logo_selected_asset_id
-      );
-      if (selectedAsset?.image_data) return selectedAsset.image_data;
-    }
-
-    // Otherwise get the first logo asset
-    const firstLogoAsset = brandKit.generated_assets.find(
-      asset => asset.type === 'logo'
-    );
-    return firstLogoAsset?.image_data || null;
-  };
 
   if (isLoading) {
     return (
@@ -99,38 +81,21 @@ export const DashboardPage: React.FC = () => {
                 >
                   <Card hover interactive className="h-full">
                     <CardContent className="p-0">
-                      {(() => {
-                        const logoImage = getLogoImage(brandKit);
-                        if (logoImage) {
-                          return (
-                            <img 
-                              src={logoImage} 
-                              alt={brandKit.name}
-                              className="h-32 w-full object-contain rounded-t-xl"
-                              style={{ 
-                                backgroundColor: brandKit.colors.background
-                              }}
-                            />
-                          );
-                        }
-                        return (
-                          <div 
-                            className="h-32 w-full rounded-t-xl flex items-center justify-center"
-                            style={{ 
-                              backgroundColor: brandKit.colors.background
-                            }}
-                          >
-                            <span 
-                              className="text-4xl font-bold font-display"
-                              style={{ 
-                                color: brandKit.colors.text
-                              }}
-                            >
-                              {brandKit.name.charAt(0)}
-                            </span>
-                          </div>
-                        );
-                      })()}
+                      <div 
+                        className="h-32 w-full rounded-t-xl flex items-center justify-center"
+                        style={{ 
+                          backgroundColor: brandKit.colors.background
+                        }}
+                      >
+                        <span 
+                          className="text-4xl font-bold font-display"
+                          style={{ 
+                            color: brandKit.colors.text
+                          }}
+                        >
+                          {brandKit.name.charAt(0)}
+                        </span>
+                      </div>
                       
                       <div className="p-6">
                         <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">
