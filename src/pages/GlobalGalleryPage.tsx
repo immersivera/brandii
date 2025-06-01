@@ -104,7 +104,7 @@ export const GlobalGalleryPage: React.FC = () => {
   if (isLoading) {
     return (
       <Layout>
-        <div className="min-h-screen bg-gray-900 py-12">
+        <div className="min-h-screen bg-white dark:bg-gray-900 py-12">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-center items-center py-20">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-600"></div>
@@ -117,15 +117,15 @@ export const GlobalGalleryPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-900 py-12">
+      <div className="min-h-screen bg-white dark:bg-gray-900 py-12">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-[1920px] mx-auto">
             <div className="flex items-center justify-between mb-8">
               <div>
-                <h1 className="text-3xl font-bold text-white mb-2">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                   Community Gallery
                 </h1>
-                <p className="text-gray-400">
+                <p className="text-gray-600 dark:text-gray-400">
                   Explore AI-generated images from our community
                 </p>
               </div>
@@ -133,7 +133,7 @@ export const GlobalGalleryPage: React.FC = () => {
 
             {images.length === 0 ? (
               <div className="text-center py-20">
-                <p className="text-gray-400">
+                <p className="text-gray-600 dark:text-gray-400">
                   No images have been generated yet
                 </p>
               </div>
@@ -202,7 +202,7 @@ export const GlobalGalleryPage: React.FC = () => {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-gray-900 rounded-xl shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden"
+              className="bg-white dark:bg-gray-900 rounded-xl shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex h-full">
@@ -218,12 +218,12 @@ export const GlobalGalleryPage: React.FC = () => {
                 {/* Details Section */}
                 <div className="w-1/3 p-6 flex flex-col">
                   <div className="flex justify-between items-start mb-6">
-                    <h3 className="text-xl font-semibold text-white">
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
                       Image Details
                     </h3>
                     <button
                       onClick={() => setSelectedImage(null)}
-                      className="text-gray-400 hover:text-gray-200 transition-colors"
+                      className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
                     >
                       <X className="h-5 w-5" />
                     </button>
@@ -232,19 +232,19 @@ export const GlobalGalleryPage: React.FC = () => {
                   <div className="space-y-6 flex-grow">
                     {selectedImage.brand_kit && (
                       <div>
-                        <h4 className="text-sm font-medium text-gray-400 mb-1">
+                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
                           Brand Kit
                         </h4>
-                        <p className="text-white font-medium">
+                        <p className="text-gray-900 dark:text-white font-medium">
                           {selectedImage.brand_kit.name}
                         </p>
-                        <p className="text-sm text-gray-300 mt-1">
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                           {selectedImage.brand_kit.description}
                         </p>
                         {isImageOwner(selectedImage) && (
                           <Link
                             to={`/kit/${selectedImage.brand_kit.id}`}
-                            className="inline-flex items-center mt-2 text-sm text-brand-400 hover:text-brand-300"
+                            className="inline-flex items-center mt-2 text-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <ExternalLink className="h-4 w-4 mr-1" />
@@ -255,15 +255,15 @@ export const GlobalGalleryPage: React.FC = () => {
                     )}
 
                     <div>
-                      <h4 className="text-sm font-medium text-gray-400 mb-2">
+                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
                         Created
                       </h4>
                       <div className="space-y-2">
-                        <div className="flex items-center text-gray-300">
+                        <div className="flex items-center text-gray-600 dark:text-gray-300">
                           <Calendar className="h-4 w-4 mr-2" />
                           <span>{formatDate(selectedImage.created_at)}</span>
                         </div>
-                        <div className="flex items-center text-gray-300">
+                        <div className="flex items-center text-gray-600 dark:text-gray-300">
                           <Clock className="h-4 w-4 mr-2" />
                           <span>{formatTime(selectedImage.created_at)}</span>
                         </div>
