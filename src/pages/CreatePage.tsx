@@ -1,0 +1,435 @@
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Layout } from '../components/layout/Layout';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Textarea } from '../components/ui/Textarea';
+import { Select } from '../components/ui/Select';
+import { Card, CardContent } from '../components/ui/Card';
+import { useBrand } from '../context/BrandContext';
+import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
+import { BRAND_TYPES, BRAND_ADJECTIVES, LOGO_STYLES } from '../lib/constants';
+import { ColorPicker } from '../components/ui/ColorPicker';
+import { saveBrandKit } from '../lib/supabase';
+import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+
+export const CreatePage: React.FC = () => {
+  const { brandDetails, updateBrandDetails, nextStep, prevStep } = useBrand();
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const navigate = useNavigate();
+
+  const handleGenerateWithAI = () => {
+    if (!brandDetails.name || !brandDetails.description) {
+      toast.error('Please provide a brand name and description');
+      return;
+    }
+    
+    setIsGenerating(true);
+    toast.promise(
+      new Promise(resolve => {
+        // Simulate AI generation delay
+        setTimeout(() => {
+          // Update with "AI-generated" values
+          updateBrandDetails({
+            colors: {
+              primary: '#8B5CF6',
+              secondary: '#6D28D9',
+              accent: '#EC4899',
+              background: '#F5F3FF',
+              text: '#111827',
+            },
+            logoOptions: [
+              'modern abstract shape',
+              'minimalist wordmark',
+              'geometric symbol',
+              'unique monogram'
+            ]
+          });
+          resolve('Generated');
+          setIsGenerating(false);
+          nextStep();
+        }, 2000);
+      }),
+      {
+        loading: 'Generating brand assets with AI...',
+        success: 'Brand assets generated successfully!',
+        error: 'Failed to generate brand assets',
+      }
+    );
+  };
+
+  const handleComplete = async () => {
+    try {
+      setIsSaving(true);
+      
+      const brandKitData = {
+        name: brandDetails.name,
+        description: brandDetails.description,
+        type: brandDetails.industry,
+        colors: brandDetails.colors,
+        logo: {
+          type: brandDetails.logoStyle || 'wordmark',
+          text: brandDetails.name,
+        },
+        typography: brandDetails.typography,
+      };
+
+      await toast.promise(
+        saveBrandKit(brandKitData),
+        {
+          loading: 'Saving your brand kit...',
+          success: 'Brand kit saved successfully!',
+          error: 'Failed to save brand kit',
+        }
+      );
+
+      navigate('/result');
+    } catch (error) {
+      console.error('Error saving brand kit:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const renderStep = () => {
+    switch (brandDetails.step) {
+      case 1:
+        return (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
+              Tell us about your brand
+            </h2>
+            
+            <div className="space-y-6">
+              <Input
+                label="Brand Name"
+                placeholder="e.g., Acme Corp"
+                value={brandDetails.name}
+                onChange={(e) => updateBrandDetails({ name: e.target.value })}
+                required
+              />
+              
+              <Textarea
+                label="Brand Description"
+                placeholder="Describe your brand, products/services, and target audience in a few sentences..."
+                value={brandDetails.description}
+                onChange={(e) => updateBrandDetails({ description: e.target.value })}
+                required
+                helperText="This helps our AI understand your brand better"
+              />
+              
+              <Select
+                label="Industry Type"
+                options={[
+                  { value: '', label: 'Select an industry', disabled: true },
+                  ...BRAND_TYPES.map(type => ({ value: type.id, label: type.name }))
+                ]}
+                value={brandDetails.industry}
+                onChange={(value) => updateBrandDetails({ industry: value })}
+                helperText="Choose the category that best fits your business"
+              />
+              
+              <Select
+                label="Brand Personality"
+                options={[
+                  { value: '', label: 'Select a personality', disabled: true },
+                  ...BRAND_ADJECTIVES.map(adj => ({ value: adj.id, label: adj.name }))
+                ]}
+                value={brandDetails.adjective}
+                onChange={(value) => updateBrandDetails({ adjective: value })}
+                helperText="How do you want your brand to be perceived?"
+              />
+              
+              <div className="pt-4 flex justify-between">
+                <Button
+                  variant="outline"
+                  onClick={handleGenerateWithAI}
+                  leftIcon={<Sparkles className="h-4 w-4" />}
+                  isLoading={isGenerating}
+                >
+                  Generate with AI
+                </Button>
+                
+                <Button
+                  onClick={nextStep}
+                  rightIcon={<ArrowRight className="h-4 w-4" />}
+                  disabled={!brandDetails.name || !brandDetails.description}
+                >
+                  Next Step
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        );
+        
+      case 2:
+        return (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
+              Design your brand identity
+            </h2>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Brand Colors
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  <ColorPicker
+                    label="Primary"
+                    color={brandDetails.colors.primary}
+                    onChange={(color) => updateBrandDetails({ 
+                      colors: { ...brandDetails.colors, primary: color } 
+                    })}
+                  />
+                  <ColorPicker
+                    label="Secondary"
+                    color={brandDetails.colors.secondary}
+                    onChange={(color) => updateBrandDetails({ 
+                      colors: { ...brandDetails.colors, secondary: color } 
+                    })}
+                  />
+                  <ColorPicker
+                    label="Accent"
+                    color={brandDetails.colors.accent}
+                    onChange={(color) => updateBrandDetails({ 
+                      colors: { ...brandDetails.colors, accent: color } 
+                    })}
+                  />
+                  <ColorPicker
+                    label="Background"
+                    color={brandDetails.colors.background}
+                    onChange={(color) => updateBrandDetails({ 
+                      colors: { ...brandDetails.colors, background: color } 
+                    })}
+                  />
+                  <ColorPicker
+                    label="Text"
+                    color={brandDetails.colors.text}
+                    onChange={(color) => updateBrandDetails({ 
+                      colors: { ...brandDetails.colors, text: color } 
+                    })}
+                  />
+                </div>
+              </div>
+              
+              <Select
+                label="Logo Style"
+                options={[
+                  { value: '', label: 'Select a logo style', disabled: true },
+                  ...LOGO_STYLES.map(style => ({ value: style.id, label: style.name }))
+                ]}
+                value={brandDetails.logoStyle}
+                onChange={(value) => updateBrandDetails({ logoStyle: value })}
+                helperText="Choose the type of logo that best represents your brand"
+              />
+              
+              <div className="pt-4 flex justify-between">
+                <Button
+                  variant="outline"
+                  onClick={prevStep}
+                  leftIcon={<ArrowLeft className="h-4 w-4" />}
+                >
+                  Previous
+                </Button>
+                
+                <Button
+                  onClick={nextStep}
+                  rightIcon={<ArrowRight className="h-4 w-4" />}
+                >
+                  Next Step
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        );
+        
+      case 3:
+        return (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
+              Preview your brand kit
+            </h2>
+            
+            <div className="space-y-8">
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+                    Brand Summary
+                  </h3>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Brand Name
+                      </h4>
+                      <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                        {brandDetails.name}
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Description
+                      </h4>
+                      <p className="text-gray-700 dark:text-gray-300">
+                        {brandDetails.description}
+                      </p>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                          Industry
+                        </h4>
+                        <p className="text-gray-700 dark:text-gray-300">
+                          {BRAND_TYPES.find(t => t.id === brandDetails.industry)?.name || 'Not specified'}
+                        </p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                          Personality
+                        </h4>
+                        <p className="text-gray-700 dark:text-gray-300">
+                          {BRAND_ADJECTIVES.find(a => a.id === brandDetails.adjective)?.name || 'Not specified'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+                    Brand Colors
+                  </h3>
+                  
+                  <div className="grid grid-cols-5 gap-3">
+                    {Object.entries(brandDetails.colors).map(([key, color]) => (
+                      <div key={key} className="text-center">
+                        <div 
+                          className="w-full h-16 rounded-md mb-2 shadow-sm"
+                          style={{ backgroundColor: color }}
+                        ></div>
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 capitalize">
+                          {key}
+                        </span>
+                        <p className="text-xs text-gray-700 dark:text-gray-300">
+                          {color}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+                    Logo Concept
+                  </h3>
+                  
+                  <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-8 flex items-center justify-center">
+                    <div 
+                      className="text-3xl font-bold"
+                      style={{ color: brandDetails.colors.primary }}
+                    >
+                      {brandDetails.name}
+                    </div>
+                  </div>
+                  
+                  <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                    This is a placeholder for your logo concept. In the full application, 
+                    you would see AI-generated logo options based on your inputs.
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <div className="pt-4 flex justify-between">
+                <Button
+                  variant="outline"
+                  onClick={prevStep}
+                  leftIcon={<ArrowLeft className="h-4 w-4" />}
+                >
+                  Previous
+                </Button>
+                
+                <Button
+                  onClick={handleComplete}
+                  rightIcon={<Sparkles className="h-4 w-4" />}
+                  isLoading={isSaving}
+                  disabled={isSaving}
+                >
+                  Complete
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        );
+        
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <Layout hideFooter>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-3xl mx-auto">
+            <div className="mb-8">
+              <div className="flex items-center justify-between">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                  Create Your Brand Kit
+                </h1>
+                
+                <div className="flex items-center space-x-1 text-sm font-medium text-gray-500 dark:text-gray-400">
+                  <span className={`${brandDetails.step >= 1 ? 'text-brand-600 dark:text-brand-400' : ''}`}>
+                    Info
+                  </span>
+                  <span>→</span>
+                  <span className={`${brandDetails.step >= 2 ? 'text-brand-600 dark:text-brand-400' : ''}`}>
+                    Design
+                  </span>
+                  <span>→</span>
+                  <span className={`${brandDetails.step >= 3 ? 'text-brand-600 dark:text-brand-400' : ''}`}>
+                    Preview
+                  </span>
+                </div>
+              </div>
+              
+              <div className="w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full mt-4">
+                <div 
+                  className="bg-brand-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${(brandDetails.step / 3) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+            
+            <Card className="shadow-lg">
+              <CardContent className="p-8">
+                {renderStep()}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </Layout>
+  );
+};
