@@ -35,11 +35,9 @@ export const Header: React.FC = () => {
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2">
               <img 
-                src="/logo.png" 
+                src={theme === 'dark' ? "/logo-white.png" : "/logo.png"}
                 alt="Brandii" 
-                className={`h-8 w-auto ${
-                  theme === 'dark' ? 'invert' : ''
-                }`}
+                className="h-8 w-auto"
               />
             </Link>
           </div>

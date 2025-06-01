@@ -13,11 +13,9 @@ export const Footer: React.FC = () => {
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center space-x-2 mb-4">
               <img 
-                src="/logo.png" 
+                src={theme === 'dark' ? "/logo-white.png" : "/logo.png"}
                 alt="Brandii" 
-                className={`h-8 w-auto ${
-                  theme === 'dark' ? 'invert' : ''
-                }`}
+                className="h-8 w-auto"
               />
             </div>
             <p className="text-gray-600 dark:text-gray-400 mb-4 max-w-md">
