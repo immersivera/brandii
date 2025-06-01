@@ -333,7 +333,7 @@ export const HomePage: React.FC = () => {
               </div>
               <Button 
                 size="lg" 
-                className="bg-white text-brand-600 hover:bg-gray-100"
+                className="bg-white text-brand-600 hover:bg-gray-100 md:text-lg text-xs"
                 onClick={() => navigate('/create')}
                 rightIcon={<ArrowRight className="h-5 w-5" />}
               >
