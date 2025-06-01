@@ -64,9 +64,9 @@ export const LibraryPage: React.FC = () => {
     if (!brandKit.generated_assets?.length) return null;
 
     // First try to get the selected logo
-    if (brandKit.logo.selected_asset_id) {
+    if (brandKit.logo_selected_asset_id) {
       const selectedAsset = brandKit.generated_assets.find(
-        asset => asset.id === brandKit.logo.selected_asset_id
+        asset => asset.id === brandKit.logo_selected_asset_id
       );
       if (selectedAsset?.image_data) return selectedAsset.image_data;
     }
@@ -91,6 +91,20 @@ export const LibraryPage: React.FC = () => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-center items-center py-20">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-600"></div>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -129,11 +143,7 @@ export const LibraryPage: React.FC = () => {
               </div>
             </div>
             
-            {isLoading ? (
-              <div className="flex justify-center items-center py-20">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-600"></div>
-              </div>
-            ) : filteredBrandKits.length === 0 ? (
+            {filteredBrandKits.length === 0 ? (
               <div className="text-center py-20">
                 {searchQuery ? (
                   <div>
