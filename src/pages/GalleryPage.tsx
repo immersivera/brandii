@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
-import { ArrowLeft, Download, Plus, X, Calendar, Clock } from 'lucide-react';
-import { BrandKit, fetchBrandKitById } from '../lib/supabase';
+import { ArrowLeft, Download, Plus, X, Calendar, Clock, Trash2 } from 'lucide-react';
+import { BrandKit, fetchBrandKitById, deleteGeneratedAsset } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import Masonry from 'react-masonry-css';
 
@@ -14,6 +14,7 @@ export const GalleryPage: React.FC = () => {
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<any | null>(null);
+  const [isDeletingImage, setIsDeletingImage] = useState(false);
 
   const breakpointColumns = {
     default: 4,
@@ -54,6 +55,37 @@ export const GalleryPage: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleDeleteImage = async (imageId: string) => {
+    if (!confirm('Are you sure you want to delete this image? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setIsDeletingImage(true);
+      await deleteGeneratedAsset(imageId);
+      
+      // Update local state
+      if (brandKit) {
+        setBrandKit({
+          ...brandKit,
+          generated_assets: brandKit.generated_assets?.filter(asset => asset.id !== imageId) || []
+        });
+      }
+      
+      // Close modal if the deleted image was selected
+      if (selectedImage?.id === imageId) {
+        setSelectedImage(null);
+      }
+      
+      toast.success('Image deleted successfully');
+    } catch (error) {
+      console.error('Error deleting image:', error);
+      toast.error('Failed to delete image');
+    } finally {
+      setIsDeletingImage(false);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -164,18 +196,33 @@ export const GalleryPage: React.FC = () => {
                           <span className="text-white text-sm">
                             {formatDate(asset.created_at)}
                           </span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDownload(asset.image_data, index);
-                            }}
-                            leftIcon={<Download className="h-4 w-4" />}
-                            className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
-                          >
-                            Download
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteImage(asset.id);
+                              }}
+                              leftIcon={<Trash2 className="h-4 w-4" />}
+                              className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-red-500/20 hover:border-red-500/20"
+                              isLoading={isDeletingImage}
+                            >
+                              Delete
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDownload(asset.image_data, index);
+                              }}
+                              leftIcon={<Download className="h-4 w-4" />}
+                              className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+                            >
+                              Download
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -246,13 +293,24 @@ export const GalleryPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <Button
-                    className="w-full mt-6"
-                    leftIcon={<Download className="h-4 w-4" />}
-                    onClick={() => handleDownload(selectedImage.image_data, imageAssets.indexOf(selectedImage))}
-                  >
-                    Download Image
-                  </Button>
+                  <div className="flex gap-2 mt-6">
+                    <Button
+                      variant="outline"
+                      className="w-1/2"
+                      leftIcon={<Trash2 className="h-4 w-4" />}
+                      onClick={() => handleDeleteImage(selectedImage.id)}
+                      isLoading={isDeletingImage}
+                    >
+                      Delete
+                    </Button>
+                    <Button
+                      className="w-1/2"
+                      leftIcon={<Download className="h-4 w-4" />}
+                      onClick={() => handleDownload(selectedImage.image_data, imageAssets.indexOf(selectedImage))}
+                    >
+                      Download
+                    </Button>
+                  </div>
                 </div>
               </div>
             </motion.div>
