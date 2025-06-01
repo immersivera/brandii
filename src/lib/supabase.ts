@@ -62,6 +62,11 @@ export type BrandKit = {
   generated_assets?: GeneratedAsset[];
 };
 
+export type PaginatedResponse<T> = {
+  data: T[];
+  totalCount: number;
+};
+
 export async function initializeAnonymousUser() {
   const storedToken = localStorage.getItem('brandii-user-token');
   
@@ -117,14 +122,39 @@ export async function updateUserProfile(updates: Partial<UserProfile>): Promise<
   return data;
 }
 
-export async function fetchBrandKits(): Promise<BrandKit[]> {
+export async function fetchBrandKits(
+  page: number = 1,
+  limit: number = 6,
+  searchQuery: string = ''
+): Promise<PaginatedResponse<BrandKit>> {
   const userId = localStorage.getItem('brandii-user-token');
   
   if (!userId) {
-    return [];
+    return { data: [], totalCount: 0 };
   }
 
-  const { data: brandKits, error: brandKitsError } = await supabase
+  const offset = (page - 1) * limit;
+
+  // First get the total count
+  const countQuery = supabase
+    .from('brand_kits')
+    .select('id', { count: 'exact' })
+    .eq('user_id', userId);
+
+  // Add search filter if provided
+  if (searchQuery) {
+    countQuery.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+  }
+
+  const { count: totalCount, error: countError } = await countQuery;
+
+  if (countError) {
+    console.error('Error fetching brand kits count:', countError);
+    throw countError;
+  }
+
+  // Then fetch the paginated data
+  const dataQuery = supabase
     .from('brand_kits')
     .select(`
       *,
@@ -136,14 +166,25 @@ export async function fetchBrandKits(): Promise<BrandKit[]> {
       )
     `)
     .eq('user_id', userId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
 
-  if (brandKitsError) {
-    console.error('Error fetching brand kits:', brandKitsError);
-    throw brandKitsError;
+  // Add search filter if provided
+  if (searchQuery) {
+    dataQuery.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
   }
 
-  return brandKits || [];
+  const { data: brandKits, error: dataError } = await dataQuery;
+
+  if (dataError) {
+    console.error('Error fetching brand kits:', dataError);
+    throw dataError;
+  }
+
+  return {
+    data: brandKits || [],
+    totalCount: totalCount || 0
+  };
 }
 
 export async function fetchBrandKitById(id: string): Promise<BrandKit | null> {

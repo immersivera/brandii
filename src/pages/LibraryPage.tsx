@@ -9,6 +9,7 @@ import { fetchBrandKits, BrandKit, deleteBrandKit } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useBrand } from '../context/BrandContext';
 import toast from 'react-hot-toast';
+import { useDebounce } from '../lib/utils';
 
 const ITEMS_PER_PAGE = 6;
 
@@ -17,14 +18,23 @@ export const LibraryPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const navigate = useNavigate();
   const { updateBrandDetails } = useBrand();
+  
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   useEffect(() => {
     const loadBrandKits = async () => {
       try {
-        const kits = await fetchBrandKits();
+        setIsLoading(true);
+        const { data: kits, totalCount } = await fetchBrandKits(
+          currentPage,
+          ITEMS_PER_PAGE,
+          debouncedSearchQuery
+        );
         setBrandKits(kits);
+        setTotalItems(totalCount);
       } catch (error) {
         console.error('Failed to fetch brand kits:', error);
         toast.error('Failed to load brand kits');
@@ -34,12 +44,27 @@ export const LibraryPage: React.FC = () => {
     };
     
     loadBrandKits();
-  }, []);
+  }, [currentPage, debouncedSearchQuery]);
 
   const handleDeleteBrandKit = async (id: string) => {
     try {
       await deleteBrandKit(id);
-      setBrandKits(brandKits.filter(kit => kit.id !== id));
+      
+      // Refresh the current page
+      const { data: kits, totalCount } = await fetchBrandKits(
+        currentPage,
+        ITEMS_PER_PAGE,
+        debouncedSearchQuery
+      );
+      
+      // If the current page is empty and it's not the first page, go to the previous page
+      if (kits.length === 0 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      } else {
+        setBrandKits(kits);
+        setTotalItems(totalCount);
+      }
+      
       toast.success('Brand kit deleted successfully');
     } catch (error) {
       console.error('Failed to delete brand kit:', error);
@@ -78,18 +103,16 @@ export const LibraryPage: React.FC = () => {
     return firstLogoAsset?.image_data || null;
   };
 
-  const filteredBrandKits = brandKits.filter(kit => 
-    kit.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    kit.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const totalPages = Math.ceil(filteredBrandKits.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedBrandKits = filteredBrandKits.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSearch = (value: string) => {
+    setSearchQuery(value);
+    setCurrentPage(1); // Reset to first page when searching
   };
 
   if (isLoading) {
@@ -125,10 +148,7 @@ export const LibraryPage: React.FC = () => {
                 <Input
                   placeholder="Search brand kits..."
                   value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setCurrentPage(1);
-                  }}
+                  onChange={(e) => handleSearch(e.target.value)}
                   leftIcon={<Search className="h-4 w-4 text-gray-500" />}
                   className="w-full md:w-auto h-8"
                 />
@@ -143,7 +163,7 @@ export const LibraryPage: React.FC = () => {
               </div>
             </div>
             
-            {filteredBrandKits.length === 0 ? (
+            {totalItems === 0 ? (
               <div className="text-center py-20">
                 {searchQuery ? (
                   <div>
@@ -156,7 +176,7 @@ export const LibraryPage: React.FC = () => {
                     <Button
                       variant="outline"
                       className="mt-4"
-                      onClick={() => setSearchQuery('')}
+                      onClick={() => handleSearch('')}
                     >
                       Clear Search
                     </Button>
@@ -181,7 +201,7 @@ export const LibraryPage: React.FC = () => {
             ) : (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {paginatedBrandKits.map((brandKit, index) => (
+                  {brandKits.map((brandKit, index) => (
                     <motion.div
                       key={brandKit.id}
                       initial={{ opacity: 0, y: 20 }}
