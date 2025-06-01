@@ -164,6 +164,7 @@ export async function fetchBrandKitById(id: string): Promise<BrandKit | null> {
 }
 
 export async function updateBrandKit(id: string, updates: Partial<BrandKit>): Promise<BrandKit> {
+  // First, update the brand kit without selecting related tables
   const { data, error } = await supabase
     .from('brand_kits')
     .update({
@@ -171,14 +172,7 @@ export async function updateBrandKit(id: string, updates: Partial<BrandKit>): Pr
       updated_at: new Date().toISOString()
     })
     .eq('id', id)
-    .select(`
-      *,
-      generated_assets (
-        id,
-        type,
-        created_at
-      )
-    `)
+    .select()
     .single();
 
   if (error) {
@@ -186,7 +180,13 @@ export async function updateBrandKit(id: string, updates: Partial<BrandKit>): Pr
     throw error;
   }
 
-  return data;
+  // Then fetch the complete brand kit with related data
+  const updatedBrandKit = await fetchBrandKitById(id);
+  if (!updatedBrandKit) {
+    throw new Error('Failed to fetch updated brand kit');
+  }
+
+  return updatedBrandKit;
 }
 
 export async function saveGeneratedAssets(
