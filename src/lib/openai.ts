@@ -26,7 +26,7 @@ export interface AIBrandSuggestion {
 
 export async function generateBrandSuggestion(prompt: string): Promise<AIBrandSuggestion> {
   const completion = await openai.chat.completions.create({
-    model: "gpt-4.1-nano",
+    model: "gpt-4",
     messages: [
       {
         role: "system",
@@ -37,7 +37,27 @@ export async function generateBrandSuggestion(prompt: string): Promise<AIBrandSu
           - adjective: One of [modern, minimal, bold, playful, elegant, retro, organic, tech]
           - logoStyle: One of [wordmark, lettermark, abstract, mascot, combination, emblem]
           - colors: Object with primary, secondary, accent, background, and text colors (in hex)
-          - typography: Object with headingFont and bodyFont (use Google Fonts names)`
+          - typography: Object with headingFont and bodyFont (use Google Fonts names)
+          
+          Example response format:
+          {
+            "name": "Luminary",
+            "description": "A modern technology company focused on innovative AI solutions",
+            "industry": "technology",
+            "adjective": "modern",
+            "logoStyle": "combination",
+            "colors": {
+              "primary": "#3B82F6",
+              "secondary": "#1E40AF",
+              "accent": "#F59E0B",
+              "background": "#F8FAFC",
+              "text": "#1F2937"
+            },
+            "typography": {
+              "headingFont": "Plus Jakarta Sans",
+              "bodyFont": "Inter"
+            }
+          }`
       },
       {
         role: "user",
