@@ -64,6 +64,13 @@ export const HomePage: React.FC = () => {
     <Layout>
       {/* Hero Section */}
       <section className="relative overflow-hidden">
+        {/* Animated background shapes */}
+        <div className="splash-shapes">
+          <div className="splash-shape splash-shape-1"></div>
+          <div className="splash-shape splash-shape-2"></div>
+          <div className="splash-shape splash-shape-3"></div>
+        </div>
+
         <div className="absolute inset-0 gradient-bg pattern-dots opacity-90"></div>
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-gray-50 dark:to-gray-900"></div>
         
