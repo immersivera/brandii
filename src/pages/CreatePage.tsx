@@ -18,6 +18,7 @@ import toast from 'react-hot-toast';
 export const CreatePage: React.FC = () => {
   const { brandDetails, updateBrandDetails, setStep, resetBrandDetails } = useBrand();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingColors, setIsGeneratingColors] = useState(false);
   const [isGeneratingLogos, setIsGeneratingLogos] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const navigate = useNavigate();
@@ -54,11 +55,40 @@ export const CreatePage: React.FC = () => {
     }
   };
 
+  const handleGenerateColors = async () => {
+    if (!brandDetails.name || !brandDetails.description) {
+      toast.error('Please complete step 1 first');
+      return;
+    }
+
+    setIsGeneratingColors(true);
+    
+    try {
+      const prompt = `Generate a brand identity for a brand called "${brandDetails.name}". 
+        Description: ${brandDetails.description}
+        Industry: ${brandDetails.industry}
+        Personality: ${brandDetails.adjective}`;
+      
+      const suggestion = await generateBrandSuggestion(prompt);
+      
+      updateBrandDetails({
+        colors: suggestion.colors,
+        logoStyle: suggestion.logoStyle
+      });
+      
+      toast.success('New color palette generated!');
+    } catch (error) {
+      console.error('Error generating colors:', error);
+      toast.error('Failed to generate new colors');
+    } finally {
+      setIsGeneratingColors(false);
+    }
+  };
+
   const handleComplete = async () => {
     try {
       setIsGeneratingLogos(true);
       
-      // Generate logo images with enhanced options
       const logoUrls = await generateLogoImages({
         brandName: brandDetails.name,
         style: brandDetails.logoStyle || 'wordmark',
@@ -72,7 +102,6 @@ export const CreatePage: React.FC = () => {
         personality: brandDetails.adjective
       });
       
-      // Save the generated logos in brand details
       updateBrandDetails({ logoOptions: logoUrls });
       
       setIsGeneratingLogos(false);
@@ -109,12 +138,10 @@ export const CreatePage: React.FC = () => {
   };
 
   const handleCompleteClick = async () => {
-    // If we have a brand kit ID, check if it has generated assets
     if (brandDetails.id) {
       try {
         const existingKit = await fetchBrandKitById(brandDetails.id);
         if (existingKit?.generated_assets?.length) {
-          // Ask user if they want to view existing assets or generate new ones
           if (window.confirm('This brand kit already has generated logos. Would you like to view them instead of generating new ones?')) {
             navigate(`/kit/${brandDetails.id}`);
             return;
@@ -125,7 +152,6 @@ export const CreatePage: React.FC = () => {
       }
     }
     
-    // If no existing assets or user wants new ones, proceed with generation
     handleComplete();
   };
 
@@ -224,15 +250,28 @@ export const CreatePage: React.FC = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
-              Design your brand identity
-            </h2>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Design your brand identity
+              </h2>
+            </div>
             
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Brand Colors
-                </label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Brand Colors
+                  </label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGenerateColors}
+                    leftIcon={<RefreshCw className="h-4 w-4" />}
+                    isLoading={isGeneratingColors}
+                  >
+                    Generate Colors
+                  </Button>
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   <ColorPicker
                     label="Primary"
@@ -469,7 +508,6 @@ export const CreatePage: React.FC = () => {
                     <React.Fragment key={s.step}>
                       <button
                         onClick={() => {
-                          // Only allow navigation to completed steps or the next step
                           if (s.step <= Math.max(brandDetails.step, 1)) {
                             setStep(s.step);
                           }
