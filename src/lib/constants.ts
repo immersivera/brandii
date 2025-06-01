@@ -59,20 +59,20 @@ export const COLOR_PALETTES = [
 export const FONT_PAIRINGS = [
   {
     name: 'Modern Tech',
-    heading: 'Inter',
-    body: 'Inter',
-    example: 'ABCDEFG abcdefg 1234567890'
-  },
-  {
-    name: 'Creative Agency',
     heading: 'Plus Jakarta Sans',
     body: 'Inter',
     example: 'ABCDEFG abcdefg 1234567890'
   },
   {
-    name: 'Professional Business',
+    name: 'Creative Agency',
     heading: 'Montserrat',
     body: 'Open Sans',
+    example: 'ABCDEFG abcdefg 1234567890'
+  },
+  {
+    name: 'Professional Business',
+    heading: 'Raleway',
+    body: 'Source Sans Pro',
     example: 'ABCDEFG abcdefg 1234567890'
   },
   {
