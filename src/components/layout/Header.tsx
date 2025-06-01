@@ -38,7 +38,7 @@ export const Header: React.FC = () => {
                 src="/logo.png" 
                 alt="Brandii" 
                 className={`h-8 w-auto ${
-                  theme === 'dark' ? 'invert' : ''
+                  theme === 'dark' ? 'invert-[.25]' : ''
                 }`}
               />
             </Link>
