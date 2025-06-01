@@ -56,17 +56,16 @@ export const ImageGeneratorPage: React.FC = () => {
       Typography: Use fonts similar to ${brandKit.typography.headingFont} for headings and ${brandKit.typography.bodyFont} for body text if text is included.
     `;
 
-    // Add logo context if selected and available
-    if (includeLogo && brandKit.logo_selected_asset_id && brandKit.generated_assets) {
-      const selectedLogo = brandKit.generated_assets.find(
-        asset => asset.id === brandKit.logo_selected_asset_id
-      );
-      if (selectedLogo?.image_data) {
-        assetsPrompt += `\nIncorporate the brand logo: ${selectedLogo.image_data}`;
-      }
-    }
-
     return assetsPrompt;
+  };
+
+  const getSelectedLogo = () => {
+    if (!brandKit?.generated_assets || !brandKit.logo_selected_asset_id || !includeLogo) return null;
+
+    const selectedLogo = brandKit.generated_assets.find(
+      asset => asset.id === brandKit.logo_selected_asset_id
+    );
+    return selectedLogo?.image_data || null;
   };
 
   const handleGenerate = async () => {
@@ -78,7 +77,8 @@ export const ImageGeneratorPage: React.FC = () => {
     setIsGenerating(true);
     try {
       const fullPrompt = `${prompt}${getBrandAssetsPrompt()}`;
-      const images = await generateImageAssets(fullPrompt);
+      const logoImage = getSelectedLogo();
+      const images = await generateImageAssets(fullPrompt, logoImage);
       setGeneratedImages(images);
 
       // Save the generated images
