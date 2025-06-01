@@ -6,10 +6,9 @@ import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Textarea } from '../components/ui/Textarea';
 import { Switch } from '../components/ui/Switch';
-import { ArrowLeft, ArrowRight, Sparkles, Download, X, Calendar, Clock, Settings, Loader } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles, Download, X, Calendar, Clock, Settings } from 'lucide-react';
 import { BrandKit, fetchBrandKitById, saveGeneratedAssets } from '../lib/supabase';
 import { generateImageAssets } from '../lib/openai';
-import { cn } from '../lib/utils';
 import toast from 'react-hot-toast';
 
 const steps = [
@@ -223,54 +222,23 @@ export const ImageGeneratorPage: React.FC = () => {
                 )}
               </div>
             </div>
-
-            {isGenerating ? (
-              <div className="py-12 flex flex-col items-center justify-center space-y-4">
-                <div className="relative">
-                  <motion.div
-                    className="w-16 h-16 border-4 border-brand-200 dark:border-brand-800 rounded-full"
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                  />
-                  <motion.div
-                    className="absolute inset-0 border-4 border-brand-600 rounded-full border-t-transparent"
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                  />
-                </div>
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="text-center"
-                >
-                  <p className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                    Generating Images
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    This may take a few moments...
-                  </p>
-                </motion.div>
-              </div>
-            ) : (
-              <div className="flex justify-between">
-                <Button
-                  variant="outline"
-                  onClick={prevStep}
-                  leftIcon={<ArrowLeft className="h-4 w-4" />}
-                >
-                  Previous Step
-                </Button>
-                <Button
-                  onClick={handleGenerate}
-                  leftIcon={<Sparkles className="h-4 w-4" />}
-                  isLoading={isGenerating}
-                  disabled={isGenerating || !prompt.trim()}
-                >
-                  Generate Images
-                </Button>
-              </div>
-            )}
+            <div className="flex justify-between">
+              <Button
+                variant="outline"
+                onClick={prevStep}
+                leftIcon={<ArrowLeft className="h-4 w-4" />}
+              >
+                Previous Step
+              </Button>
+              <Button
+                onClick={handleGenerate}
+                leftIcon={<Sparkles className="h-4 w-4" />}
+                isLoading={isGenerating}
+                disabled={isGenerating || !prompt.trim()}
+              >
+                Generate Images
+              </Button>
+            </div>
           </div>
         );
 
