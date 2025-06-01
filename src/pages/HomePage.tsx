@@ -65,12 +65,12 @@ export const HomePage: React.FC = () => {
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 gradient-bg pattern-dots opacity-90"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-gray-50 dark:to-gray-900"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-gray-50 dark:to-gray-900"></div>
         
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-32 sm:pt-32 sm:pb-40 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
             <motion.h1 
-              className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-6"
+              className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6 drop-shadow-lg"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
@@ -79,7 +79,7 @@ export const HomePage: React.FC = () => {
             </motion.h1>
             
             <motion.p 
-              className="text-xl text-white/90 mb-8 max-w-2xl mx-auto"
+              className="text-xl text-gray-800 dark:text-white/90 mb-8 max-w-2xl mx-auto drop-shadow"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
@@ -105,7 +105,7 @@ export const HomePage: React.FC = () => {
               <Button 
                 variant="outline" 
                 size="lg" 
-                className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+                className="bg-white/10 backdrop-blur-sm border-white/20 text-gray-900 dark:text-white hover:bg-white/20"
                 onClick={() => navigate('/library')}
               >
                 View Examples
