@@ -1,20 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
-import { ArrowLeft, Download, Plus, X, Calendar, Clock, Trash2 } from 'lucide-react';
-import { BrandKit, fetchBrandKitById, deleteGeneratedAsset } from '../lib/supabase';
+import { Download, X, Calendar, Clock, ExternalLink } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { useUser } from '../context/UserContext';
+import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Masonry from 'react-masonry-css';
 
-export const GalleryPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
+interface ImageDetails {
+  id: string;
+  image_data: string;
+  created_at: string;
+  brand_kit: {
+    id: string;
+    name: string;
+    description: string;
+    type: string;
+    user_id: string;
+  } | null;
+}
+
+export const GlobalGalleryPage: React.FC = () => {
+  const [images, setImages] = useState<ImageDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedImage, setSelectedImage] = useState<any | null>(null);
-  const [isDeletingImage, setIsDeletingImage] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<ImageDetails | null>(null);
+  const { userId } = useUser();
 
   const breakpointColumns = {
     default: 4,
@@ -26,66 +38,45 @@ export const GalleryPage: React.FC = () => {
   };
 
   useEffect(() => {
-    const loadBrandKit = async () => {
-      if (!id) return;
-      
+    const fetchImages = async () => {
       try {
-        const kit = await fetchBrandKitById(id);
-        if (kit) {
-          setBrandKit(kit);
-        } else {
-          toast.error('Brand kit not found');
-          navigate('/library');
-        }
+        const { data, error } = await supabase
+          .from('generated_assets')
+          .select(`
+            id, 
+            image_data, 
+            created_at,
+            brand_kit:brand_kit_id (
+              id,
+              name,
+              description,
+              type,
+              user_id
+            )
+          `)
+          .eq('type', 'image')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setImages(data || []);
       } catch (error) {
-        console.error('Error loading brand kit:', error);
-        toast.error('Failed to load brand kit');
+        console.error('Error fetching images:', error);
+        toast.error('Failed to load images');
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadBrandKit();
-  }, [id, navigate]);
+    fetchImages();
+  }, []);
 
   const handleDownload = (imageUrl: string, index: number) => {
     const link = document.createElement('a');
     link.href = imageUrl;
-    link.download = `${brandKit?.name.toLowerCase().replace(/\s+/g, '-')}-image-${index + 1}.png`;
+    link.download = `generated-image-${index + 1}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
-
-  const handleDeleteImage = async (imageId: string) => {
-    if (!confirm('Are you sure you want to delete this image? This action cannot be undone.')) {
-      return;
-    }
-
-    try {
-      setIsDeletingImage(true);
-      await deleteGeneratedAsset(imageId);
-      
-      // Update local state
-      if (brandKit) {
-        setBrandKit({
-          ...brandKit,
-          generated_assets: brandKit.generated_assets?.filter(asset => asset.id !== imageId) || []
-        });
-      }
-      
-      // Close modal if the deleted image was selected
-      if (selectedImage?.id === imageId) {
-        setSelectedImage(null);
-      }
-      
-      toast.success('Image deleted successfully');
-    } catch (error) {
-      console.error('Error deleting image:', error);
-      toast.error('Failed to delete image');
-    } finally {
-      setIsDeletingImage(false);
-    }
   };
 
   const formatDate = (dateString: string) => {
@@ -106,6 +97,10 @@ export const GalleryPage: React.FC = () => {
     }).format(date);
   };
 
+  const isImageOwner = (image: ImageDetails) => {
+    return image.brand_kit?.user_id === userId;
+  };
+
   if (isLoading) {
     return (
       <Layout>
@@ -120,10 +115,6 @@ export const GalleryPage: React.FC = () => {
     );
   }
 
-  if (!brandKit) return null;
-
-  const imageAssets = brandKit.generated_assets?.filter(asset => asset.type === 'image') || [];
-
   return (
     <Layout>
       <div className="min-h-screen bg-white dark:bg-gray-900 py-12">
@@ -131,42 +122,20 @@ export const GalleryPage: React.FC = () => {
           <div className="max-w-[1920px] mx-auto">
             <div className="flex items-center justify-between mb-8">
               <div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate(`/kit/${id}`)}
-                  leftIcon={<ArrowLeft className="h-4 w-4" />}
-                  className="mb-4"
-                >
-                  Back to Brand Kit
-                </Button>
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                  {brandKit.name} Image Gallery
+                  Community Gallery
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400">
-                  View and manage your brand's generated images
+                  Explore AI-generated images from our community
                 </p>
               </div>
-
-              <Button
-                onClick={() => navigate(`/kit/${id}/create`)}
-                leftIcon={<Plus className="h-4 w-4" />}
-              >
-                Create New Image
-              </Button>
             </div>
 
-            {imageAssets.length === 0 ? (
+            {images.length === 0 ? (
               <div className="text-center py-20">
-                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                <p className="text-gray-600 dark:text-gray-400">
                   No images have been generated yet
                 </p>
-                <Button
-                  onClick={() => navigate(`/kit/${id}/create`)}
-                  leftIcon={<Plus className="h-4 w-4" />}
-                >
-                  Generate Your First Image
-                </Button>
               </div>
             ) : (
               <Masonry
@@ -174,9 +143,9 @@ export const GalleryPage: React.FC = () => {
                 className="flex -ml-4 w-auto"
                 columnClassName="pl-4 bg-clip-padding"
               >
-                {imageAssets.map((asset, index) => (
+                {images.map((image, index) => (
                   <motion.div
-                    key={asset.id}
+                    key={image.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3, delay: index * 0.05 }}
@@ -184,45 +153,30 @@ export const GalleryPage: React.FC = () => {
                   >
                     <div 
                       className="relative group cursor-pointer overflow-hidden rounded-xl"
-                      onClick={() => setSelectedImage(asset)}
+                      onClick={() => setSelectedImage(image)}
                     >
                       <img
-                        src={asset.image_data}
+                        src={image.image_data}
                         alt={`Generated image ${index + 1}`}
                         className="w-full h-auto object-cover rounded-xl transition-transform duration-300 group-hover:scale-105"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
                         <div className="w-full flex justify-between items-center">
                           <span className="text-white text-sm">
-                            {formatDate(asset.created_at)}
+                            {formatDate(image.created_at)}
                           </span>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteImage(asset.id);
-                              }}
-                              leftIcon={<Trash2 className="h-4 w-4" />}
-                              className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-red-500/20 hover:border-red-500/20"
-                              isLoading={isDeletingImage}
-                            >
-                              Delete
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDownload(asset.image_data, index);
-                              }}
-                              leftIcon={<Download className="h-4 w-4" />}
-                              className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
-                            >
-                              Download
-                            </Button>
-                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownload(image.image_data, index);
+                            }}
+                            leftIcon={<Download className="h-4 w-4" />}
+                            className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+                          >
+                            Download
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -276,6 +230,30 @@ export const GalleryPage: React.FC = () => {
                   </div>
 
                   <div className="space-y-6 flex-grow">
+                    {selectedImage.brand_kit && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                          Brand Kit
+                        </h4>
+                        <p className="text-gray-900 dark:text-white font-medium">
+                          {selectedImage.brand_kit.name}
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                          {selectedImage.brand_kit.description}
+                        </p>
+                        {isImageOwner(selectedImage) && (
+                          <Link
+                            to={`/kit/${selectedImage.brand_kit.id}`}
+                            className="inline-flex items-center mt-2 text-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ExternalLink className="h-4 w-4 mr-1" />
+                            View Brand Kit
+                          </Link>
+                        )}
+                      </div>
+                    )}
+
                     <div>
                       <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
                         Created
@@ -293,24 +271,13 @@ export const GalleryPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="flex gap-2 mt-6">
-                    <Button
-                      variant="outline"
-                      className="w-1/2"
-                      leftIcon={<Trash2 className="h-4 w-4" />}
-                      onClick={() => handleDeleteImage(selectedImage.id)}
-                      isLoading={isDeletingImage}
-                    >
-                      Delete
-                    </Button>
-                    <Button
-                      className="w-1/2"
-                      leftIcon={<Download className="h-4 w-4" />}
-                      onClick={() => handleDownload(selectedImage.image_data, imageAssets.indexOf(selectedImage))}
-                    >
-                      Download
-                    </Button>
-                  </div>
+                  <Button
+                    className="w-full mt-6"
+                    leftIcon={<Download className="h-4 w-4" />}
+                    onClick={() => handleDownload(selectedImage.image_data, 0)}
+                  >
+                    Download Image
+                  </Button>
                 </div>
               </div>
             </motion.div>
