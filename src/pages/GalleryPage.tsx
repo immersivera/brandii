@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
-import { ArrowLeft, Download, Plus, X, Calendar, Clock } from 'lucide-react';
-import { BrandKit, fetchBrandKitById } from '../lib/supabase';
+import { ArrowLeft, Download, Plus, X, Calendar, Clock, Trash2 } from 'lucide-react';
+import { BrandKit, fetchBrandKitById, deleteGeneratedAsset } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import Masonry from 'react-masonry-css';
 
@@ -14,6 +14,7 @@ export const GalleryPage: React.FC = () => {
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<any | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const breakpointColumns = {
     default: 4,
@@ -54,6 +55,31 @@ export const GalleryPage: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleDeleteImage = async () => {
+    if (!selectedImage || !brandKit) return;
+
+    try {
+      setIsDeleting(true);
+      await deleteGeneratedAsset(selectedImage.id);
+      
+      // Update the brandKit state to remove the deleted image
+      setBrandKit({
+        ...brandKit,
+        generated_assets: brandKit.generated_assets?.filter(
+          asset => asset.id !== selectedImage.id
+        )
+      });
+      
+      setSelectedImage(null);
+      toast.success('Image deleted successfully');
+    } catch (error) {
+      console.error('Error deleting image:', error);
+      toast.error('Failed to delete image');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -246,13 +272,23 @@ export const GalleryPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <Button
-                    className="w-full mt-6"
-                    leftIcon={<Download className="h-4 w-4" />}
-                    onClick={() => handleDownload(selectedImage.image_data, imageAssets.indexOf(selectedImage))}
-                  >
-                    Download Image
-                  </Button>
+                  <div className="flex flex-col gap-3 mt-6">
+                    <Button
+                      leftIcon={<Download className="h-4 w-4" />}
+                      onClick={() => handleDownload(selectedImage.image_data, imageAssets.indexOf(selectedImage))}
+                    >
+                      Download Image
+                    </Button>
+                    <Button
+                      variant="outline"
+                      leftIcon={<Trash2 className="h-4 w-4" />}
+                      onClick={handleDeleteImage}
+                      isLoading={isDeleting}
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    >
+                      Delete Image
+                    </Button>
+                  </div>
                 </div>
               </div>
             </motion.div>
