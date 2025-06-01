@@ -105,7 +105,7 @@ export const LibraryPage: React.FC = () => {
                   onClick={() => navigate('/create')}
                   leftIcon={<Plus className="h-4 w-4" />}
                 >
-                  New Brand Kit
+                  New
                 </Button>
               </div>
             </div>
