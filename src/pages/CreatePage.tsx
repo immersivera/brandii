@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -11,8 +12,8 @@ import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
 import { BRAND_TYPES, BRAND_ADJECTIVES, LOGO_STYLES } from '../lib/constants';
 import { ColorPicker } from '../components/ui/ColorPicker';
 import { saveBrandKit } from '../lib/supabase';
+import { generateBrandSuggestion } from '../lib/openai';
 import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
 
 export const CreatePage: React.FC = () => {
   const { brandDetails, updateBrandDetails, nextStep, prevStep } = useBrand();
@@ -20,44 +21,36 @@ export const CreatePage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const navigate = useNavigate();
 
-  const handleGenerateWithAI = () => {
+  const handleGenerateWithAI = async () => {
     if (!brandDetails.name || !brandDetails.description) {
       toast.error('Please provide a brand name and description');
       return;
     }
     
     setIsGenerating(true);
-    toast.promise(
-      new Promise(resolve => {
-        // Simulate AI generation delay
-        setTimeout(() => {
-          // Update with "AI-generated" values
-          updateBrandDetails({
-            colors: {
-              primary: '#8B5CF6',
-              secondary: '#6D28D9',
-              accent: '#EC4899',
-              background: '#F5F3FF',
-              text: '#111827',
-            },
-            logoOptions: [
-              'modern abstract shape',
-              'minimalist wordmark',
-              'geometric symbol',
-              'unique monogram'
-            ]
-          });
-          resolve('Generated');
-          setIsGenerating(false);
-          nextStep();
-        }, 2000);
-      }),
-      {
-        loading: 'Generating brand assets with AI...',
-        success: 'Brand assets generated successfully!',
-        error: 'Failed to generate brand assets',
-      }
-    );
+    
+    try {
+      const prompt = `Generate a brand identity for a brand called "${brandDetails.name}". 
+        Description: ${brandDetails.description}`;
+      
+      const suggestion = await generateBrandSuggestion(prompt);
+      
+      updateBrandDetails({
+        industry: suggestion.industry,
+        adjective: suggestion.adjective,
+        logoStyle: suggestion.logoStyle,
+        colors: suggestion.colors,
+        typography: suggestion.typography
+      });
+      
+      toast.success('Brand identity generated successfully!');
+      nextStep();
+    } catch (error) {
+      console.error('Error generating brand identity:', error);
+      toast.error('Failed to generate brand identity');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleComplete = async () => {
