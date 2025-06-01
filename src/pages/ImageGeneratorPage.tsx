@@ -9,6 +9,7 @@ import { Switch } from '../components/ui/Switch';
 import { ArrowLeft, ArrowRight, Sparkles, Download, X, Calendar, Clock, Settings } from 'lucide-react';
 import { BrandKit, fetchBrandKitById, saveGeneratedAssets } from '../lib/supabase';
 import { generateImageAssets } from '../lib/openai';
+import { cn } from '../lib/utils';
 import toast from 'react-hot-toast';
 
 const steps = [
