@@ -16,6 +16,20 @@ export async function generateBrandKitZip(brandKit: BrandKit): Promise<Blob> {
   // Add brand guidelines
   zip.file('guidelines.md', generateGuidelines(brandKit));
 
+  // Add logo if available
+  if (brandKit.logo.image) {
+    const base64Data = brandKit.logo.image.split(',')[1];
+    zip.file('logo/logo.png', base64Data, { base64: true });
+  }
+
+  // Add all generated assets if available
+  if (brandKit.generated_assets && brandKit.generated_assets.length > 0) {
+    brandKit.generated_assets.forEach((asset, index) => {
+      const base64Data = asset.image_data.split(',')[1];
+      zip.file(`logo/concept-${index + 1}.png`, base64Data, { base64: true });
+    });
+  }
+
   // Create the ZIP file
   return await zip.generateAsync({ type: 'blob' });
 }
@@ -32,7 +46,7 @@ This brand kit contains:
 1. \`styles/colors.css\` - Color variables and utility classes
 2. \`styles/typography.css\` - Typography styles and font settings
 3. \`guidelines.md\` - Comprehensive brand guidelines
-4. \`logo/\` - Logo files in various formats (coming soon)
+4. \`logo/\` - Logo files in various formats
 
 ## Quick Start
 
