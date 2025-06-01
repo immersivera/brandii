@@ -251,18 +251,18 @@ export const GalleryPage: React.FC = () => {
               className="bg-white dark:bg-gray-900 rounded-xl shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex h-full">
+              <div className="flex flex-col md:flex-row h-full">
                 {/* Image Section */}
-                <div className="w-2/3 bg-black p-4 flex items-center justify-center">
+                <div className="w-full md:w-2/3 bg-black p-4 flex items-center justify-center">
                   <img
                     src={selectedImage.image_data}
                     alt="Selected image"
-                    className="max-w-full max-h-[80vh] object-contain rounded-lg"
+                    className="max-w-full max-h-[50vh] md:max-h-[80vh] object-contain rounded-lg"
                   />
                 </div>
 
                 {/* Details Section */}
-                <div className="w-1/3 p-6 flex flex-col">
+                <div className="w-full md:w-1/3 p-6 flex flex-col">
                   <div className="flex justify-between items-start mb-6">
                     <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
                       Image Details
