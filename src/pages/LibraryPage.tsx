@@ -4,9 +4,10 @@ import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
-import { Search, Plus, Trash2 } from 'lucide-react';
+import { Search, Plus, Trash2, Palette } from 'lucide-react';
 import { fetchBrandKits, BrandKit, deleteBrandKit } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { useBrand } from '../context/BrandContext';
 import toast from 'react-hot-toast';
 
 export const LibraryPage: React.FC = () => {
@@ -14,6 +15,7 @@ export const LibraryPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const { updateBrandDetails } = useBrand();
 
   useEffect(() => {
     const loadBrandKits = async () => {
@@ -40,6 +42,19 @@ export const LibraryPage: React.FC = () => {
       console.error('Failed to delete brand kit:', error);
       toast.error('Failed to delete brand kit');
     }
+  };
+
+  const handleRemix = (brandKit: BrandKit) => {
+    updateBrandDetails({
+      name: `${brandKit.name} Remix`,
+      description: brandKit.description,
+      industry: brandKit.type,
+      colors: brandKit.colors,
+      typography: brandKit.typography,
+      logoStyle: brandKit.logo.type,
+      step: 1
+    });
+    navigate('/create');
   };
 
   const filteredBrandKits = brandKits.filter(kit => 
@@ -130,20 +145,30 @@ export const LibraryPage: React.FC = () => {
                   >
                     <Card hover interactive className="h-full">
                       <CardContent className="p-0">
-                        <div 
-                          className="h-32 w-full rounded-t-xl"
-                          style={{ backgroundColor: brandKit.colors.primary }}
-                        >
-                          <div className="h-full w-full flex items-center justify-center p-4" style={{ 
-                            color: brandKit.colors.primary.startsWith('#f') || 
-                                 brandKit.colors.primary.startsWith('#e') || 
-                                 brandKit.colors.primary.startsWith('#d') || 
-                                 brandKit.colors.primary.startsWith('#c') ? '#000' : '#fff'
-                          }}>
-                            <span className="text-3xl font-bold font-display">
-                              {brandKit.name.charAt(0)}
-                            </span>
-                          </div>
+                        <div className="relative">
+                          {brandKit.generated_assets && brandKit.generated_assets.length > 0 ? (
+                            <img
+                              src={brandKit.generated_assets[0].image_data}
+                              alt={brandKit.name}
+                              className="h-32 w-full object-cover rounded-t-xl"
+                            />
+                          ) : (
+                            <div 
+                              className="h-32 w-full rounded-t-xl"
+                              style={{ backgroundColor: brandKit.colors.primary }}
+                            >
+                              <div className="h-full w-full flex items-center justify-center p-4" style={{ 
+                                color: brandKit.colors.primary.startsWith('#f') || 
+                                     brandKit.colors.primary.startsWith('#e') || 
+                                     brandKit.colors.primary.startsWith('#d') || 
+                                     brandKit.colors.primary.startsWith('#c') ? '#000' : '#fff'
+                              }}>
+                                <span className="text-3xl font-bold font-display">
+                                  {brandKit.name.charAt(0)}
+                                </span>
+                              </div>
+                            </div>
+                          )}
                         </div>
                         
                         <div className="p-6">
@@ -164,7 +189,7 @@ export const LibraryPage: React.FC = () => {
                             ))}
                           </div>
                           
-                          <div className="flex justify-between">
+                          <div className="flex justify-between gap-2">
                             <Button
                               variant="outline"
                               size="sm"
@@ -173,14 +198,25 @@ export const LibraryPage: React.FC = () => {
                               View Details
                             </Button>
                             
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteBrandKit(brandKit.id)}
-                              className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleRemix(brandKit)}
+                                leftIcon={<Palette className="h-4 w-4" />}
+                              >
+                                Remix
+                              </Button>
+                              
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteBrandKit(brandKit.id)}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </CardContent>

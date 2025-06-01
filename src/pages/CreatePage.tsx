@@ -58,12 +58,14 @@ export const CreatePage: React.FC = () => {
     try {
       setIsGeneratingLogos(true);
       
+      // Generate logo images
       const logoUrls = await generateLogoImages(
         brandDetails.name,
         brandDetails.logoStyle || 'wordmark',
         { primary: brandDetails.colors.primary }
       );
       
+      // Save the generated logos in brand details
       updateBrandDetails({ logoOptions: logoUrls });
       
       setIsGeneratingLogos(false);
@@ -82,7 +84,7 @@ export const CreatePage: React.FC = () => {
       };
 
       await toast.promise(
-        saveBrandKit(brandKitData),
+        saveBrandKit(brandKitData, logoUrls),
         {
           loading: 'Saving your brand kit...',
           success: 'Brand kit saved successfully!',
