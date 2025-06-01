@@ -8,15 +8,15 @@ import { Textarea } from '../components/ui/Textarea';
 import { Select } from '../components/ui/Select';
 import { Card, CardContent } from '../components/ui/Card';
 import { useBrand } from '../context/BrandContext';
-import { ArrowLeft, ArrowRight, Sparkles, Loader } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles, Loader, RefreshCw } from 'lucide-react';
 import { BRAND_TYPES, BRAND_ADJECTIVES, LOGO_STYLES } from '../lib/constants';
 import { ColorPicker } from '../components/ui/ColorPicker';
-import { saveBrandKit } from '../lib/supabase';
+import { saveBrandKit, fetchBrandKitById } from '../lib/supabase';
 import { generateBrandSuggestion, generateLogoImages } from '../lib/openai';
 import toast from 'react-hot-toast';
 
 export const CreatePage: React.FC = () => {
-  const { brandDetails, updateBrandDetails, nextStep, prevStep } = useBrand();
+  const { brandDetails, updateBrandDetails, setStep, resetBrandDetails } = useBrand();
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingLogos, setIsGeneratingLogos] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -45,7 +45,7 @@ export const CreatePage: React.FC = () => {
       });
       
       toast.success('Brand identity generated successfully!');
-      nextStep();
+      setStep(2);
     } catch (error) {
       console.error('Error generating brand identity:', error);
       toast.error('Failed to generate brand identity');
@@ -58,12 +58,19 @@ export const CreatePage: React.FC = () => {
     try {
       setIsGeneratingLogos(true);
       
-      // Generate logo images
-      const logoUrls = await generateLogoImages(
-        brandDetails.name,
-        brandDetails.logoStyle || 'wordmark',
-        { primary: brandDetails.colors.primary }
-      );
+      // Generate logo images with enhanced options
+      const logoUrls = await generateLogoImages({
+        brandName: brandDetails.name,
+        style: brandDetails.logoStyle || 'wordmark',
+        colors: {
+          primary: brandDetails.colors.primary,
+          secondary: brandDetails.colors.secondary,
+          accent: brandDetails.colors.accent
+        },
+        description: brandDetails.description,
+        industry: brandDetails.industry,
+        personality: brandDetails.adjective
+      });
       
       // Save the generated logos in brand details
       updateBrandDetails({ logoOptions: logoUrls });
@@ -100,6 +107,40 @@ export const CreatePage: React.FC = () => {
       setIsSaving(false);
     }
   };
+
+  const handleCompleteClick = async () => {
+    // If we have a brand kit ID, check if it has generated assets
+    if (brandDetails.id) {
+      try {
+        const existingKit = await fetchBrandKitById(brandDetails.id);
+        if (existingKit?.generated_assets?.length) {
+          // Ask user if they want to view existing assets or generate new ones
+          if (window.confirm('This brand kit already has generated logos. Would you like to view them instead of generating new ones?')) {
+            navigate(`/kit/${brandDetails.id}`);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Error checking existing brand kit:', error);
+      }
+    }
+    
+    // If no existing assets or user wants new ones, proceed with generation
+    handleComplete();
+  };
+
+  const handleStartOver = () => {
+    if (window.confirm('Are you sure you want to start over? All current progress will be lost.')) {
+      resetBrandDetails();
+      setStep(1);
+    }
+  };
+
+  const steps = [
+    { name: 'Info', step: 1 },
+    { name: 'Design', step: 2 },
+    { name: 'Preview', step: 3 }
+  ];
 
   const renderStep = () => {
     switch (brandDetails.step) {
@@ -165,7 +206,7 @@ export const CreatePage: React.FC = () => {
                 </Button>
                 
                 <Button
-                  onClick={nextStep}
+                  onClick={() => setStep(2)}
                   rightIcon={<ArrowRight className="h-4 w-4" />}
                   disabled={!brandDetails.name || !brandDetails.description}
                 >
@@ -245,14 +286,14 @@ export const CreatePage: React.FC = () => {
               <div className="pt-4 flex justify-between">
                 <Button
                   variant="outline"
-                  onClick={prevStep}
+                  onClick={() => setStep(1)}
                   leftIcon={<ArrowLeft className="h-4 w-4" />}
                 >
                   Previous
                 </Button>
                 
                 <Button
-                  onClick={nextStep}
+                  onClick={() => setStep(3)}
                   rightIcon={<ArrowRight className="h-4 w-4" />}
                 >
                   Next Step
@@ -370,23 +411,32 @@ export const CreatePage: React.FC = () => {
                   </div>
                   
                   <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-                    This is a placeholder for your logo concept. In the full application, 
-                    you would see AI-generated logo options based on your inputs.
+                    Click "Complete" to generate AI-powered logo concepts based on your brand details.
                   </p>
                 </CardContent>
               </Card>
               
               <div className="pt-4 flex justify-between">
-                <Button
-                  variant="outline"
-                  onClick={prevStep}
-                  leftIcon={<ArrowLeft className="h-4 w-4" />}
-                >
-                  Previous
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleStartOver}
+                    leftIcon={<RefreshCw className="h-4 w-4" />}
+                  >
+                    Start Over
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => setStep(2)}
+                    leftIcon={<ArrowLeft className="h-4 w-4" />}
+                  >
+                    Previous
+                  </Button>
+                </div>
                 
                 <Button
-                  onClick={handleComplete}
+                  onClick={handleCompleteClick}
                   rightIcon={<Sparkles className="h-4 w-4" />}
                   isLoading={isSaving || isGeneratingLogos}
                   disabled={isSaving || isGeneratingLogos}
@@ -415,17 +465,31 @@ export const CreatePage: React.FC = () => {
                 </h1>
                 
                 <div className="flex items-center space-x-1 text-sm font-medium text-gray-500 dark:text-gray-400">
-                  <span className={`${brandDetails.step >= 1 ? 'text-brand-600 dark:text-brand-400' : ''}`}>
-                    Info
-                  </span>
-                  <span>→</span>
-                  <span className={`${brandDetails.step >= 2 ? 'text-brand-600 dark:text-brand-400' : ''}`}>
-                    Design
-                  </span>
-                  <span>→</span>
-                  <span className={`${brandDetails.step >= 3 ? 'text-brand-600 dark:text-brand-400' : ''}`}>
-                    Preview
-                  </span>
+                  {steps.map((s, index) => (
+                    <React.Fragment key={s.step}>
+                      <button
+                        onClick={() => {
+                          // Only allow navigation to completed steps or the next step
+                          if (s.step <= Math.max(brandDetails.step, 1)) {
+                            setStep(s.step);
+                          }
+                        }}
+                        className={`px-2 py-1 rounded transition-colors ${
+                          s.step === brandDetails.step
+                            ? 'text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/20'
+                            : s.step < brandDetails.step
+                            ? 'text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20'
+                            : ''
+                        }`}
+                        disabled={s.step > Math.max(brandDetails.step, 1)}
+                      >
+                        {s.name}
+                      </button>
+                      {index < steps.length - 1 && (
+                        <span className="text-gray-400 dark:text-gray-600">→</span>
+                      )}
+                    </React.Fragment>
+                  ))}
                 </div>
               </div>
               

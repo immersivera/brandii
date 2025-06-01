@@ -88,9 +88,26 @@ export const Footer: React.FC = () => {
         </div>
         
         <div className="border-t border-gray-200 dark:border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            &copy; {new Date().getFullYear()} Brandii. All rights reserved.
-          </p>
+          <div className="flex flex-col md:flex-row items-center gap-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              &copy; {new Date().getFullYear()} Brandii. All rights reserved.
+            </p>
+            <div className="flex items-center">
+              <span className="text-sm text-gray-400 dark:text-gray-500 mx-2">Built with</span>
+              <a 
+                href="https://bolt.new"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center hover:opacity-80 transition-opacity"
+              >
+                <img 
+                  src="/black_circle_360x360.png" 
+                  alt="Built with Bolt.new" 
+                  className="h-6 w-6 dark:invert"
+                />
+              </a>
+            </div>
+          </div>
           <div className="flex space-x-6 mt-4 md:mt-0">
             <Link to="/privacy" className="text-sm text-gray-500 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
               Privacy Policy

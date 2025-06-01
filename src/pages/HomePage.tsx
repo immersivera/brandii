@@ -65,12 +65,12 @@ export const HomePage: React.FC = () => {
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 gradient-bg pattern-dots opacity-90"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-gray-50 dark:to-gray-900"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-gray-50 dark:to-gray-900"></div>
         
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-32 sm:pt-32 sm:pb-40 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
             <motion.h1 
-              className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-6"
+              className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6 drop-shadow-lg"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
@@ -79,7 +79,7 @@ export const HomePage: React.FC = () => {
             </motion.h1>
             
             <motion.p 
-              className="text-xl text-white/90 mb-8 max-w-2xl mx-auto"
+              className="text-xl text-gray-800 dark:text-white/90 mb-8 max-w-2xl mx-auto drop-shadow"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
@@ -105,27 +105,44 @@ export const HomePage: React.FC = () => {
               <Button 
                 variant="outline" 
                 size="lg" 
-                className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+                className="bg-white/10 backdrop-blur-sm border-white/20 text-gray-900 dark:text-white hover:bg-white/20"
                 onClick={() => navigate('/library')}
               >
                 View Examples
               </Button>
             </motion.div>
           </div>
-          
+        </div>
+      </section>
+
+      {/* Powered by Bolt Section */}
+      <section className="py-12 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div 
-            className="mt-16 max-w-5xl mx-auto"
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
+            className="flex flex-col items-center justify-center text-center"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            viewport={{ once: true }}
           >
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-2xl shadow-xl overflow-hidden">
+            <a 
+              href="https://bolt.new" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+            >
               <img 
-                src="https://images.pexels.com/photos/4125349/pexels-photo-4125349.jpeg?auto=compress&cs=tinysrgb&w=1200" 
-                alt="Brandii Dashboard Preview" 
-                className="w-full h-auto object-cover object-top"
+                src="/black_circle_360x360.png" 
+                alt="Bolt.new" 
+                className="h-8 w-8 dark:invert"
               />
-            </div>
+              <span className="text-lg font-medium text-gray-600 dark:text-gray-300">
+                Built with Bolt.new
+              </span>
+            </a>
+            <p className="mt-3 text-sm text-gray-500 dark:text-gray-400 max-w-md">
+              Powered by the next generation of web development tools
+            </p>
           </motion.div>
         </div>
       </section>
@@ -212,7 +229,7 @@ export const HomePage: React.FC = () => {
                 viewport={{ once: true }}
               >
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 relative z-10">
-                  <div className="text-5xl font-bold text-brand-100 dark:text-brand-900/50 mb-4">
+                  <div className="text-5xl font-bold bg-gradient-to-r from-brand-400 to-accent-400 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(139,92,246,0.3)] mb-4">
                     {step.number}
                   </div>
                   <div className="bg-brand-100 dark:bg-brand-900/30 w-10 h-10 rounded-lg flex items-center justify-center mb-4">

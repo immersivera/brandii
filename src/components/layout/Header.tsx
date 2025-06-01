@@ -34,10 +34,14 @@ export const Header: React.FC = () => {
         <div className="flex items-center justify-between h-16 sm:h-20">
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2">
-              <Palette className="h-8 w-8 text-brand-600 dark:text-brand-400" />
+              <Palette className={`h-8 w-8 ${
+                isTransparent 
+                  ? 'text-gray-900 dark:text-brand-400'
+                  : 'text-brand-600 dark:text-brand-400'
+              }`} />
               <span className={`text-xl font-bold ${
                 isTransparent 
-                  ? 'text-white' 
+                  ? 'text-gray-900 dark:text-white drop-shadow-sm'
                   : 'text-gray-900 dark:text-white'
               }`}>
                 Brandii
@@ -51,15 +55,18 @@ export const Header: React.FC = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`text-sm font-medium transition-colors ${
+                className={`text-sm font-medium transition-colors relative group ${
                   location.pathname === link.path
                     ? 'text-brand-600 dark:text-brand-400'
                     : isTransparent
-                      ? 'text-white/90 hover:text-white'
+                      ? 'text-gray-900 dark:text-white/90 hover:text-gray-900 dark:hover:text-white'
                       : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
                 {link.name}
+                <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-brand-600 dark:bg-brand-400 transition-all duration-300 group-hover:w-full ${
+                  location.pathname === link.path ? 'w-full' : ''
+                }`} />
               </Link>
             ))}
             
@@ -68,7 +75,7 @@ export const Header: React.FC = () => {
               size="sm"
               onClick={toggleTheme}
               aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-              className={isTransparent ? 'text-white' : ''}
+              className={isTransparent ? 'text-gray-900 dark:text-white' : ''}
             >
               {theme === 'light' ? (
                 <Moon className="h-5 w-5" />
@@ -85,7 +92,7 @@ export const Header: React.FC = () => {
               size="sm"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
-              className={isTransparent && !isMenuOpen ? 'text-white' : ''}
+              className={isTransparent && !isMenuOpen ? 'text-gray-900 dark:text-white' : ''}
             >
               {isMenuOpen ? (
                 <X className="h-5 w-5" />
@@ -110,7 +117,7 @@ export const Header: React.FC = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`block px-3 py-2 rounded-md text-base font-medium ${
+                className={`block px-3 py-2 rounded-md text-base font-medium relative group ${
                   location.pathname === link.path
                     ? 'bg-brand-50 dark:bg-gray-800 text-brand-600 dark:text-brand-400'
                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -118,6 +125,9 @@ export const Header: React.FC = () => {
                 onClick={() => setIsMenuOpen(false)}
               >
                 {link.name}
+                <span className={`absolute bottom-1 left-3 w-0 h-0.5 bg-brand-600 dark:bg-brand-400 transition-all duration-300 group-hover:w-[calc(100%-24px)] ${
+                  location.pathname === link.path ? 'w-[calc(100%-24px)]' : ''
+                }`} />
               </Link>
             ))}
             
