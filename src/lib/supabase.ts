@@ -124,7 +124,10 @@ export async function fetchBrandKits(): Promise<BrandKit[]> {
 
   const { data: brandKits, error: brandKitsError } = await supabase
     .from('brand_kits')
-    .select('*')
+    .select(`
+      *,
+      generated_assets (*)
+    `)
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
@@ -133,33 +136,16 @@ export async function fetchBrandKits(): Promise<BrandKit[]> {
     throw brandKitsError;
   }
 
-  // Fetch generated assets for each brand kit
-  const brandKitsWithAssets = await Promise.all(
-    brandKits.map(async (kit) => {
-      const { data: assets, error: assetsError } = await supabase
-        .from('generated_assets')
-        .select('*')
-        .eq('brand_kit_id', kit.id);
-
-      if (assetsError) {
-        console.error('Error fetching generated assets:', assetsError);
-        return kit;
-      }
-
-      return {
-        ...kit,
-        generated_assets: assets || []
-      };
-    })
-  );
-
-  return brandKitsWithAssets || [];
+  return brandKits || [];
 }
 
 export async function fetchBrandKitById(id: string): Promise<BrandKit | null> {
   const { data: brandKit, error: brandKitError } = await supabase
     .from('brand_kits')
-    .select('*')
+    .select(`
+      *,
+      generated_assets (*)
+    `)
     .eq('id', id)
     .single();
 
@@ -168,24 +154,7 @@ export async function fetchBrandKitById(id: string): Promise<BrandKit | null> {
     throw brandKitError;
   }
 
-  if (!brandKit) {
-    return null;
-  }
-
-  const { data: assets, error: assetsError } = await supabase
-    .from('generated_assets')
-    .select('*')
-    .eq('brand_kit_id', id);
-
-  if (assetsError) {
-    console.error('Error fetching generated assets:', assetsError);
-    return brandKit;
-  }
-
-  return {
-    ...brandKit,
-    generated_assets: assets || []
-  };
+  return brandKit;
 }
 
 export async function saveGeneratedAssets(brandKitId: string, imageDataArray: string[]): Promise<GeneratedAsset[]> {

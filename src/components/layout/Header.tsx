@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
-import { Palette, Moon, Sun, Menu, X } from 'lucide-react';
+import { Moon, Sun, Menu, X } from 'lucide-react';
 import { Button } from '../ui/Button';
 
 export const Header: React.FC = () => {
@@ -34,18 +34,11 @@ export const Header: React.FC = () => {
         <div className="flex items-center justify-between h-16 sm:h-20">
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2">
-              <Palette className={`h-8 w-8 ${
-                isTransparent 
-                  ? 'text-gray-900 dark:text-brand-400'
-                  : 'text-brand-600 dark:text-brand-400'
-              }`} />
-              <span className={`text-xl font-bold ${
-                isTransparent 
-                  ? 'text-gray-900 dark:text-white drop-shadow-sm'
-                  : 'text-gray-900 dark:text-white'
-              }`}>
-                Brandii
-              </span>
+              <img 
+                src={theme === 'dark' ? "/logo-white.png" : "/logo.png"}
+                alt="Brandii" 
+                className="h-8 w-auto"
+              />
             </Link>
           </div>
           

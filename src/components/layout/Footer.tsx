@@ -1,18 +1,22 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Palette, Twitter, Instagram, Github as GitHub } from 'lucide-react';
+import { Twitter, Instagram, Github as GitHub } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
 
 export const Footer: React.FC = () => {
+  const { theme } = useTheme();
+  
   return (
     <footer className="bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center space-x-2 mb-4">
-              <Palette className="h-6 w-6 text-brand-600 dark:text-brand-400" />
-              <span className="text-xl font-bold text-gray-900 dark:text-white">
-                Brandii
-              </span>
+              <img 
+                src={theme === 'dark' ? "/logo-white.png" : "/logo.png"}
+                alt="Brandii" 
+                className="h-8 w-auto"
+              />
             </div>
             <p className="text-gray-600 dark:text-gray-400 mb-4 max-w-md">
               Create stunning brand kits with AI-powered tools. Generate color palettes, 
