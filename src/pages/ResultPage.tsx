@@ -13,6 +13,9 @@ export const ResultPage: React.FC = () => {
   const { brandDetails } = useBrand();
   const navigate = useNavigate();
   const [isDownloading, setIsDownloading] = useState(false);
+  const [selectedLogo, setSelectedLogo] = useState<string | null>(
+    brandDetails.logoOptions?.[0] || null
+  );
 
   const handleDownload = async () => {
     try {
@@ -257,35 +260,46 @@ export const ResultPage: React.FC = () => {
                     Logo Concepts
                   </h3>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 flex items-center justify-center bg-white dark:bg-gray-800 h-40">
-                      <div 
-                        className="text-3xl font-bold"
-                        style={{ color: brandDetails.colors.primary }}
-                      >
-                        {brandDetails.name}
+                  {brandDetails.logoOptions ? (
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-2 gap-4">
+                        {brandDetails.logoOptions.map((url, index) => (
+                          <div
+                            key={index}
+                            className={`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
+                              selectedLogo === url
+                                ? 'border-brand-600 shadow-lg'
+                                : 'border-gray-200 dark:border-gray-700'
+                            }`}
+                            onClick={() => setSelectedLogo(url)}
+                          >
+                            <img
+                              src={url}
+                              alt={`Logo concept ${index + 1}`}
+                              className="w-full h-auto"
+                            />
+                            {selectedLogo === url && (
+                              <div className="absolute inset-0 bg-brand-600/10 flex items-center justify-center">
+                                <div className="bg-brand-600 text-white px-3 py-1 rounded-full text-sm">
+                                  Selected
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
+                      
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Click on a logo concept to select it. The selected logo will be included in your brand kit download.
+                      </p>
                     </div>
-                    
-                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 flex items-center justify-center bg-white dark:bg-gray-800 h-40">
-                      <div 
-                        className="flex flex-col items-center"
-                        style={{ color: brandDetails.colors.primary }}
-                      >
-                        <div className="text-5xl font-bold mb-1">
-                          {brandDetails.name.charAt(0)}
-                        </div>
-                        <div className="text-sm font-medium">
-                          {brandDetails.name}
-                        </div>
-                      </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <p className="text-gray-500 dark:text-gray-400">
+                        Logo concepts are being generated...
+                      </p>
                     </div>
-                  </div>
-                  
-                  <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-                    These are concept visualizations. In the full application, 
-                    you would see AI-generated logo designs based on your brand details.
-                  </p>
+                  )}
                 </CardContent>
               </Card>
               
