@@ -70,17 +70,30 @@ export async function generateBrandSuggestion(prompt: string): Promise<AIBrandSu
   return JSON.parse(completion.choices[0].message.content);
 }
 
-export async function generateLogoImages(brandName: string, style: string, colors: { primary: string }): Promise<string[]> {
+interface LogoGenerationOptions {
+  brandName: string;
+  style: string;
+  colors: {
+    primary: string;
+    secondary: string;
+    accent: string;
+  };
+  description: string;
+  industry: string;
+  personality: string;
+}
+
+export async function generateLogoImages(options: LogoGenerationOptions): Promise<string[]> {
   const styleDescriptions = {
-    wordmark: `a minimalist, modern wordmark logo design for "${brandName}" using the color ${colors.primary}. The design should be clean, professional, and versatile.`,
-    lettermark: `a sophisticated lettermark logo using the letter "${brandName[0]}" in ${colors.primary}. The design should be bold and memorable.`,
-    abstract: `an abstract, geometric logo mark that represents "${brandName}" using ${colors.primary}. The design should be unique and contemporary.`,
-    mascot: `a friendly, character-based logo design for "${brandName}" incorporating ${colors.primary}. The mascot should be approachable and memorable.`,
-    combination: `a combination mark logo for "${brandName}" that combines a wordmark with a distinctive symbol, using ${colors.primary}. The design should be balanced and professional.`,
-    emblem: `an emblem-style logo for "${brandName}" with contained typography and imagery, using ${colors.primary}. The design should be classic and authoritative.`
+    wordmark: `a minimalist, modern wordmark logo design for "${options.brandName}" using the colors ${options.colors.primary} (primary), ${options.colors.secondary} (secondary), and ${options.colors.accent} (accent). The design should be clean, professional, and versatile. Brand description: ${options.description}. Industry: ${options.industry}. Brand personality: ${options.personality}.`,
+    lettermark: `a sophisticated lettermark logo using the letter "${options.brandName[0]}" with colors ${options.colors.primary} (primary), ${options.colors.secondary} (secondary), and ${options.colors.accent} (accent). The design should be bold and memorable. Brand description: ${options.description}. Industry: ${options.industry}. Brand personality: ${options.personality}.`,
+    abstract: `an abstract, geometric logo mark that represents "${options.brandName}" using colors ${options.colors.primary} (primary), ${options.colors.secondary} (secondary), and ${options.colors.accent} (accent). The design should be unique and contemporary. Brand description: ${options.description}. Industry: ${options.industry}. Brand personality: ${options.personality}.`,
+    mascot: `a friendly, character-based logo design for "${options.brandName}" incorporating colors ${options.colors.primary} (primary), ${options.colors.secondary} (secondary), and ${options.colors.accent} (accent). The mascot should be approachable and memorable. Brand description: ${options.description}. Industry: ${options.industry}. Brand personality: ${options.personality}.`,
+    combination: `a combination mark logo for "${options.brandName}" that combines a wordmark with a distinctive symbol, using colors ${options.colors.primary} (primary), ${options.colors.secondary} (secondary), and ${options.colors.accent} (accent). The design should be balanced and professional. Brand description: ${options.description}. Industry: ${options.industry}. Brand personality: ${options.personality}.`,
+    emblem: `an emblem-style logo for "${options.brandName}" with contained typography and imagery, using colors ${options.colors.primary} (primary), ${options.colors.secondary} (secondary), and ${options.colors.accent} (accent). The design should be classic and authoritative. Brand description: ${options.description}. Industry: ${options.industry}. Brand personality: ${options.personality}.`
   };
 
-  const prompt = styleDescriptions[style as keyof typeof styleDescriptions] || styleDescriptions.wordmark;
+  const prompt = styleDescriptions[options.style as keyof typeof styleDescriptions] || styleDescriptions.wordmark;
   
   try {
     console.log("Generating logo with prompt:", prompt.substring(0, 100) + "...");
