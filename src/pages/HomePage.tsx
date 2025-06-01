@@ -64,6 +64,13 @@ export const HomePage: React.FC = () => {
     <Layout>
       {/* Hero Section */}
       <section className="relative overflow-hidden">
+        {/* Animated background shapes */}
+        <div className="splash-shapes">
+          <div className="splash-shape splash-shape-1"></div>
+          <div className="splash-shape splash-shape-2"></div>
+          <div className="splash-shape splash-shape-3"></div>
+        </div>
+
         <div className="absolute inset-0 gradient-bg pattern-dots opacity-90"></div>
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-gray-50 dark:to-gray-900"></div>
         
@@ -115,38 +122,6 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Powered by Bolt Section */}
-      <section className="py-12 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div 
-            className="flex flex-col items-center justify-center text-center"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            viewport={{ once: true }}
-          >
-            <a 
-              href="https://bolt.new" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-            >
-              <img 
-                src="/black_circle_360x360.png" 
-                alt="Bolt.new" 
-                className="h-8 w-8 dark:invert"
-              />
-              <span className="text-lg font-medium text-gray-600 dark:text-gray-300">
-                Built with Bolt.new
-              </span>
-            </a>
-            <p className="mt-3 text-sm text-gray-500 dark:text-gray-400 max-w-md">
-              Powered by the next generation of web development tools
-            </p>
-          </motion.div>
-        </div>
-      </section>
-      
       {/* Features Section */}
       <section className="py-20 bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -199,7 +174,7 @@ export const HomePage: React.FC = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto relative">
             {[
               {
                 number: '01',
@@ -244,8 +219,8 @@ export const HomePage: React.FC = () => {
                 </div>
                 
                 {index < 2 && (
-                  <div className="hidden md:block absolute top-1/2 -right-12 transform -translate-y-1/2 text-brand-300 dark:text-brand-800">
-                    <ArrowRight className="h-8 w-8" />
+                  <div className="hidden md:flex absolute top-1/2 -right-16 transform -translate-y-1/2 z-20 items-center justify-center w-24">
+                    <ArrowRight className="h-8 w-8 text-brand-300 dark:text-brand-800" />
                   </div>
                 )}
               </motion.div>
