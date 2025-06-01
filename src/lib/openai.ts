@@ -80,29 +80,30 @@ export async function generateLogoImages(brandName: string, style: string, color
     emblem: `an emblem-style logo for "${brandName}" with contained typography and imagery, using ${colors.primary}. The design should be classic and authoritative.`
   };
 
-  // const prompt = styleDescriptions[style as keyof typeof styleDescriptions] || styleDescriptions.wordmark;
-   const prompt = `
-Create a high-resolution, ${adjective} **${logoStyle}** logo for a **${industry}** brand named “${name}”.
+  const prompt = styleDescriptions[style as keyof typeof styleDescriptions] || styleDescriptions.wordmark;
+  
+//    const prompt = `
+// Create a high-resolution, ${adjective} **${logoStyle}** logo for a **${industry}** brand named “${name}”.
 
-**Brand essence:** ${description}
+// **Brand essence:** ${description}
 
-**Color palette**
-• Primary: ${colors.primary}  
-• Secondary: ${colors.secondary}  
-• Accent: ${colors.accent}  
-• Background the logo must work on: ${colors.background}  
-• Text color guideline: ${colors.text}  
+// **Color palette**
+// • Primary: ${colors.primary}  
+// • Secondary: ${colors.secondary}  
+// • Accent: ${colors.accent}  
+// • Background the logo must work on: ${colors.background}  
+// • Text color guideline: ${colors.text}  
 
-**Typography reference**  
-• Heading: "${typography.headingFont}"  
-• Body: "${typography.bodyFont}"
+// **Typography reference**  
+// • Heading: "${typography.headingFont}"  
+// • Body: "${typography.bodyFont}"
 
-**Stylistic guidance**  
-• Reflect the ${adjective} personality of the brand.  
-• Use the ${logoStyle} approach (e.g.\ wordmark, lettermark, emblem …​).  
-• Ensure strong contrast against ${colors.background}.  
-• No mock-ups, watermarks, or realistic stationery shots—return a clean, centered logo on a transparent background.
-  `.trim();
+// **Stylistic guidance**  
+// • Reflect the ${adjective} personality of the brand.  
+// • Use the ${logoStyle} approach (e.g.\ wordmark, lettermark, emblem …​).  
+// • Ensure strong contrast against ${colors.background}.  
+// • No mock-ups, watermarks, or realistic stationery shots—return a clean, centered logo on a transparent background.
+//   `.trim();
 
   try {
     console.log("Generating logo with prompt:", prompt.substring(0, 100) + "...");
