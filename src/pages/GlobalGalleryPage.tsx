@@ -3,8 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Layout } from '../components/layout/Layout';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Download, X, Calendar, Clock } from 'lucide-react';
+import { Download, X, Calendar, Clock, ExternalLink } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useUser } from '../context/UserContext';
+import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 interface ImageDetails {
@@ -12,9 +14,11 @@ interface ImageDetails {
   image_data: string;
   created_at: string;
   brand_kit: {
+    id: string;
     name: string;
     description: string;
     type: string;
+    user_id: string;
   } | null;
 }
 
@@ -22,6 +26,7 @@ export const GlobalGalleryPage: React.FC = () => {
   const [images, setImages] = useState<ImageDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<ImageDetails | null>(null);
+  const { userId } = useUser();
 
   useEffect(() => {
     const fetchImages = async () => {
@@ -33,9 +38,11 @@ export const GlobalGalleryPage: React.FC = () => {
             image_data, 
             created_at,
             brand_kit:brand_kit_id (
+              id,
               name,
               description,
-              type
+              type,
+              user_id
             )
           `)
           .eq('type', 'image')
@@ -79,6 +86,10 @@ export const GlobalGalleryPage: React.FC = () => {
       minute: 'numeric',
       hour12: true,
     }).format(date);
+  };
+
+  const isImageOwner = (image: ImageDetails) => {
+    return image.brand_kit?.user_id === userId;
   };
 
   if (isLoading) {
@@ -219,6 +230,16 @@ export const GlobalGalleryPage: React.FC = () => {
                         <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                           {selectedImage.brand_kit.description}
                         </p>
+                        {isImageOwner(selectedImage) && (
+                          <Link
+                            to={`/kit/${selectedImage.brand_kit.id}`}
+                            className="inline-flex items-center mt-2 text-sm text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ExternalLink className="h-4 w-4 mr-1" />
+                            View Brand Kit
+                          </Link>
+                        )}
                       </div>
                     )}
 
