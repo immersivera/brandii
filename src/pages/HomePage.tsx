@@ -229,7 +229,7 @@ export const HomePage: React.FC = () => {
                 viewport={{ once: true }}
               >
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 relative z-10">
-                  <div className="text-5xl font-bold text-brand-100 dark:text-brand-900/50 mb-4">
+                  <div className="text-5xl font-bold bg-gradient-to-r from-brand-400 to-accent-400 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(139,92,246,0.3)] mb-4">
                     {step.number}
                   </div>
                   <div className="bg-brand-100 dark:bg-brand-900/30 w-10 h-10 rounded-lg flex items-center justify-center mb-4">
