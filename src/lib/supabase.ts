@@ -29,7 +29,7 @@ export type UserProfile = {
 export type GeneratedAsset = {
   id: string;
   brand_kit_id: string;
-  image_data: string;
+  image_data?: string; // Made optional since we don't always fetch it
   type: 'logo' | 'image';
   created_at: string;
 };
@@ -123,11 +123,16 @@ export async function fetchBrandKits(): Promise<BrandKit[]> {
     return [];
   }
 
+  // Only fetch essential fields from generated_assets to prevent timeout
   const { data: brandKits, error: brandKitsError } = await supabase
     .from('brand_kits')
     .select(`
       *,
-      generated_assets (*)
+      generated_assets (
+        id,
+        type,
+        created_at
+      )
     `)
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
