@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
@@ -11,17 +11,49 @@ import { useBrand } from '../context/BrandContext';
 import { ArrowLeft, ArrowRight, Sparkles, Loader, RefreshCw } from 'lucide-react';
 import { BRAND_TYPES, BRAND_ADJECTIVES, LOGO_STYLES } from '../lib/constants';
 import { ColorPicker } from '../components/ui/ColorPicker';
-import { saveBrandKit, fetchBrandKitById } from '../lib/supabase';
+import { saveBrandKit, fetchBrandKits, fetchBrandKitById } from '../lib/supabase';
 import { generateBrandSuggestion, generateLogoImages } from '../lib/openai';
 import toast from 'react-hot-toast';
 
 export const CreatePage: React.FC = () => {
   const { brandDetails, updateBrandDetails, setStep, resetBrandDetails } = useBrand();
+  const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingColors, setIsGeneratingColors] = useState(false);
   const [isGeneratingLogos, setIsGeneratingLogos] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkExistingBrandKits = async () => {
+      try {
+        const kits = await fetchBrandKits();
+        if (kits.length > 0) {
+          navigate('/dashboard');
+        }
+      } catch (error) {
+        console.error('Error checking brand kits:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkExistingBrandKits();
+  }, [navigate]);
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-center items-center py-20">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-600"></div>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   const handleGenerateWithAI = async () => {
     if (!brandDetails.name || !brandDetails.description) {
