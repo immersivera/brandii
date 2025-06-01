@@ -30,6 +30,7 @@ export type GeneratedAsset = {
   id: string;
   brand_kit_id: string;
   image_data: string;
+  type: 'logo' | 'image';
   created_at: string;
 };
 
@@ -157,10 +158,15 @@ export async function fetchBrandKitById(id: string): Promise<BrandKit | null> {
   return brandKit;
 }
 
-export async function saveGeneratedAssets(brandKitId: string, imageDataArray: string[]): Promise<GeneratedAsset[]> {
+export async function saveGeneratedAssets(
+  brandKitId: string, 
+  imageDataArray: string[], 
+  type: 'logo' | 'image' = 'logo'
+): Promise<GeneratedAsset[]> {
   const assets = imageDataArray.map(imageData => ({
     brand_kit_id: brandKitId,
-    image_data: imageData
+    image_data: imageData,
+    type
   }));
 
   const { data, error } = await supabase
@@ -203,7 +209,7 @@ export async function saveBrandKit(brandKit: Omit<BrandKit, 'id' | 'created_at' 
 
   if (generatedLogoImages && generatedLogoImages.length > 0) {
     try {
-      const assets = await saveGeneratedAssets(savedBrandKit.id, generatedLogoImages);
+      const assets = await saveGeneratedAssets(savedBrandKit.id, generatedLogoImages, 'logo');
       return {
         ...savedBrandKit,
         generated_assets: assets
