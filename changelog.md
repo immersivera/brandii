@@ -1,5 +1,26 @@
 # Changelog
 
+## Version 0.2.0 (Latest)
+
+### Added
+- Pagination in brand kit library (6 items per page)
+- "Start Over" button in preview and results screens
+- Enhanced logo generation with more brand context
+- Improved industry and personality display in results
+
+### Changed
+- Updated logo generation to include more brand details:
+  - Primary, secondary, and accent colors
+  - Brand description
+  - Industry type
+  - Brand personality
+- Improved brand kit display in library
+- Enhanced user experience with pagination controls
+
+### Fixed
+- Industry and personality text display in results page
+- Search functionality in paginated library view
+
 ## Version 0.1.0 (Initial Release)
 
 ### Added
