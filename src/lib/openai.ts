@@ -66,7 +66,6 @@ export async function generateBrandSuggestion(prompt: string): Promise<AIBrandSu
     ],
     response_format: { type: "json_object" }
   });
-console.log('ai response',JSON.parse(completion.choices[0].message.content))
   return JSON.parse(completion.choices[0].message.content);
 }
 
