@@ -73,15 +73,26 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
         </label>
       )}
       
-      <motion.button
-        type="button"
-        className="w-12 h-12 rounded-lg shadow-sm border border-gray-300 dark:border-gray-700 transition-all"
-        style={{ backgroundColor: color }}
-        onClick={() => setIsOpen(!isOpen)}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        aria-label={`Select color: current value is ${color}`}
-      />
+      <div className="flex items-center gap-2">
+        <motion.button
+          type="button"
+          className="w-12 h-12 rounded-lg shadow-sm border border-gray-300 dark:border-gray-700 transition-all"
+          style={{ backgroundColor: color }}
+          onClick={() => setIsOpen(!isOpen)}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          aria-label={`Select color: current value is ${color}`}
+        />
+        
+        <input
+          type="text"
+          value={hexInput}
+          onChange={(e) => handleHexInputChange(formatHexInput(e.target.value))}
+          onBlur={handleHexInputBlur}
+          className="w-24 px-2 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 rounded-md border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+          placeholder="#000000"
+        />
+      </div>
       
       {isOpen && (
         <motion.div 
@@ -91,29 +102,24 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.2 }}
         >
-          <HexColorPicker 
-            color={color} 
-            onChange={(newColor) => {
-              onChange(newColor);
-              setHexInput(newColor);
-            }} 
-          />
-          <div className="mt-2 flex items-center justify-between bg-white dark:bg-gray-800 p-2 rounded-md shadow-md border border-gray-200 dark:border-gray-700">
-            <input
-              type="text"
-              value={hexInput}
-              onChange={(e) => handleHexInputChange(formatHexInput(e.target.value))}
-              onBlur={handleHexInputBlur}
-              className="w-24 px-2 py-1 text-sm bg-gray-100 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-brand-500"
-              placeholder="#000000"
+          <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+            <HexColorPicker 
+              color={color} 
+              onChange={(newColor) => {
+                onChange(newColor);
+                setHexInput(newColor);
+              }} 
             />
-            <button
-              type="button"
-              className="ml-2 text-xs bg-brand-100 text-brand-800 dark:bg-brand-900 dark:text-brand-200 px-2 py-1 rounded hover:bg-brand-200 dark:hover:bg-brand-800 transition-colors"
-              onClick={() => setIsOpen(false)}
-            >
-              Done
-            </button>
+            
+            <div className="mt-3 flex justify-end">
+              <button
+                type="button"
+                className="text-xs bg-brand-100 text-brand-800 dark:bg-brand-900 dark:text-brand-200 px-3 py-1.5 rounded-md hover:bg-brand-200 dark:hover:bg-brand-800 transition-colors"
+                onClick={() => setIsOpen(false)}
+              >
+                Done
+              </button>
+            </div>
           </div>
         </motion.div>
       )}
