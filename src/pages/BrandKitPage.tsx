@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardFooter } from '../components/ui/Card';
-import { ArrowLeft, Download, Copy, Share2, Trash2, Image, Plus } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Download, Copy, Share2, Trash2, Image, Plus } from 'lucide-react';
 import { BrandKit, fetchBrandKitById, deleteBrandKit, updateBrandKit } from '../lib/supabase';
 import { generateBrandKitZip } from '../lib/download';
 import toast from 'react-hot-toast';
