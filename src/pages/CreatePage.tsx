@@ -16,8 +16,8 @@ export const CreatePage: React.FC = () => {
   useEffect(() => {
     const checkExistingBrandKits = async () => {
       try {
-        const kits = await fetchBrandKits();
-        setHasExistingBrandKits(kits.length > 0);
+        const { data } = await fetchBrandKits();
+        setHasExistingBrandKits(data.length > 0);
       } catch (error) {
         console.error('Error checking brand kits:', error);
         toast.error('Failed to check existing brand kits');
@@ -28,6 +28,14 @@ export const CreatePage: React.FC = () => {
 
     checkExistingBrandKits();
   }, []);
+
+  const handleMediaAssetsClick = () => {
+    if (!hasExistingBrandKits) {
+      toast.error('Please create a brand kit first before generating media assets');
+      return;
+    }
+    navigate('/dashboard');
+  };
 
   if (isLoading) {
     return (
@@ -92,7 +100,7 @@ export const CreatePage: React.FC = () => {
                 <Card 
                   hover 
                   interactive 
-                  onClick={() => navigate('/dashboard')} 
+                  onClick={handleMediaAssetsClick}
                   className={`h-full ${!hasExistingBrandKits ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <CardContent className="p-8 flex flex-col items-center text-center">
