@@ -92,7 +92,7 @@ export async function generateLogoImages(brandName: string, style: string, color
       style: "natural",
       response_format: "url"
     });
-
+console.log('imageurlOpenai', response)
     return response.data.map(image => image.url);
   } catch (error) {
     console.error('Error generating logo images:', error);
