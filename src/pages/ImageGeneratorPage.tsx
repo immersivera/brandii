@@ -19,6 +19,7 @@ export const ImageGeneratorPage: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
   const [includeBrandAssets, setIncludeBrandAssets] = useState(true);
+  const [includeLogo, setIncludeLogo] = useState(false);
 
   useEffect(() => {
     const loadBrandKit = async () => {
@@ -48,12 +49,24 @@ export const ImageGeneratorPage: React.FC = () => {
   const getBrandAssetsPrompt = () => {
     if (!brandKit || !includeBrandAssets) return '';
 
-    return `
+    let assetsPrompt = `
       Use the following brand assets in the image:
       Colors: Primary ${brandKit.colors.primary}, Secondary ${brandKit.colors.secondary}, Accent ${brandKit.colors.accent}
       Style: Match the brand's ${brandKit.type} industry style and maintain consistency with the brand's visual identity.
       Typography: Use fonts similar to ${brandKit.typography.headingFont} for headings and ${brandKit.typography.bodyFont} for body text if text is included.
     `;
+
+    // Add logo context if selected and available
+    if (includeLogo && brandKit.logo_selected_asset_id && brandKit.generated_assets) {
+      const selectedLogo = brandKit.generated_assets.find(
+        asset => asset.id === brandKit.logo_selected_asset_id
+      );
+      if (selectedLogo?.image_data) {
+        assetsPrompt += `\nIncorporate the brand logo: ${selectedLogo.image_data}`;
+      }
+    }
+
+    return assetsPrompt;
   };
 
   const handleGenerate = async () => {
@@ -91,7 +104,7 @@ export const ImageGeneratorPage: React.FC = () => {
   if (isLoading) {
     return (
       <Layout>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
+        <div className="min-h-screen bg-white dark:bg-gray-900 py-12">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-center items-center py-20">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-600"></div>
@@ -104,9 +117,13 @@ export const ImageGeneratorPage: React.FC = () => {
 
   if (!brandKit) return null;
 
+  const hasLogo = brandKit.logo_selected_asset_id && brandKit.generated_assets?.some(
+    asset => asset.id === brandKit.logo_selected_asset_id
+  );
+
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
+      <div className="min-h-screen bg-white dark:bg-gray-900 py-12">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto">
             <div className="flex items-center justify-between mb-8">
@@ -140,20 +157,45 @@ export const ImageGeneratorPage: React.FC = () => {
                     className="h-32"
                   />
 
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="includeBrandAssets"
-                      checked={includeBrandAssets}
-                      onChange={(e) => setIncludeBrandAssets(e.target.checked)}
-                      className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
-                    />
-                    <label 
-                      htmlFor="includeBrandAssets"
-                      className="text-sm text-gray-700 dark:text-gray-300"
-                    >
-                      Include brand colors, typography, and style in the generation
-                    </label>
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="includeBrandAssets"
+                        checked={includeBrandAssets}
+                        onChange={(e) => {
+                          setIncludeBrandAssets(e.target.checked);
+                          if (!e.target.checked) {
+                            setIncludeLogo(false);
+                          }
+                        }}
+                        className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
+                      />
+                      <label 
+                        htmlFor="includeBrandAssets"
+                        className="text-sm text-gray-700 dark:text-gray-300"
+                      >
+                        Include brand colors, typography, and style in the generation
+                      </label>
+                    </div>
+
+                    {includeBrandAssets && hasLogo && (
+                      <div className="flex items-center space-x-2 ml-6">
+                        <input
+                          type="checkbox"
+                          id="includeLogo"
+                          checked={includeLogo}
+                          onChange={(e) => setIncludeLogo(e.target.checked)}
+                          className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
+                        />
+                        <label 
+                          htmlFor="includeLogo"
+                          className="text-sm text-gray-700 dark:text-gray-300"
+                        >
+                          Include brand logo in the generated images
+                        </label>
+                      </div>
+                    )}
                   </div>
 
                   <Button
