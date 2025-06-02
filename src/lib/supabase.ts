@@ -71,25 +71,20 @@ export type PaginatedResponse<T> = {
 
 export async function uploadImageToStorage(file: File, userId: string): Promise<string> {
   try {
-    // First check if the bucket exists
-    const { data: buckets } = await supabase.storage.listBuckets();
-    const bucketExists = buckets?.some(bucket => bucket.name === 'brand-logos');
-
-    if (!bucketExists) {
-      throw new Error('Storage is not properly configured. Please contact support.');
-    }
-
     const fileExt = file.name.split('.').pop();
     const fileName = `${uuidv4()}.${fileExt}`;
     const filePath = `${userId}/${fileName}`;
 
     const { data, error } = await supabase.storage
       .from('brand-logos')
-      .upload(filePath, file);
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
 
     if (error) {
       console.error('Error uploading file:', error);
-      throw new Error('Failed to upload logo. Please try again or contact support.');
+      throw new Error('Failed to upload logo. Please try again.');
     }
 
     const { data: { publicUrl } } = supabase.storage
@@ -99,7 +94,7 @@ export async function uploadImageToStorage(file: File, userId: string): Promise<
     return publicUrl;
   } catch (error) {
     console.error('Storage upload error:', error);
-    throw new Error('Failed to upload logo. Please try again or contact support.');
+    throw error;
   }
 }
 
