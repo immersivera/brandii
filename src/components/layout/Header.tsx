@@ -2,11 +2,15 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
-import { Moon, Sun, Menu, X } from 'lucide-react';
+import { useUser } from '../../context/UserContext';
+import { Moon, Sun, Menu, X, LogOut, User } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { logoutUser } from '../../lib/supabase';
+import toast from 'react-hot-toast';
 
 export const Header: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
+  const { isAnonymous, profile } = useUser();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   
@@ -19,6 +23,16 @@ export const Header: React.FC = () => {
     { name: 'Library', path: '/library' },
     { name: 'Gallery', path: '/gallery' }
   ];
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      toast.success('Logged out successfully');
+    } catch (error) {
+      console.error('Error logging out:', error);
+      toast.error('Failed to log out');
+    }
+  };
   
   return (
     <motion.header
@@ -63,20 +77,41 @@ export const Header: React.FC = () => {
                 }`} />
               </Link>
             ))}
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleTheme}
-              aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-              className={isTransparent ? 'text-gray-900 dark:text-white' : ''}
-            >
-              {theme === 'light' ? (
-                <Moon className="h-5 w-5" />
-              ) : (
-                <Sun className="h-5 w-5" />
+
+            <div className="flex items-center space-x-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleTheme}
+                aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+                className={isTransparent ? 'text-gray-900 dark:text-white' : ''}
+              >
+                {theme === 'light' ? (
+                  <Moon className="h-5 w-5" />
+                ) : (
+                  <Sun className="h-5 w-5" />
+                )}
+              </Button>
+
+              {!isAnonymous && (
+                <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800">
+                    <User className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      {profile?.email}
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleLogout}
+                    className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                  >
+                    <LogOut className="h-5 w-5" />
+                  </Button>
+                </div>
               )}
-            </Button>
+            </div>
           </nav>
           
           {/* Mobile Menu Button */}
@@ -125,6 +160,26 @@ export const Header: React.FC = () => {
               </Link>
             ))}
             
+            {!isAnonymous && (
+              <div className="px-3 py-2">
+                <div className="flex items-center space-x-2 mb-2">
+                  <User className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                  <span className="text-sm text-gray-900 dark:text-white">
+                    {profile?.email}
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="w-full justify-start text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  <span>Log Out</span>
+                </Button>
+              </div>
+            )}
+
             <button
               className="flex w-full items-center px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
               onClick={toggleTheme}
