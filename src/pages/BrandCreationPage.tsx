@@ -8,6 +8,7 @@ import { Textarea } from '../components/ui/Textarea';
 import { Select } from '../components/ui/Select';
 import { Card, CardContent } from '../components/ui/Card';
 import { FileUpload } from '../components/ui/FileUpload';
+import { AuthModal } from '../components/AuthModal';
 import { useBrand } from '../context/BrandContext';
 import { useUser } from '../context/UserContext';
 import { ArrowLeft, ArrowRight, Sparkles, RefreshCw, Loader } from 'lucide-react';
@@ -19,12 +20,13 @@ import toast from 'react-hot-toast';
 
 export const BrandCreationPage: React.FC = () => {
   const { brandDetails, updateBrandDetails, setStep, resetBrandDetails } = useBrand();
-  const { user } = useUser();
+  const { userId, isAnonymous } = useUser();
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingColors, setIsGeneratingColors] = useState(false);
   const [isGeneratingLogos, setIsGeneratingLogos] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const navigate = useNavigate();
 
   const handleGenerateWithAI = async () => {
@@ -91,8 +93,8 @@ export const BrandCreationPage: React.FC = () => {
   };
 
   const handleComplete = async () => {
-    if (!user) {
-      toast.error('Please sign in to save your brand kit');
+    if (isAnonymous) {
+      setShowAuthModal(true);
       return;
     }
 
@@ -128,7 +130,7 @@ export const BrandCreationPage: React.FC = () => {
         setIsGeneratingLogos(false);
       } else if (brandDetails.logoChoice === 'upload' && uploadedFile) {
         try {
-          uploadedLogoUrl = await uploadImageToStorage(uploadedFile, user.id);
+          uploadedLogoUrl = await uploadImageToStorage(uploadedFile, userId!);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to upload logo';
           toast.error(errorMessage);
@@ -701,7 +703,7 @@ export const BrandCreationPage: React.FC = () => {
               
               <div className="w-full bg-gray-200 dark:bg-gray-700 h-2 rounded-full mt-4">
                 <div 
-                  className="bg-brand-600 h-2  rounded-full transition-all duration-300"
+                  className="bg-brand-600 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${(brandDetails.step / 3) * 100}%` }}
                 ></div>
               </div>
@@ -715,6 +717,12 @@ export const BrandCreationPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={handleComplete}
+      />
     </Layout>
   );
 };
