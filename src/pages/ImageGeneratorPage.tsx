@@ -81,8 +81,8 @@ export const ImageGeneratorPage: React.FC = () => {
       const images = await generateImageAssets(fullPrompt, logoImage);
       setGeneratedImages(images);
 
-      // Save the generated images
-      await saveGeneratedAssets(brandKit.id, images, 'image');
+      // Save the generated images with the prompt
+      await saveGeneratedAssets(brandKit.id, images, 'image', prompt);
       toast.success('Images generated and saved successfully!');
     } catch (error) {
       console.error('Error generating images:', error);

@@ -29,7 +29,8 @@ export type UserProfile = {
 export type GeneratedAsset = {
   id: string;
   brand_kit_id: string;
-  image_data?: string;
+  image_data: string;
+  image_prompt?: string;
   type: 'logo' | 'image';
   created_at: string;
 };
@@ -232,12 +233,14 @@ export async function updateBrandKit(id: string, updates: Partial<BrandKit>): Pr
 export async function saveGeneratedAssets(
   brandKitId: string, 
   imageDataArray: string[], 
-  type: 'logo' | 'image' = 'logo'
+  type: 'logo' | 'image' = 'logo',
+  imagePrompt?: string
 ): Promise<GeneratedAsset[]> {
   const assets = imageDataArray.map(imageData => ({
     brand_kit_id: brandKitId,
     image_data: imageData,
-    type
+    type,
+    image_prompt: imagePrompt
   }));
 
   const { data, error } = await supabase
