@@ -18,9 +18,7 @@ export const CreatePage: React.FC = () => {
   useEffect(() => {
     const checkExistingBrandKits = async () => {
       // Return early if user context is still loading
-      if (isLoadingUser) {
-        return;
-      }
+     
 
       try {
         const { data } = await fetchBrandKits();
