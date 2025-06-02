@@ -1,9 +1,4 @@
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true
-});
+import { supabase } from './supabase';
 
 export interface AIBrandSuggestion {
   name: string;
@@ -25,48 +20,15 @@ export interface AIBrandSuggestion {
 }
 
 export async function generateBrandSuggestion(prompt: string): Promise<AIBrandSuggestion> {
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4.1-nano",
-    messages: [
-      {
-        role: "system",
-        content: `You are a brand identity expert. Generate brand suggestions in JSON format based on the user's description. Include:
-          - name: A creative brand name
-          - description: A concise brand description
-          - industry: One of [technology, creative, business, health, food, education, ecommerce, custom]
-          - adjective: One of [modern, minimal, bold, playful, elegant, retro, organic, tech]
-          - logoStyle: One of [wordmark, lettermark, abstract, mascot, combination, emblem]
-          - colors: Object with primary, secondary, accent, background, and text colors (in hex)
-          - typography: Object with headingFont and bodyFont (use Google Fonts names)
-          
-          Example response format:
-          {
-            "name": "Luminary",
-            "description": "A modern technology company focused on innovative AI solutions",
-            "industry": "technology",
-            "adjective": "modern",
-            "logoStyle": "combination",
-            "colors": {
-              "primary": "#3B82F6",
-              "secondary": "#1E40AF",
-              "accent": "#F59E0B",
-              "background": "#F8FAFC",
-              "text": "#1F2937"
-            },
-            "typography": {
-              "headingFont": "Plus Jakarta Sans",
-              "bodyFont": "Inter"
-            }
-          }`
-      },
-      {
-        role: "user",
-        content: prompt
-      }
-    ],
-    response_format: { type: "json_object" }
+  const { data, error } = await supabase.functions.invoke('openai', {
+    body: {
+      action: 'generateBrandSuggestion',
+      data: { prompt }
+    }
   });
-  return JSON.parse(completion.choices[0].message.content);
+
+  if (error) throw error;
+  return JSON.parse(data);
 }
 
 interface LogoGenerationOptions {
@@ -83,86 +45,35 @@ interface LogoGenerationOptions {
 }
 
 export async function generateLogoImages(options: LogoGenerationOptions): Promise<string[]> {
-  const styleDescriptions = {
-    wordmark: `a minimalist, modern wordmark logo design for "${options.brandName}" using the colors ${options.colors.primary} (primary), ${options.colors.secondary} (secondary), and ${options.colors.accent} (accent). The design should be clean, professional, and versatile. Brand description: ${options.description}. Industry: ${options.industry}. Brand personality: ${options.personality}.`,
-    lettermark: `a sophisticated lettermark logo using the letter "${options.brandName[0]}" with colors ${options.colors.primary} (primary), ${options.colors.secondary} (secondary), and ${options.colors.accent} (accent). The design should be bold and memorable. Brand description: ${options.description}. Industry: ${options.industry}. Brand personality: ${options.personality}.`,
-    abstract: `an abstract, geometric logo mark that represents "${options.brandName}" using colors ${options.colors.primary} (primary), ${options.colors.secondary} (secondary), and ${options.colors.accent} (accent). The design should be unique and contemporary. Brand description: ${options.description}. Industry: ${options.industry}. Brand personality: ${options.personality}.`,
-    mascot: `a friendly, character-based logo design for "${options.brandName}" incorporating colors ${options.colors.primary} (primary), ${options.colors.secondary} (secondary), and ${options.colors.accent} (accent). The mascot should be approachable and memorable. Brand description: ${options.description}. Industry: ${options.industry}. Brand personality: ${options.personality}.`,
-    combination: `a combination mark logo for "${options.brandName}" that combines a wordmark with a distinctive symbol, using colors ${options.colors.primary} (primary), ${options.colors.secondary} (secondary), and ${options.colors.accent} (accent). The design should be balanced and professional. Brand description: ${options.description}. Industry: ${options.industry}. Brand personality: ${options.personality}.`,
-    emblem: `an emblem-style logo for "${options.brandName}" with contained typography and imagery, using colors ${options.colors.primary} (primary), ${options.colors.secondary} (secondary), and ${options.colors.accent} (accent). The design should be classic and authoritative. Brand description: ${options.description}. Industry: ${options.industry}. Brand personality: ${options.personality}.`
-  };
-
-  const prompt = styleDescriptions[options.style as keyof typeof styleDescriptions] || styleDescriptions.wordmark;
-  
   try {
-    console.log("Generating logo with prompt:", prompt.substring(0, 100) + "...");
-
-    const response = await openai.images.generate({
-      model: "gpt-image-1",
-      prompt,
-      n: 2,
-      size: "1024x1024",
+    const { data, error } = await supabase.functions.invoke('openai', {
+      body: {
+        action: 'generateLogoImages',
+        data: options
+      }
     });
 
-    if (!response.data || response.data.length === 0 || !response.data[0].b64_json) {
-      console.error(
-        "No b64_json in response:",
-        JSON.stringify(response).substring(0, 200)
-      );
-      throw new Error("No image data returned from OpenAI");
-    }
+    if (error) throw error;
 
-    return response.data.map(image => `data:image/png;base64,${image.b64_json}`);
+    return data.map((image: any) => `data:image/png;base64,${image.b64_json}`);
   } catch (error) {
-    console.error("Error generating image with OpenAI:", error);
+    console.error("Error generating logo images:", error);
     throw error;
   }
 }
 
 export async function generateImageAssets(prompt: string, logoImage?: string): Promise<string[]> {
   try {
-    let response;
-    
-    if (logoImage) {
-      // Convert base64 string to File object
-      const base64Data = logoImage.split(',')[1];
-      const byteCharacters = atob(base64Data);
-      const byteArrays = [];
-      
-      for (let offset = 0; offset < byteCharacters.length; offset += 1024) {
-        const slice = byteCharacters.slice(offset, offset + 1024);
-        const byteNumbers = new Array(slice.length);
-        for (let i = 0; i < slice.length; i++) {
-          byteNumbers[i] = slice.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        byteArrays.push(byteArray);
+    const { data, error } = await supabase.functions.invoke('openai', {
+      body: {
+        action: 'generateImageAssets',
+        data: { prompt, logoImage }
       }
-      
-      const blob = new Blob(byteArrays, { type: 'image/png' });
-      const logoFile = new File([blob], 'logo.png', { type: 'image/png' });
+    });
 
-      response = await openai.images.edit({
-        model: "gpt-image-1",
-        image: logoFile,
-        prompt,
-        n: 2,
-        size: "1024x1024",
-      });
-    } else {
-      response = await openai.images.generate({
-        model: "gpt-image-1",
-        prompt,
-        n: 2,
-        size: "1024x1024",
-      });
-    }
+    if (error) throw error;
 
-    if (!response.data || response.data.length === 0 || !response.data[0].b64_json) {
-      throw new Error("No image data returned from OpenAI");
-    }
-
-    return response.data.map(image => `data:image/png;base64,${image.b64_json}`);
+    return data.map((image: any) => `data:image/png;base64,${image.b64_json}`);
   } catch (error) {
     console.error("Error generating image assets:", error);
     throw error;
