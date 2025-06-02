@@ -9,6 +9,7 @@ import { Select } from '../components/ui/Select';
 import { Card, CardContent } from '../components/ui/Card';
 import { FileUpload } from '../components/ui/FileUpload';
 import { useBrand } from '../context/BrandContext';
+import { useUser } from '../context/UserContext';
 import { ArrowLeft, ArrowRight, Sparkles, RefreshCw, Loader } from 'lucide-react';
 import { BRAND_TYPES, BRAND_ADJECTIVES, LOGO_STYLES, GOOGLE_FONTS } from '../lib/constants';
 import { ColorPicker } from '../components/ui/ColorPicker';
@@ -18,6 +19,7 @@ import toast from 'react-hot-toast';
 
 export const BrandCreationPage: React.FC = () => {
   const { brandDetails, updateBrandDetails, setStep, resetBrandDetails } = useBrand();
+  const { user } = useUser();
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingColors, setIsGeneratingColors] = useState(false);
   const [isGeneratingLogos, setIsGeneratingLogos] = useState(false);
@@ -89,6 +91,11 @@ export const BrandCreationPage: React.FC = () => {
   };
 
   const handleComplete = async () => {
+    if (!user) {
+      toast.error('Please sign in to save your brand kit');
+      return;
+    }
+
     try {
       setIsSaving(true);
 
@@ -121,7 +128,7 @@ export const BrandCreationPage: React.FC = () => {
         setIsGeneratingLogos(false);
       } else if (brandDetails.logoChoice === 'upload' && uploadedFile) {
         try {
-          uploadedLogoUrl = await uploadImageToStorage(uploadedFile, 'anon_user');
+          uploadedLogoUrl = await uploadImageToStorage(uploadedFile, user.id);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to upload logo';
           toast.error(errorMessage);
