@@ -2,19 +2,13 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
-import { useUser } from '../../context/UserContext';
-import { Moon, Sun, Menu, X, User, ChevronDown, LogOut } from 'lucide-react';
+import { Moon, Sun, Menu, X } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { logoutUser } from '../../lib/supabase';
-import toast from 'react-hot-toast';
 
 export const Header: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
-  const { isAnonymous, profile } = useUser();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
-  const [isUserDropdownOpen, setIsUserDropdownOpen] = React.useState(false);
-  const dropdownRef = React.useRef<HTMLDivElement>(null);
   
   const isHomePage = location.pathname === '/';
   const isTransparent = isHomePage && !isMenuOpen;
@@ -25,28 +19,6 @@ export const Header: React.FC = () => {
     { name: 'Library', path: '/library' },
     { name: 'Gallery', path: '/gallery' }
   ];
-
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsUserDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-  
-  const handleLogout = async () => {
-    try {
-      await logoutUser();
-      setIsUserDropdownOpen(false);
-      toast.success('Logged out successfully');
-    } catch (error) {
-      console.error('Error logging out:', error);
-      toast.error('Failed to log out');
-    }
-  };
   
   return (
     <motion.header
@@ -91,67 +63,20 @@ export const Header: React.FC = () => {
                 }`} />
               </Link>
             ))}
-
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleTheme}
-                aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-                className={isTransparent ? 'text-gray-900 dark:text-white' : ''}
-              >
-                {theme === 'light' ? (
-                  <Moon className="h-5 w-5" />
-                ) : (
-                  <Sun className="h-5 w-5" />
-                )}
-              </Button>
-
-              {!isAnonymous ? (
-                <div className="relative" ref={dropdownRef}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
-                    className="flex items-center space-x-2"
-                  >
-                    <User className="h-5 w-5" />
-                    <span className="text-sm font-medium hidden lg:block">
-                      {profile?.email?.split('@')[0]}
-                    </span>
-                    <ChevronDown className={`h-4 w-4 transition-transform ${isUserDropdownOpen ? 'rotate-180' : ''}`} />
-                  </Button>
-
-                  {isUserDropdownOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg py-1 border border-gray-200 dark:border-gray-700"
-                    >
-                      <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                          {profile?.email}
-                        </p>
-                      </div>
-                      <button
-                        onClick={handleLogout}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
-                      >
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Sign Out
-                      </button>
-                    </motion.div>
-                  )}
-                </div>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleTheme}
+              aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+              className={isTransparent ? 'text-gray-900 dark:text-white' : ''}
+            >
+              {theme === 'light' ? (
+                <Moon className="h-5 w-5" />
               ) : (
-                <Link to="/create">
-                  <Button size="sm">
-                    Sign In
-                  </Button>
-                </Link>
+                <Sun className="h-5 w-5" />
               )}
-            </div>
+            </Button>
           </nav>
           
           {/* Mobile Menu Button */}
@@ -200,29 +125,6 @@ export const Header: React.FC = () => {
               </Link>
             ))}
             
-            {!isAnonymous && (
-              <div className="px-3 py-2 border-t border-gray-200 dark:border-gray-700 mt-2">
-                <div className="flex items-center space-x-2 mb-2">
-                  <User className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                  <span className="text-sm text-gray-900 dark:text-white">
-                    {profile?.email}
-                  </span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    handleLogout();
-                    setIsMenuOpen(false);
-                  }}
-                  className="w-full justify-start text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
-                </Button>
-              </div>
-            )}
-
             <button
               className="flex w-full items-center px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
               onClick={toggleTheme}
