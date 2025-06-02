@@ -27,6 +27,7 @@ const ITEMS_PER_PAGE = 6;
 export const GlobalGalleryPage: React.FC = () => {
   const [images, setImages] = useState<ImageDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPageLoading, setIsPageLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<ImageDetails | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -42,6 +43,12 @@ export const GlobalGalleryPage: React.FC = () => {
   useEffect(() => {
     const fetchImages = async () => {
       try {
+        if (currentPage === 1) {
+          setIsLoading(true);
+        } else {
+          setIsPageLoading(true);
+        }
+
         // First get the total count
         const { count, error: countError } = await supabase
           .from('generated_assets')
@@ -80,6 +87,7 @@ export const GlobalGalleryPage: React.FC = () => {
         toast.error('Failed to load images');
       } finally {
         setIsLoading(false);
+        setIsPageLoading(false);
       }
     };
 
@@ -162,51 +170,58 @@ export const GlobalGalleryPage: React.FC = () => {
               </div>
             ) : (
               <>
-                <Masonry
-                  breakpointCols={breakpointColumns}
-                  className="flex -ml-4 w-auto"
-                  columnClassName="pl-4 bg-clip-padding"
-                >
-                  {images.map((image, index) => (
-                    <motion.div
-                      key={image.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.05 }}
-                      className="mb-4"
-                    >
-                      <div 
-                        className="relative group cursor-pointer overflow-hidden rounded-xl"
-                        onClick={() => setSelectedImage(image)}
+                <div className="relative">
+                  {isPageLoading && (
+                    <div className="absolute inset-0 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm z-10 flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-600"></div>
+                    </div>
+                  )}
+                  <Masonry
+                    breakpointCols={breakpointColumns}
+                    className="flex -ml-4 w-auto"
+                    columnClassName="pl-4 bg-clip-padding"
+                  >
+                    {images.map((image, index) => (
+                      <motion.div
+                        key={image.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                        className="mb-4"
                       >
-                        <img
-                          src={image.image_data}
-                          alt={`Generated image ${index + 1}`}
-                          className="w-full h-auto object-cover rounded-xl transition-transform duration-300 group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
-                          <div className="w-full flex justify-between items-center">
-                            <span className="text-white text-sm">
-                              {formatDate(image.created_at)}
-                            </span>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDownload(image.image_data, index);
-                              }}
-                              leftIcon={<Download className="h-4 w-4" />}
-                              className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
-                            >
-                              Download
-                            </Button>
+                        <div 
+                          className="relative group cursor-pointer overflow-hidden rounded-xl"
+                          onClick={() => setSelectedImage(image)}
+                        >
+                          <img
+                            src={image.image_data}
+                            alt={`Generated image ${index + 1}`}
+                            className="w-full h-auto object-cover rounded-xl transition-transform duration-300 group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                            <div className="w-full flex justify-between items-center">
+                              <span className="text-white text-sm">
+                                {formatDate(image.created_at)}
+                              </span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDownload(image.image_data, index);
+                                }}
+                                leftIcon={<Download className="h-4 w-4" />}
+                                className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+                              >
+                                Download
+                              </Button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </Masonry>
+                      </motion.div>
+                    ))}
+                  </Masonry>
+                </div>
 
                 {totalPages > 1 && (
                   <div className="mt-8 flex justify-center items-center space-x-2">
@@ -214,7 +229,7 @@ export const GlobalGalleryPage: React.FC = () => {
                       variant="outline"
                       size="sm"
                       onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={currentPage === 1}
+                      disabled={currentPage === 1 || isPageLoading}
                       leftIcon={<ChevronLeft className="h-4 w-4" />}
                     >
                       Previous
@@ -227,6 +242,7 @@ export const GlobalGalleryPage: React.FC = () => {
                           variant={currentPage === page ? 'primary' : 'outline'}
                           size="sm"
                           onClick={() => handlePageChange(page)}
+                          disabled={isPageLoading}
                           className={`w-8 ${
                             currentPage === page
                               ? 'bg-brand-600 text-white'
@@ -242,7 +258,7 @@ export const GlobalGalleryPage: React.FC = () => {
                       variant="outline"
                       size="sm"
                       onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={currentPage === totalPages}
+                      disabled={currentPage === totalPages || isPageLoading}
                       rightIcon={<ChevronRight className="h-4 w-4" />}
                     >
                       Next
