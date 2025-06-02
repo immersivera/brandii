@@ -15,7 +15,9 @@ export const ResultPage: React.FC = () => {
   const navigate = useNavigate();
   const [isDownloading, setIsDownloading] = useState(false);
   const [selectedLogo, setSelectedLogo] = useState<string | null>(
-    brandDetails.logoOptions?.[0] || null
+    brandDetails.logoChoice === 'upload' 
+      ? brandDetails.uploadedLogoUrl || null
+      : brandDetails.logoOptions?.[0] || null
   );
 
   const handleStartOver = () => {
@@ -182,11 +184,12 @@ export const ResultPage: React.FC = () => {
                           src={selectedLogo} 
                           alt="Selected logo"
                           className="w-32 h-32 object-contain rounded-xl"
+                          style={{ backgroundColor: brandDetails.colors.background }}
                         />
                       ) : (
                         <div 
                           className="w-32 h-32 rounded-xl flex items-center justify-center"
-                          style={{ backgroundColor: brandDetails.colors.primary }}
+                          style={{ backgroundColor: brandDetails.colors.background }}
                         >
                           <span 
                             className="text-4xl font-bold"
@@ -295,13 +298,13 @@ export const ResultPage: React.FC = () => {
                 </Card>
               </div>
               
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-                    Logo Concepts
-                  </h3>
-                  
-                  {brandDetails.logoOptions ? (
+              {brandDetails.logoChoice === 'ai' && brandDetails.logoOptions && brandDetails.logoOptions.length > 0 && (
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+                      Logo Concepts
+                    </h3>
+                    
                     <div className="space-y-6">
                       <div className="grid grid-cols-2 gap-4">
                         {brandDetails.logoOptions.map((url, index) => (
@@ -318,6 +321,7 @@ export const ResultPage: React.FC = () => {
                               src={url}
                               alt={`Logo concept ${index + 1}`}
                               className="w-full h-auto"
+                              style={{ backgroundColor: brandDetails.colors.background }}
                             />
                             {selectedLogo === url && (
                               <div className="absolute inset-0 bg-brand-600/10 flex items-center justify-center">
@@ -334,15 +338,9 @@ export const ResultPage: React.FC = () => {
                         Click on a logo concept to select it. The selected logo will be included in your brand kit download.
                       </p>
                     </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <p className="text-gray-500 dark:text-gray-400">
-                        Logo concepts are being generated...
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
               
               <div className="flex justify-center mt-8">
                 <Button
