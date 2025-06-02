@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { v4 as uuidv4 } from 'uuid';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -67,6 +68,27 @@ export type PaginatedResponse<T> = {
   data: T[];
   totalCount: number;
 };
+
+export async function uploadImageToStorage(file: File, userId: string): Promise<string> {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${uuidv4()}.${fileExt}`;
+  const filePath = `${userId}/${fileName}`;
+
+  const { data, error } = await supabase.storage
+    .from('brand-logos')
+    .upload(filePath, file);
+
+  if (error) {
+    console.error('Error uploading file:', error);
+    throw error;
+  }
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('brand-logos')
+    .getPublicUrl(filePath);
+
+  return publicUrl;
+}
 
 export async function initializeAnonymousUser() {
   const storedToken = localStorage.getItem('brandii-user-token');

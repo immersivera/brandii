@@ -6,6 +6,9 @@ export interface BrandDetails {
   industry: string;
   adjective: string;
   logoStyle: string;
+  logoChoice: 'ai' | 'upload' | 'none';
+  uploadedLogoUrl?: string;
+  typographyChoice: 'ai' | 'custom';
   colors: {
     primary: string;
     secondary: string;
@@ -27,6 +30,8 @@ const initialBrandState: BrandDetails = {
   industry: '',
   adjective: '',
   logoStyle: '',
+  logoChoice: 'ai',
+  typographyChoice: 'ai',
   colors: {
     primary: '#8B5CF6',
     secondary: '#6D28D9',
