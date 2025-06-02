@@ -122,19 +122,29 @@ export const BrandKitPage: React.FC = () => {
   };
 
   const getSelectedLogo = () => {
-    if (!brandKit?.generated_assets?.length) return null;
+    if (!brandKit) return null;
 
-    if (brandKit.logo_selected_asset_id) {
-      const selectedAsset = brandKit.generated_assets.find(
-        asset => asset.id === brandKit.logo_selected_asset_id
-      );
-      if (selectedAsset?.image_data) return selectedAsset.image_data;
+    // Check for uploaded logo first
+    if (brandKit.logo.image) {
+      return brandKit.logo.image;
     }
 
-    const firstLogoAsset = brandKit.generated_assets.find(
-      asset => asset.type === 'logo'
-    );
-    return firstLogoAsset?.image_data || null;
+    // Then check for AI-generated logo
+    if (brandKit.generated_assets?.length) {
+      if (brandKit.logo_selected_asset_id) {
+        const selectedAsset = brandKit.generated_assets.find(
+          asset => asset.id === brandKit.logo_selected_asset_id
+        );
+        if (selectedAsset?.image_data) return selectedAsset.image_data;
+      }
+
+      const firstLogoAsset = brandKit.generated_assets.find(
+        asset => asset.type === 'logo'
+      );
+      return firstLogoAsset?.image_data || null;
+    }
+
+    return null;
   };
 
   if (isLoading) {
@@ -155,6 +165,7 @@ export const BrandKitPage: React.FC = () => {
 
   const logoAssets = brandKit.generated_assets?.filter(asset => asset.type === 'logo') || [];
   const imageAssets = brandKit.generated_assets?.filter(asset => asset.type === 'image') || [];
+  const selectedLogo = getSelectedLogo();
 
   return (
     <Layout>
@@ -255,38 +266,32 @@ export const BrandKitPage: React.FC = () => {
                     </div>
                     
                     <div className="w-full md:w-auto flex justify-center">
-                      {(() => {
-                        const logoImage = getSelectedLogo();
-                        if (logoImage) {
-                          return (
-                            <img 
-                              src={logoImage} 
-                              alt={brandKit.name}
-                              className="w-32 h-32 object-contain rounded-xl"
-                              style={{ 
-                                backgroundColor: brandKit.colors.background
-                              }}
-                            />
-                          );
-                        }
-                        return (
-                          <div 
-                            className="w-32 h-32 rounded-xl flex items-center justify-center"
+                      {selectedLogo ? (
+                        <img 
+                          src={selectedLogo} 
+                          alt={brandKit.name}
+                          className="w-32 h-32 object-contain rounded-xl"
+                          style={{ 
+                            backgroundColor: brandKit.colors.background
+                          }}
+                        />
+                      ) : (
+                        <div 
+                          className="w-32 h-32 rounded-xl flex items-center justify-center"
+                          style={{ 
+                            backgroundColor: brandKit.colors.background
+                          }}
+                        >
+                          <span 
+                            className="text-4xl font-bold font-display"
                             style={{ 
-                              backgroundColor: brandKit.colors.background
+                              color: brandKit.colors.text
                             }}
                           >
-                            <span 
-                              className="text-4xl font-bold font-display"
-                              style={{ 
-                                color: brandKit.colors.text
-                              }}
-                            >
-                              {brandKit.name.charAt(0)}
-                            </span>
-                          </div>
-                        );
-                      })()}
+                            {brandKit.name.charAt(0)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -381,13 +386,13 @@ export const BrandKitPage: React.FC = () => {
                 </Card>
               </div>
               
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-                    Logo Concepts
-                  </h3>
-                  
-                  {logoAssets.length > 0 ? (
+              {logoAssets.length > 0 && (
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+                      Logo Concepts
+                    </h3>
+                    
                     <div className="space-y-6">
                       <div className="grid grid-cols-2 gap-4">
                         {logoAssets.map((asset) => (
@@ -423,15 +428,9 @@ export const BrandKitPage: React.FC = () => {
                         Click on a logo concept to select it as your primary logo.
                       </p>
                     </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <p className="text-gray-500 dark:text-gray-400">
-                        No logo concepts available
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
 
               {imageAssets.length > 0 && (
                 <div className="mt-8">
