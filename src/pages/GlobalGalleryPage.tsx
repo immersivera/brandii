@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
-import { Download, X, Calendar, Clock, ExternalLink } from 'lucide-react';
+import { Download, X, Calendar, Clock, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useUser } from '../context/UserContext';
 import { Link } from 'react-router-dom';
@@ -22,24 +22,39 @@ interface ImageDetails {
   } | null;
 }
 
+const ITEMS_PER_PAGE = 6;
+
 export const GlobalGalleryPage: React.FC = () => {
   const [images, setImages] = useState<ImageDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<ImageDetails | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const { userId } = useUser();
 
   const breakpointColumns = {
-    default: 4,
-    1536: 4,
+    default: 3,
     1280: 3,
-    1024: 3,
-    768: 2,
+    1024: 2,
     640: 1
   };
 
   useEffect(() => {
     const fetchImages = async () => {
       try {
+        // First get the total count
+        const { count, error: countError } = await supabase
+          .from('generated_assets')
+          .select('id', { count: 'exact' })
+          .eq('type', 'image');
+
+        if (countError) throw countError;
+        setTotalItems(count || 0);
+
+        // Calculate pagination range
+        const from = (currentPage - 1) * ITEMS_PER_PAGE;
+        const to = from + ITEMS_PER_PAGE - 1;
+
         const { data, error } = await supabase
           .from('generated_assets')
           .select(`
@@ -55,7 +70,8 @@ export const GlobalGalleryPage: React.FC = () => {
             )
           `)
           .eq('type', 'image')
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .range(from, to);
 
         if (error) throw error;
         setImages(data || []);
@@ -68,7 +84,7 @@ export const GlobalGalleryPage: React.FC = () => {
     };
 
     fetchImages();
-  }, []);
+  }, [currentPage]);
 
   const handleDownload = (imageUrl: string, index: number) => {
     const link = document.createElement('a');
@@ -99,6 +115,13 @@ export const GlobalGalleryPage: React.FC = () => {
 
   const isImageOwner = (image: ImageDetails) => {
     return image.brand_kit?.user_id === userId;
+  };
+
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   if (isLoading) {
@@ -138,51 +161,95 @@ export const GlobalGalleryPage: React.FC = () => {
                 </p>
               </div>
             ) : (
-              <Masonry
-                breakpointCols={breakpointColumns}
-                className="flex -ml-4 w-auto"
-                columnClassName="pl-4 bg-clip-padding"
-              >
-                {images.map((image, index) => (
-                  <motion.div
-                    key={image.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.05 }}
-                    className="mb-4"
-                  >
-                    <div 
-                      className="relative group cursor-pointer overflow-hidden rounded-xl"
-                      onClick={() => setSelectedImage(image)}
+              <>
+                <Masonry
+                  breakpointCols={breakpointColumns}
+                  className="flex -ml-4 w-auto"
+                  columnClassName="pl-4 bg-clip-padding"
+                >
+                  {images.map((image, index) => (
+                    <motion.div
+                      key={image.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: index * 0.05 }}
+                      className="mb-4"
                     >
-                      <img
-                        src={image.image_data}
-                        alt={`Generated image ${index + 1}`}
-                        className="w-full h-auto object-cover rounded-xl transition-transform duration-300 group-hover:scale-105"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
-                        <div className="w-full flex justify-between items-center">
-                          <span className="text-white text-sm">
-                            {formatDate(image.created_at)}
-                          </span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDownload(image.image_data, index);
-                            }}
-                            leftIcon={<Download className="h-4 w-4" />}
-                            className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
-                          >
-                            Download
-                          </Button>
+                      <div 
+                        className="relative group cursor-pointer overflow-hidden rounded-xl"
+                        onClick={() => setSelectedImage(image)}
+                      >
+                        <img
+                          src={image.image_data}
+                          alt={`Generated image ${index + 1}`}
+                          className="w-full h-auto object-cover rounded-xl transition-transform duration-300 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                          <div className="w-full flex justify-between items-center">
+                            <span className="text-white text-sm">
+                              {formatDate(image.created_at)}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDownload(image.image_data, index);
+                              }}
+                              leftIcon={<Download className="h-4 w-4" />}
+                              className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+                            >
+                              Download
+                            </Button>
+                          </div>
                         </div>
                       </div>
+                    </motion.div>
+                  ))}
+                </Masonry>
+
+                {totalPages > 1 && (
+                  <div className="mt-8 flex justify-center items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      leftIcon={<ChevronLeft className="h-4 w-4" />}
+                    >
+                      Previous
+                    </Button>
+                    
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? 'primary' : 'outline'}
+                          size="sm"
+                          onClick={() => handlePageChange(page)}
+                          className={`w-8 ${
+                            currentPage === page
+                              ? 'bg-brand-600 text-white'
+                              : 'text-gray-600 dark:text-gray-400'
+                          }`}
+                        >
+                          {page}
+                        </Button>
+                      ))}
                     </div>
-                  </motion.div>
-                ))}
-              </Masonry>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      rightIcon={<ChevronRight className="h-4 w-4" />}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
