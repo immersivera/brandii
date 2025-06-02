@@ -4,7 +4,7 @@ import { X, Mail, Lock, Loader } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Card } from './ui/Card';
-import { supabase } from '../lib/supabase';
+import { registerUser, loginUser } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
 interface AuthModalProps {
@@ -25,24 +25,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
 
     try {
       if (isSignUp) {
-        const { data: { user }, error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
-
-        if (error) throw error;
+        const user = await registerUser(email, password);
         if (user) {
           toast.success('Account created successfully!');
           onSuccess();
           onClose();
         }
       } else {
-        const { data: { user }, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (error) throw error;
+        const user = await loginUser(email, password);
         if (user) {
           toast.success('Signed in successfully!');
           onSuccess();
