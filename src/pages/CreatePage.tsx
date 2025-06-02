@@ -6,15 +6,22 @@ import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Plus, Image, ArrowRight } from 'lucide-react';
 import { fetchBrandKits } from '../lib/supabase';
+import { useUser } from '../context/UserContext';
 import toast from 'react-hot-toast';
 
 export const CreatePage: React.FC = () => {
   const [hasExistingBrandKits, setHasExistingBrandKits] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingLocal, setIsLoadingLocal] = useState(true);
+  const { isLoading: isLoadingUser } = useUser();
   const navigate = useNavigate();
 
   useEffect(() => {
     const checkExistingBrandKits = async () => {
+      // Return early if user context is still loading
+      if (isLoadingUser) {
+        return;
+      }
+
       try {
         const { data } = await fetchBrandKits();
         setHasExistingBrandKits(data.length > 0);
@@ -22,12 +29,12 @@ export const CreatePage: React.FC = () => {
         console.error('Error checking brand kits:', error);
         toast.error('Failed to check existing brand kits');
       } finally {
-        setIsLoading(false);
+        setIsLoadingLocal(false);
       }
     };
 
     checkExistingBrandKits();
-  }, []);
+  }, [isLoadingUser]); // Add isLoadingUser to dependencies
 
   const handleMediaAssetsClick = () => {
     if (!hasExistingBrandKits) {
@@ -36,6 +43,9 @@ export const CreatePage: React.FC = () => {
     }
     navigate('/dashboard');
   };
+
+  // Combine both loading states
+  const isLoading = isLoadingLocal || isLoadingUser;
 
   if (isLoading) {
     return (
