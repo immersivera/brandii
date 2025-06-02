@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
@@ -23,6 +23,7 @@ export const BrandKitPage: React.FC = () => {
       try {
         const kit = await fetchBrandKitById(id);
         if (kit) {
+          console.log('Loaded brand kit logo:', kit.logo);
           setBrandKit(kit);
         } else {
           toast.error('Brand kit not found');
@@ -125,7 +126,8 @@ export const BrandKitPage: React.FC = () => {
     if (!brandKit) return null;
 
     // Check for uploaded logo first
-    if (brandKit.logo.image) {
+    if (brandKit.logo.image && brandKit.logo.image.length > 0) {
+      console.log('Using uploaded logo:', brandKit.logo.image);
       return brandKit.logo.image;
     }
 
@@ -133,17 +135,24 @@ export const BrandKitPage: React.FC = () => {
     if (brandKit.generated_assets?.length) {
       if (brandKit.logo_selected_asset_id) {
         const selectedAsset = brandKit.generated_assets.find(
-          asset => asset.id === brandKit.logo_selected_asset_id
+          asset => asset.id === brandKit.logo_selected_asset_id && asset.type === 'logo'
         );
-        if (selectedAsset?.image_data) return selectedAsset.image_data;
+        if (selectedAsset?.image_data) {
+          console.log('Using selected AI logo:', selectedAsset.id);
+          return selectedAsset.image_data;
+        }
       }
 
       const firstLogoAsset = brandKit.generated_assets.find(
         asset => asset.type === 'logo'
       );
-      return firstLogoAsset?.image_data || null;
+      if (firstLogoAsset?.image_data) {
+        console.log('Using first AI logo:', firstLogoAsset.id);
+        return firstLogoAsset.image_data;
+      }
     }
 
+    console.log('No logo found');
     return null;
   };
 
