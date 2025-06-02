@@ -70,24 +70,37 @@ export type PaginatedResponse<T> = {
 };
 
 export async function uploadImageToStorage(file: File, userId: string): Promise<string> {
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${uuidv4()}.${fileExt}`;
-  const filePath = `${userId}/${fileName}`;
+  try {
+    // First check if the bucket exists
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketExists = buckets?.some(bucket => bucket.name === 'brand-logos');
 
-  const { data, error } = await supabase.storage
-    .from('brand-logos')
-    .upload(filePath, file);
+    if (!bucketExists) {
+      throw new Error('Storage is not properly configured. Please contact support.');
+    }
 
-  if (error) {
-    console.error('Error uploading file:', error);
-    throw error;
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${uuidv4()}.${fileExt}`;
+    const filePath = `${userId}/${fileName}`;
+
+    const { data, error } = await supabase.storage
+      .from('brand-logos')
+      .upload(filePath, file);
+
+    if (error) {
+      console.error('Error uploading file:', error);
+      throw new Error('Failed to upload logo. Please try again or contact support.');
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('brand-logos')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
+  } catch (error) {
+    console.error('Storage upload error:', error);
+    throw new Error('Failed to upload logo. Please try again or contact support.');
   }
-
-  const { data: { publicUrl } } = supabase.storage
-    .from('brand-logos')
-    .getPublicUrl(filePath);
-
-  return publicUrl;
 }
 
 export async function initializeAnonymousUser() {
