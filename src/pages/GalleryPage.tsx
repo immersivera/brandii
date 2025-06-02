@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
-import { ArrowLeft, Download, Plus, X, Calendar, Clock, Trash2 } from 'lucide-react';
+import { ArrowLeft, Download, Plus, X, Calendar, Clock, Trash2, MessageSquare } from 'lucide-react';
 import { BrandKit, fetchBrandKitById, deleteGeneratedAsset } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import Masonry from 'react-masonry-css';
@@ -193,9 +193,14 @@ export const GalleryPage: React.FC = () => {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
                         <div className="w-full flex justify-between items-center">
-                          <span className="text-white text-sm">
-                            {formatDate(asset.created_at)}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-white text-sm">
+                              {formatDate(asset.created_at)}
+                            </span>
+                            {asset.image_prompt && (
+                              <MessageSquare className="h-4 w-4 text-white/70" />
+                            )}
+                          </div>
                           <div className="flex gap-2">
                             <Button
                               variant="outline"
@@ -291,6 +296,17 @@ export const GalleryPage: React.FC = () => {
                         </div>
                       </div>
                     </div>
+
+                    {selectedImage.image_prompt && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                          Generation Prompt
+                        </h4>
+                        <p className="text-gray-600 dark:text-gray-300 text-sm">
+                          {selectedImage.image_prompt}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex gap-2 mt-6">
