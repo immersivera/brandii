@@ -98,21 +98,36 @@ export const BrandCreationPage: React.FC = () => {
       // Handle logo based on user choice
       if (brandDetails.logoChoice === 'ai') {
         setIsGeneratingLogos(true);
-        logoUrls = await generateLogoImages({
-          brandName: brandDetails.name,
-          style: brandDetails.logoStyle || 'wordmark',
-          colors: {
-            primary: brandDetails.colors.primary,
-            secondary: brandDetails.colors.secondary,
-            accent: brandDetails.colors.accent
-          },
-          description: brandDetails.description,
-          industry: brandDetails.industry,
-          personality: brandDetails.adjective
-        });
+        try {
+          logoUrls = await generateLogoImages({
+            brandName: brandDetails.name,
+            style: brandDetails.logoStyle || 'wordmark',
+            colors: {
+              primary: brandDetails.colors.primary,
+              secondary: brandDetails.colors.secondary,
+              accent: brandDetails.colors.accent
+            },
+            description: brandDetails.description,
+            industry: brandDetails.industry,
+            personality: brandDetails.adjective
+          });
+        } catch (error) {
+          console.error('Error generating logos:', error);
+          toast.error('Failed to generate logos. Please try again.');
+          setIsGeneratingLogos(false);
+          setIsSaving(false);
+          return;
+        }
         setIsGeneratingLogos(false);
       } else if (brandDetails.logoChoice === 'upload' && uploadedFile) {
-        uploadedLogoUrl = await uploadImageToStorage(uploadedFile, 'anon_user');
+        try {
+          uploadedLogoUrl = await uploadImageToStorage(uploadedFile, 'anon_user');
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Failed to upload logo';
+          toast.error(errorMessage);
+          setIsSaving(false);
+          return;
+        }
       }
       
       const brandKitData = {
@@ -133,14 +148,14 @@ export const BrandCreationPage: React.FC = () => {
         {
           loading: 'Saving your brand kit...',
           success: 'Brand kit saved successfully!',
-          error: 'Failed to save brand kit',
+          error: 'Failed to save brand kit. Please try again.'
         }
       );
 
       navigate('/result');
     } catch (error) {
       console.error('Error completing brand kit:', error);
-      toast.error('Failed to complete brand kit');
+      toast.error('Failed to complete brand kit. Please try again.');
       setIsGeneratingLogos(false);
       setIsSaving(false);
     }
