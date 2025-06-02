@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
-import { Download, X, Calendar, Clock, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Download, X, Calendar, Clock, ExternalLink, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useUser } from '../context/UserContext';
 import { Link } from 'react-router-dom';
@@ -12,6 +12,7 @@ import Masonry from 'react-masonry-css';
 interface ImageDetails {
   id: string;
   image_data: string;
+  image_prompt?: string;
   created_at: string;
   brand_kit: {
     id: string;
@@ -67,6 +68,7 @@ export const GlobalGalleryPage: React.FC = () => {
           .select(`
             id, 
             image_data, 
+            image_prompt,
             created_at,
             brand_kit:brand_kit_id (
               id,
@@ -200,9 +202,14 @@ export const GlobalGalleryPage: React.FC = () => {
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
                             <div className="w-full flex justify-between items-center">
-                              <span className="text-white text-sm">
-                                {formatDate(image.created_at)}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-white text-sm">
+                                  {formatDate(image.created_at)}
+                                </span>
+                                {image.image_prompt && (
+                                  <MessageSquare className="h-4 w-4 text-white/70" />
+                                )}
+                              </div>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -352,12 +359,23 @@ export const GlobalGalleryPage: React.FC = () => {
                         </div>
                       </div>
                     </div>
+
+                    {selectedImage.image_prompt && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                          Generation Prompt
+                        </h4>
+                        <p className="text-gray-600 dark:text-gray-300 text-sm">
+                          {selectedImage.image_prompt}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <Button
                     className="w-full mt-6"
                     leftIcon={<Download className="h-4 w-4" />}
-                    onClick={() => handleDownload(selectedImage.image_data, 0)}
+                    onClick={() => handleDownload(selectedImage.image_data, images.indexOf(selectedImage))}
                   >
                     Download Image
                   </Button>
