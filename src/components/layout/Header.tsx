@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
-import { Moon, Sun, Menu, X, LogOut, User } from 'lucide-react';
+import { Moon, Sun, Menu, X, User, ChevronDown, LogOut } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { logoutUser } from '../../lib/supabase';
 import toast from 'react-hot-toast';
@@ -13,6 +13,8 @@ export const Header: React.FC = () => {
   const { isAnonymous, profile } = useUser();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = React.useState(false);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
   
   const isHomePage = location.pathname === '/';
   const isTransparent = isHomePage && !isMenuOpen;
@@ -24,9 +26,21 @@ export const Header: React.FC = () => {
     { name: 'Gallery', path: '/gallery' }
   ];
 
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsUserDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+  
   const handleLogout = async () => {
     try {
       await logoutUser();
+      setIsUserDropdownOpen(false);
       toast.success('Logged out successfully');
     } catch (error) {
       console.error('Error logging out:', error);
@@ -93,23 +107,49 @@ export const Header: React.FC = () => {
                 )}
               </Button>
 
-              {!isAnonymous && (
-                <div className="flex items-center space-x-2">
-                  <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800">
-                    <User className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">
-                      {profile?.email}
-                    </span>
-                  </div>
+              {!isAnonymous ? (
+                <div className="relative" ref={dropdownRef}>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={handleLogout}
-                    className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                    onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+                    className="flex items-center space-x-2"
                   >
-                    <LogOut className="h-5 w-5" />
+                    <User className="h-5 w-5" />
+                    <span className="text-sm font-medium hidden lg:block">
+                      {profile?.email?.split('@')[0]}
+                    </span>
+                    <ChevronDown className={`h-4 w-4 transition-transform ${isUserDropdownOpen ? 'rotate-180' : ''}`} />
                   </Button>
+
+                  {isUserDropdownOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg py-1 border border-gray-200 dark:border-gray-700"
+                    >
+                      <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {profile?.email}
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"
+                      >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Sign Out
+                      </button>
+                    </motion.div>
+                  )}
                 </div>
+              ) : (
+                <Link to="/create">
+                  <Button size="sm">
+                    Sign In
+                  </Button>
+                </Link>
               )}
             </div>
           </nav>
@@ -161,7 +201,7 @@ export const Header: React.FC = () => {
             ))}
             
             {!isAnonymous && (
-              <div className="px-3 py-2">
+              <div className="px-3 py-2 border-t border-gray-200 dark:border-gray-700 mt-2">
                 <div className="flex items-center space-x-2 mb-2">
                   <User className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                   <span className="text-sm text-gray-900 dark:text-white">
@@ -171,11 +211,14 @@ export const Header: React.FC = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleLogout}
+                  onClick={() => {
+                    handleLogout();
+                    setIsMenuOpen(false);
+                  }}
                   className="w-full justify-start text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
                 >
                   <LogOut className="h-4 w-4 mr-2" />
-                  <span>Log Out</span>
+                  Sign Out
                 </Button>
               </div>
             )}
