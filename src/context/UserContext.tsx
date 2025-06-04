@@ -42,6 +42,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshProfile = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
+      console.log('set progile if session has user')
       await fetchProfile(session.user.id);
     } else {
         console.log('set profile to null')
