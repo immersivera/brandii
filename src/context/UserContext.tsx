@@ -4,7 +4,6 @@ import toast from 'react-hot-toast';
 
 interface UserContextType {
   userId: string | null;
-  isAnonymous: boolean;
   isLoading: boolean;
   profile: UserProfile | null;
   refreshProfile: () => Promise<void>;
@@ -17,17 +16,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
-  const fetchProfile = async (session: any) => {
-    if (!session?.user) {
-      setProfile(null);
-      return;
-    }
-
+  const fetchProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
-        .eq('id', session.user.id)
+        .eq('id', userId)
         .single();
 
       if (error) throw error;
@@ -40,37 +34,22 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshProfile = async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    await fetchProfile(session);
-  };
-
-  const generateAnonymousId = () => {
-    return `anon_${Math.random().toString(36).substring(2, 9)}_${Date.now()}`;
+    if (session?.user) {
+      await fetchProfile(session.user.id);
+    }
   };
 
   useEffect(() => {
     const initUser = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        let currentUserId: string | null = null;
-
+        
         if (session?.user) {
-          currentUserId = session.user.id;
-          await fetchProfile(session);
+          setUserId(session.user.id);
+          await fetchProfile(session.user.id);
         } else {
-          // Check for existing anonymous token
-          const storedToken = localStorage.getItem('brandii-user-token');
-          
-          if (!storedToken || !storedToken.startsWith('anon_')) {
-            // Generate new anonymous ID if none exists or if stored token is invalid
-            currentUserId = generateAnonymousId();
-          } else {
-            currentUserId = storedToken;
-          }
-        }
-
-        if (currentUserId) {
-          setUserId(currentUserId);
-          localStorage.setItem('brandii-user-token', currentUserId);
+          setUserId(null);
+          setProfile(null);
         }
       } catch (error) {
         console.error('Error initializing user:', error);
@@ -83,22 +62,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      let currentUserId: string | null = null;
-
       if (session?.user) {
-        currentUserId = session.user.id;
-        await fetchProfile(session);
-      } else if (event === 'SIGNED_OUT') {
-        currentUserId = generateAnonymousId();
-        setProfile(null);
-      }
-
-      if (currentUserId) {
-        setUserId(currentUserId);
-        localStorage.setItem('brandii-user-token', currentUserId);
+        setUserId(session.user.id);
+        await fetchProfile(session.user.id);
       } else {
         setUserId(null);
-        localStorage.removeItem('brandii-user-token');
+        setProfile(null);
       }
     });
 
@@ -107,12 +76,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const isAnonymous = userId?.startsWith('anon_') ?? true;
-
   return (
     <UserContext.Provider value={{ 
       userId, 
-      isAnonymous, 
       isLoading, 
       profile,
       refreshProfile 

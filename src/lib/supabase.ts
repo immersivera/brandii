@@ -4,7 +4,15 @@ import { v4 as uuidv4 } from 'uuid';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    storageKey: 'brandii-auth',
+    storage: localStorage,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  }
+});
 
 export type UserProfile = {
   id: string;
@@ -146,10 +154,10 @@ export async function fetchBrandKits(
   limit: number = 6,
   searchQuery: string = ''
 ): Promise<PaginatedResponse<BrandKit>> {
-  const userId = localStorage.getItem('brandii-user-token');
+  const { data: { session } } = await supabase.auth.getSession();
   
-  if (!userId) {
-    return { data: [], totalCount: 0 };
+  if (!session?.user) {
+    throw new Error('Authentication required');
   }
 
   const offset = (page - 1) * limit;
@@ -158,7 +166,7 @@ export async function fetchBrandKits(
   const countQuery = supabase
     .from('brand_kits')
     .select('id', { count: 'exact' })
-    .eq('user_id', userId);
+    .eq('user_id', session.user.id);
 
   // Add search filter if provided
   if (searchQuery) {
@@ -183,7 +191,7 @@ export async function fetchBrandKits(
         created_at
       )
     `)
-    .eq('user_id', userId)
+    .eq('user_id', session.user.id)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
@@ -206,6 +214,12 @@ export async function fetchBrandKits(
 }
 
 export async function fetchBrandKitById(id: string): Promise<BrandKit | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session?.user) {
+    throw new Error('Authentication required');
+  }
+
   const { data: brandKit, error: brandKitError } = await supabase
     .from('brand_kits')
     .select(`
@@ -213,6 +227,7 @@ export async function fetchBrandKitById(id: string): Promise<BrandKit | null> {
       generated_assets!generated_assets_brand_kit_id_fkey (*)
     `)
     .eq('id', id)
+    .eq('user_id', session.user.id)
     .single();
 
   if (brandKitError) {
@@ -224,6 +239,12 @@ export async function fetchBrandKitById(id: string): Promise<BrandKit | null> {
 }
 
 export async function updateBrandKit(id: string, updates: Partial<BrandKit>): Promise<BrandKit> {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session?.user) {
+    throw new Error('Authentication required');
+  }
+
   // Exclude the generated_assets field from updates as it's a relationship, not a column
   const { generated_assets, ...updateData } = updates;
 
@@ -234,6 +255,7 @@ export async function updateBrandKit(id: string, updates: Partial<BrandKit>): Pr
       updated_at: new Date().toISOString()
     })
     .eq('id', id)
+    .eq('user_id', session.user.id)
     .select(`
       *,
       generated_assets!generated_assets_brand_kit_id_fkey (*)
@@ -254,6 +276,12 @@ export async function saveGeneratedAssets(
   type: 'logo' | 'image' = 'logo',
   imagePrompt?: string
 ): Promise<GeneratedAsset[]> {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session?.user) {
+    throw new Error('Authentication required');
+  }
+
   const assets = imageDataArray.map(imageData => ({
     brand_kit_id: brandKitId,
     image_data: imageData,
@@ -275,6 +303,12 @@ export async function saveGeneratedAssets(
 }
 
 export async function deleteGeneratedAsset(id: string): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session?.user) {
+    throw new Error('Authentication required');
+  }
+
   const { error } = await supabase
     .from('generated_assets')
     .delete()
@@ -287,15 +321,15 @@ export async function deleteGeneratedAsset(id: string): Promise<void> {
 }
 
 export async function saveBrandKit(brandKit: Omit<BrandKit, 'id' | 'created_at' | 'updated_at' | 'user_id'>, generatedLogoImages?: string[]): Promise<BrandKit> {
-  const userId = localStorage.getItem('brandii-user-token');
+  const { data: { session } } = await supabase.auth.getSession();
   
-  if (!userId) {
-    throw new Error('No user token found');
+  if (!session?.user) {
+    throw new Error('Authentication required');
   }
 
   const newBrandKit = {
     ...brandKit,
-    user_id: userId,
+    user_id: session.user.id,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -337,17 +371,17 @@ export async function saveBrandKit(brandKit: Omit<BrandKit, 'id' | 'created_at' 
 }
 
 export async function deleteBrandKit(id: string): Promise<boolean> {
-  const userId = localStorage.getItem('brandii-user-token');
+  const { data: { session } } = await supabase.auth.getSession();
   
-  if (!userId) {
-    throw new Error('No user token found');
+  if (!session?.user) {
+    throw new Error('Authentication required');
   }
 
   const { error } = await supabase
     .from('brand_kits')
     .delete()
     .eq('id', id)
-    .eq('user_id', userId);
+    .eq('user_id', session.user.id);
 
   if (error) {
     console.error('Error deleting brand kit:', error);
@@ -365,22 +399,6 @@ export async function registerUser(email: string, password: string) {
 
   if (error) {
     throw error;
-  }
-
-  if (user) {
-    const currentToken = localStorage.getItem('brandii-user-token');
-    
-    if (currentToken) {
-      // Transfer anonymous creations to the new user
-      const { error: updateError } = await supabase
-        .from('brand_kits')
-        .update({ user_id: user.id })
-        .eq('user_id', currentToken);
-
-      if (updateError) {
-        console.error('Error transferring brand kits:', updateError);
-      }
-    }
   }
 
   return user;
@@ -405,6 +423,4 @@ export async function logoutUser() {
   if (error) {
     throw error;
   }
-
-  localStorage.removeItem('brandii-user-token');
 }
