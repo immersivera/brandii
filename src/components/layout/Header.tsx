@@ -1,14 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
-import { Moon, Sun, Menu, X } from 'lucide-react';
+import { useUser } from '../../context/UserContext';
+import { Moon, Sun, Menu, X, LogIn, LogOut, User } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { AuthModal } from '../AuthModal';
+import { logoutUser } from '../../lib/supabase';
+import toast from 'react-hot-toast';
 
 export const Header: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
+  const { isAnonymous, profile } = useUser();
   const location = useLocation();
-  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   
   const isHomePage = location.pathname === '/';
   const isTransparent = isHomePage && !isMenuOpen;
@@ -19,6 +25,16 @@ export const Header: React.FC = () => {
     { name: 'Library', path: '/library' },
     { name: 'Gallery', path: '/gallery' }
   ];
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      toast.success('Signed out successfully');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast.error('Failed to sign out');
+    }
+  };
   
   return (
     <motion.header
@@ -77,6 +93,33 @@ export const Header: React.FC = () => {
                 <Sun className="h-5 w-5" />
               )}
             </Button>
+
+            {isAnonymous ? (
+              <Button
+                size="sm"
+                onClick={() => setShowAuthModal(true)}
+                leftIcon={<LogIn className="h-4 w-4" />}
+              >
+                Sign In
+              </Button>
+            ) : (
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <User className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    {profile?.full_name || profile?.email}
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLogout}
+                  leftIcon={<LogOut className="h-4 w-4" />}
+                >
+                  Sign Out
+                </Button>
+              </div>
+            )}
           </nav>
           
           {/* Mobile Menu Button */}
@@ -141,9 +184,40 @@ export const Header: React.FC = () => {
                 </>
               )}
             </button>
+
+            {isAnonymous ? (
+              <Button
+                className="w-full"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setShowAuthModal(true);
+                }}
+                leftIcon={<LogIn className="h-4 w-4" />}
+              >
+                Sign In
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                className="w-full"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  handleLogout();
+                }}
+                leftIcon={<LogOut className="h-4 w-4" />}
+              >
+                Sign Out
+              </Button>
+            )}
           </nav>
         </motion.div>
       )}
+
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={() => setShowAuthModal(false)}
+      />
     </motion.header>
   );
 };
