@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { initializeAnonymousUser, supabase, type UserProfile } from '../lib/supabase';
+import { supabase, type UserProfile } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
 interface UserContextType {
@@ -43,17 +43,34 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await fetchProfile(session);
   };
 
+  const generateAnonymousId = () => {
+    return `anon_${Math.random().toString(36).substring(2, 9)}_${Date.now()}`;
+  };
+
   useEffect(() => {
     const initUser = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        
+        let currentUserId: string | null = null;
+
         if (session?.user) {
-          setUserId(session.user.id);
+          currentUserId = session.user.id;
           await fetchProfile(session);
         } else {
-          const anonId = await initializeAnonymousUser();
-          setUserId(anonId);
+          // Check for existing anonymous token
+          const storedToken = localStorage.getItem('brandii-user-token');
+          
+          if (!storedToken || !storedToken.startsWith('anon_')) {
+            // Generate new anonymous ID if none exists or if stored token is invalid
+            currentUserId = generateAnonymousId();
+          } else {
+            currentUserId = storedToken;
+          }
+        }
+
+        if (currentUserId) {
+          setUserId(currentUserId);
+          localStorage.setItem('brandii-user-token', currentUserId);
         }
       } catch (error) {
         console.error('Error initializing user:', error);
@@ -66,13 +83,22 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      let currentUserId: string | null = null;
+
       if (session?.user) {
-        setUserId(session.user.id);
+        currentUserId = session.user.id;
         await fetchProfile(session);
       } else if (event === 'SIGNED_OUT') {
-        const anonId = await initializeAnonymousUser();
-        setUserId(anonId);
+        currentUserId = generateAnonymousId();
         setProfile(null);
+      }
+
+      if (currentUserId) {
+        setUserId(currentUserId);
+        localStorage.setItem('brandii-user-token', currentUserId);
+      } else {
+        setUserId(null);
+        localStorage.removeItem('brandii-user-token');
       }
     });
 

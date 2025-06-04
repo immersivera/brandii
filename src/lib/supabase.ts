@@ -98,18 +98,6 @@ export async function uploadImageToStorage(file: File, userId: string): Promise<
   }
 }
 
-export async function initializeAnonymousUser() {
-  const storedToken = localStorage.getItem('brandii-user-token');
-  
-  if (!storedToken) {
-    const token = generateUniqueId();
-    localStorage.setItem('brandii-user-token', token);
-    return token;
-  }
-  
-  return storedToken;
-}
-
 export async function fetchUserProfile(): Promise<UserProfile | null> {
   const { data: { session } } = await supabase.auth.getSession();
   
@@ -393,8 +381,6 @@ export async function registerUser(email: string, password: string) {
         console.error('Error transferring brand kits:', updateError);
       }
     }
-
-    localStorage.setItem('brandii-user-token', user.id);
   }
 
   return user;
@@ -410,10 +396,6 @@ export async function loginUser(email: string, password: string) {
     throw error;
   }
 
-  if (user) {
-    localStorage.setItem('brandii-user-token', user.id);
-  }
-
   return user;
 }
 
@@ -424,11 +406,5 @@ export async function logoutUser() {
     throw error;
   }
 
-  // Generate new anonymous token
-  const newToken = await initializeAnonymousUser();
-  localStorage.setItem('brandii-user-token', newToken);
-}
-
-function generateUniqueId(): string {
-  return `anon_${Math.random().toString(36).substring(2, 9)}_${Date.now()}`;
+  localStorage.removeItem('brandii-user-token');
 }
