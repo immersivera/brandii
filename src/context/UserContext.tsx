@@ -31,6 +31,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfile(data);
       return data;
     } catch (error) {
+      console.log('error getting profile')
       console.error('Error fetching user profile:', error);
       toast.error('Failed to load user profile');
         console.log('set profile to null')
