@@ -19,7 +19,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchProfile = async (id: string) => {
     try {
       
-      console.log('fetch profile data')
       
       const { data, error } = await supabase
         .from('user_profiles')
@@ -33,7 +32,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Error fetching user profile:', error);
       toast.error('Failed to load user profile');
-        console.log('set profile to null')
       setProfile(null);
       return null;
     }
@@ -42,10 +40,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshProfile = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
-      console.log('set progile if session has user')
       await fetchProfile(session.user.id);
     } else {
-        console.log('set profile to null')
       setProfile(null);
     }
   };
@@ -61,11 +57,9 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (session?.user && isSubscribed) {
           setUserId(session.user.id);
           // Wait for profile to be fetched
-          const profiledata = await fetchProfile(session.user.id);
-          console.log('profiledata', profiledata)
+         await fetchProfile(session.user.id);
         } else if (isSubscribed) {
           setUserId(null);
-        console.log('set profile to null')
           setProfile(null);
         }
       } catch (error) {
