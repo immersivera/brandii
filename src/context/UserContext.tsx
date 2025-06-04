@@ -30,6 +30,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Error fetching user profile:', error);
       toast.error('Failed to load user profile');
+        console.log('set profile to null')
       setProfile(null);
       return null;
     }
@@ -40,6 +41,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (session?.user) {
       await fetchProfile(session.user.id);
     } else {
+        console.log('set profile to null')
       setProfile(null);
     }
   };
@@ -58,11 +60,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await fetchProfile(session.user.id);
         } else if (isSubscribed) {
           setUserId(null);
+        console.log('set profile to null')
           setProfile(null);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
         if (isSubscribed) {
+          console.log('set profile to null')
           setUserId(null);
           setProfile(null);
         }
@@ -84,7 +88,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUserId(session.user.id);
         await fetchProfile(session.user.id);
       } else {
-        console.log('set profile to null')
         setUserId(null);
         setProfile(null);
       }
