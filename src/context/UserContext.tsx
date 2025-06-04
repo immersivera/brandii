@@ -18,6 +18,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchProfile = async (id: string) => {
     try {
+      console.log('fetch profile data');
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
