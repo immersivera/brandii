@@ -164,7 +164,7 @@ export async function fetchBrandKits(
   const offset = (page - 1) * limit;
 
   // First get the total count
-  const countQuery = await supabase
+  const countQuery = supabase
     .from('brand_kits')
     .select('id', { count: 'exact' })
     .eq('user_id', session.user.id);
