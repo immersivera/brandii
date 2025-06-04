@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 
 export const Header: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
-  const { isAnonymous, profile } = useUser();
+  const { userId, profile } = useUser();
   const { openModal } = useAuthModal();
   const location = useLocation();
   const navigate = useNavigate();
@@ -24,8 +24,8 @@ export const Header: React.FC = () => {
   
   const navLinks = [
     { name: 'Home', path: '/' },
-    { name: 'Create', path: '/create' },
-    { name: 'Library', path: '/library' },
+    { name: 'Create', path: '/create', protected: true },
+    { name: 'Library', path: '/library', protected: true },
     { name: 'Gallery', path: '/gallery' }
   ];
 
@@ -45,6 +45,7 @@ export const Header: React.FC = () => {
       await logoutUser();
       toast.success('Signed out successfully');
       setIsDropdownOpen(false);
+      navigate('/');
     } catch (error) {
       console.error('Error signing out:', error);
       toast.error('Failed to sign out');
@@ -77,22 +78,24 @@ export const Header: React.FC = () => {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={`text-sm font-medium transition-colors relative group ${
-                  location.pathname === link.path
-                    ? 'text-brand-600 dark:text-brand-400'
-                    : isTransparent
-                      ? 'text-gray-900 dark:text-white/90 hover:text-gray-900 dark:hover:text-white'
-                      : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                }`}
-              >
-                {link.name}
-                <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-brand-600 dark:bg-brand-400 transition-all duration-300 group-hover:w-full ${
-                  location.pathname === link.path ? 'w-full' : ''
-                }`} />
-              </Link>
+              (!link.protected || userId) && (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className={`text-sm font-medium transition-colors relative group ${
+                    location.pathname === link.path
+                      ? 'text-brand-600 dark:text-brand-400'
+                      : isTransparent
+                        ? 'text-gray-900 dark:text-white/90 hover:text-gray-900 dark:hover:text-white'
+                        : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  {link.name}
+                  <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-brand-600 dark:bg-brand-400 transition-all duration-300 group-hover:w-full ${
+                    location.pathname === link.path ? 'w-full' : ''
+                  }`} />
+                </Link>
+              )
             ))}
             
             <Button
@@ -109,7 +112,7 @@ export const Header: React.FC = () => {
               )}
             </Button>
 
-            {isAnonymous ? (
+            {!userId ? (
               <Button
                 size="sm"
                 onClick={() => openModal()}
@@ -194,21 +197,23 @@ export const Header: React.FC = () => {
         >
           <nav className="px-4 pt-2 pb-4 space-y-2">
             {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={`block px-3 py-2 rounded-md text-base font-medium relative group ${
-                  location.pathname === link.path
-                    ? 'bg-brand-50 dark:bg-gray-800 text-brand-600 dark:text-brand-400'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-                }`}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                {link.name}
-                <span className={`absolute bottom-1 left-3 w-0 h-0.5 bg-brand-600 dark:bg-brand-400 transition-all duration-300 group-hover:w-[calc(100%-24px)] ${
-                  location.pathname === link.path ? 'w-[calc(100%-24px)]' : ''
-                }`} />
-              </Link>
+              (!link.protected || userId) && (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className={`block px-3 py-2 rounded-md text-base font-medium relative group ${
+                    location.pathname === link.path
+                      ? 'bg-brand-50 dark:bg-gray-800 text-brand-600 dark:text-brand-400'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  {link.name}
+                  <span className={`absolute bottom-1 left-3 w-0 h-0.5 bg-brand-600 dark:bg-brand-400 transition-all duration-300 group-hover:w-[calc(100%-24px)] ${
+                    location.pathname === link.path ? 'w-[calc(100%-24px)]' : ''
+                  }`} />
+                </Link>
+              )
             ))}
             
             <button
@@ -228,7 +233,7 @@ export const Header: React.FC = () => {
               )}
             </button>
 
-            {isAnonymous ? (
+            {!userId ? (
               <Button
                 className="w-full"
                 onClick={() => {
