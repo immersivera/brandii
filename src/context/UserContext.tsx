@@ -1,10 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { initializeAnonymousUser, supabase, type UserProfile } from '../lib/supabase';
+import { supabase, type UserProfile } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
 interface UserContextType {
   userId: string | null;
-  isAnonymous: boolean;
   isLoading: boolean;
   profile: UserProfile | null;
   refreshProfile: () => Promise<void>;
@@ -17,76 +16,92 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
-  const fetchProfile = async (session: any) => {
-    if (!session?.user) {
-      setProfile(null);
-      return;
-    }
-
+  const fetchProfile = async (id: string) => {
     try {
+      
+      
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
-        .eq('id', session.user.id)
+        .eq('id', id)
         .single();
 
       if (error) throw error;
       setProfile(data);
+      return data;
     } catch (error) {
       console.error('Error fetching user profile:', error);
       toast.error('Failed to load user profile');
+      setProfile(null);
+      return null;
     }
   };
 
   const refreshProfile = async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    await fetchProfile(session);
+    if (session?.user) {
+      await fetchProfile(session.user.id);
+    } else {
+      setProfile(null);
+    }
   };
 
   useEffect(() => {
-    const initUser = async () => {
+    let isSubscribed = true;
+
+    const initializeAuth = async () => {
       try {
+        // Get initial session
         const { data: { session } } = await supabase.auth.getSession();
         
-        if (session?.user) {
+        if (session?.user && isSubscribed) {
           setUserId(session.user.id);
-          await fetchProfile(session);
-        } else {
-          const anonId = await initializeAnonymousUser();
-          setUserId(anonId);
+          // Wait for profile to be fetched
+         await fetchProfile(session.user.id);
+        } else if (isSubscribed) {
+          setUserId(null);
+          setProfile(null);
         }
       } catch (error) {
-        console.error('Error initializing user:', error);
-        toast.error('Failed to initialize user session');
+        console.error('Error initializing auth:', error);
+        if (isSubscribed) {
+          console.log('set profile to null')
+          setUserId(null);
+          setProfile(null);
+        }
       } finally {
-        setIsLoading(false);
+        if (isSubscribed) {
+          setIsLoading(false);
+        }
       }
     };
 
-    initUser();
+    // Initialize auth state
+    initializeAuth();
 
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isSubscribed) return;
+
       if (session?.user) {
         setUserId(session.user.id);
-        await fetchProfile(session);
-      } else if (event === 'SIGNED_OUT') {
-        const anonId = await initializeAnonymousUser();
-        setUserId(anonId);
+        fetchProfile(session.user.id);
+      } else {
+        setUserId(null);
         setProfile(null);
       }
     });
 
+    // Cleanup
     return () => {
+      isSubscribed = false;
       subscription.unsubscribe();
     };
   }, []);
 
-  const isAnonymous = userId?.startsWith('anon_') ?? true;
-
   return (
     <UserContext.Provider value={{ 
       userId, 
-      isAnonymous, 
       isLoading, 
       profile,
       refreshProfile 

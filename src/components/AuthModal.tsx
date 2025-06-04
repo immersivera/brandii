@@ -4,7 +4,7 @@ import { X, Mail, Lock, Loader } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Card } from './ui/Card';
-import { registerUser, loginUser } from '../lib/supabase';
+import { useAuthActions } from '../lib/hooks/useAuthActions';
 import toast from 'react-hot-toast';
 
 interface AuthModalProps {
@@ -17,33 +17,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const { isLoading, signIn, signUp } = useAuthActions();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
 
     try {
       if (isSignUp) {
-        const user = await registerUser(email, password);
-        if (user) {
-          toast.success('Account created successfully!');
-          onSuccess();
-          onClose();
-        }
+        await signUp(email, password);
+        toast.success('Account created successfully!');
+        onSuccess();
+        onClose();
       } else {
-        const user = await loginUser(email, password);
-        if (user) {
-          toast.success('Signed in successfully!');
-          onSuccess();
-          onClose();
-        }
+        await signIn(email, password);
+        toast.success('Signed in successfully!');
+        onSuccess();
+        onClose();
       }
     } catch (error) {
       console.error('Authentication error:', error);
       toast.error(error instanceof Error ? error.message : 'Authentication failed');
-    } finally {
-      setIsLoading(false);
     }
   };
 
