@@ -26,10 +26,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) throw error;
       setProfile(data);
+      return data;
     } catch (error) {
       console.error('Error fetching user profile:', error);
       toast.error('Failed to load user profile');
       setProfile(null);
+      return null;
     }
   };
 
@@ -43,10 +45,41 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    let isInitialLoadHandled = false;
+    let isSubscribed = true;
+
+    const initializeAuth = async () => {
+      try {
+        // Get initial session
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user && isSubscribed) {
+          setUserId(session.user.id);
+          // Wait for profile to be fetched
+          await fetchProfile(session.user.id);
+        } else if (isSubscribed) {
+          setUserId(null);
+          setProfile(null);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        if (isSubscribed) {
+          setUserId(null);
+          setProfile(null);
+        }
+      } finally {
+        if (isSubscribed) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    // Initialize auth state
+    initializeAuth();
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isSubscribed) return;
+
       if (session?.user) {
         setUserId(session.user.id);
         await fetchProfile(session.user.id);
@@ -54,40 +87,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUserId(null);
         setProfile(null);
       }
-
-      // Only set isLoading to false after the first event
-      if (!isInitialLoadHandled) {
-        setIsLoading(false);
-        isInitialLoadHandled = true;
-      }
     });
 
-    // Immediately check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUserId(session.user.id);
-        fetchProfile(session.user.id);
-      } else {
-        setUserId(null);
-        setProfile(null);
-      }
-      
-      // Set isLoading to false if onAuthStateChange hasn't fired yet
-      if (!isInitialLoadHandled) {
-        setIsLoading(false);
-        isInitialLoadHandled = true;
-      }
-    }).catch(error => {
-      console.error('Error getting session on initial load:', error);
-      setUserId(null);
-      setProfile(null);
-      if (!isInitialLoadHandled) {
-        setIsLoading(false);
-        isInitialLoadHandled = true;
-      }
-    });
-
+    // Cleanup
     return () => {
+      isSubscribed = false;
       subscription.unsubscribe();
     };
   }, []);
