@@ -61,7 +61,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (session?.user && isSubscribed) {
           setUserId(session.user.id);
           // Wait for profile to be fetched
-          await fetchProfile(session.user.id);
+          const profiledata = await fetchProfile(session.user.id);
+          console.log('profiledata', profiledata)
         } else if (isSubscribed) {
           setUserId(null);
         console.log('set profile to null')
