@@ -18,9 +18,14 @@ export const ImageGeneratorPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  
+  // Brand asset controls
   const [includeBrandAssets, setIncludeBrandAssets] = useState(true);
   const [includeLogo, setIncludeLogo] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [includeBrandColors, setIncludeBrandColors] = useState(true);
+  const [includeBrandTypography, setIncludeBrandTypography] = useState(true);
+  const [includeBrandStyle, setIncludeBrandStyle] = useState(true);
 
   useEffect(() => {
     const loadBrandKit = async () => {
@@ -49,14 +54,23 @@ export const ImageGeneratorPage: React.FC = () => {
   const getBrandAssetsPrompt = () => {
     if (!brandKit || !includeBrandAssets) return '';
 
-    let assetsPrompt = `
-      Use the following brand assets in the image:
-      Colors: Primary ${brandKit.colors.primary}, Secondary ${brandKit.colors.secondary}, Accent ${brandKit.colors.accent}
-      Style: Match the brand's ${brandKit.type} industry style and maintain consistency with the brand's visual identity.
-      Typography: Use fonts similar to ${brandKit.typography.headingFont} for headings and ${brandKit.typography.bodyFont} for body text if text is included.
-    `;
+    const parts = [];
 
-    return assetsPrompt;
+    if (includeBrandColors) {
+      parts.push(`Colors: Primary ${brandKit.colors.primary}, Secondary ${brandKit.colors.secondary}, Accent ${brandKit.colors.accent}`);
+    }
+
+    if (includeBrandTypography) {
+      parts.push(`Typography: Use fonts similar to ${brandKit.typography.headingFont} for headings and ${brandKit.typography.bodyFont} for body text if text is included`);
+    }
+
+    if (includeBrandStyle) {
+      parts.push(`Style: Match the brand's ${brandKit.type} industry style and maintain consistency with the brand's visual identity`);
+    }
+
+    if (parts.length === 0) return '';
+
+    return `\nUse the following brand assets in the image:\n${parts.join('\n')}`;
   };
 
   const getSelectedLogo = () => {
@@ -185,6 +199,9 @@ export const ImageGeneratorPage: React.FC = () => {
                           setIncludeBrandAssets(e.target.checked);
                           if (!e.target.checked) {
                             setIncludeLogo(false);
+                            setIncludeBrandColors(false);
+                            setIncludeBrandTypography(false);
+                            setIncludeBrandStyle(false);
                           }
                         }}
                         className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
@@ -193,25 +210,77 @@ export const ImageGeneratorPage: React.FC = () => {
                         htmlFor="includeBrandAssets"
                         className="text-sm text-gray-700 dark:text-gray-300"
                       >
-                        Include brand colors, typography, and style in the generation
+                        Include brand assets in generation
                       </label>
                     </div>
 
-                    {includeBrandAssets && hasLogo && (
-                      <div className="flex items-center space-x-2 ml-6">
-                        <input
-                          type="checkbox"
-                          id="includeLogo"
-                          checked={includeLogo}
-                          onChange={(e) => setIncludeLogo(e.target.checked)}
-                          className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
-                        />
-                        <label 
-                          htmlFor="includeLogo"
-                          className="text-sm text-gray-700 dark:text-gray-300"
-                        >
-                          Include brand logo in the generated images
-                        </label>
+                    {includeBrandAssets && (
+                      <div className="space-y-2 ml-6">
+                        {hasLogo && (
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="includeLogo"
+                              checked={includeLogo}
+                              onChange={(e) => setIncludeLogo(e.target.checked)}
+                              className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
+                            />
+                            <label 
+                              htmlFor="includeLogo"
+                              className="text-sm text-gray-700 dark:text-gray-300"
+                            >
+                              Include brand logo
+                            </label>
+                          </div>
+                        )}
+
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="includeBrandColors"
+                            checked={includeBrandColors}
+                            onChange={(e) => setIncludeBrandColors(e.target.checked)}
+                            className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
+                          />
+                          <label 
+                            htmlFor="includeBrandColors"
+                            className="text-sm text-gray-700 dark:text-gray-300"
+                          >
+                            Include brand colors
+                          </label>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="includeBrandTypography"
+                            checked={includeBrandTypography}
+                            onChange={(e) => setIncludeBrandTypography(e.target.checked)}
+                            className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
+                          />
+                          <label 
+                            htmlFor="includeBrandTypography"
+                            className="text-sm text-gray-700 dark:text-gray-300"
+                          >
+                            Include brand typography
+                          </label>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="includeBrandStyle"
+                            checked={includeBrandStyle}
+                            onChange={(e) => setIncludeBrandStyle(e.target.checked)}
+                            className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
+                          />
+                          <label 
+                            htmlFor="includeBrandStyle"
+                            className="text-sm text-gray-700 dark:text-gray-300"
+                          >
+                            Include brand style
+                          </label>
+                        </div>
                       </div>
                     )}
                   </div>
