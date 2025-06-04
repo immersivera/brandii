@@ -18,21 +18,19 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchProfile = async (id: string) => {
     try {
-      console.log('fetch profile data');
+      
+      console.log('fetch profile data')
+      
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('id', id)
         .single();
 
-      // if (error) throw error;
-    
-      
-        console.log('set profile to', data)
+      if (error) throw error;
       setProfile(data);
       return data;
     } catch (error) {
-      console.log('error getting profile')
       console.error('Error fetching user profile:', error);
       toast.error('Failed to load user profile');
         console.log('set profile to null')
