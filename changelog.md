@@ -1,6 +1,12 @@
 # Changelog
 
-## Version 0.3.0 (Latest)
+## Version 0.3.1 (Latest)
+
+### Fixed
+- Updated Supabase client library to version 2.49.8 to address JSR issue
+- Modified Edge Function imports to use npm: specifier for better compatibility
+
+## Version 0.3.0
 
 ### Added
 - Media asset generation for existing brand kits
