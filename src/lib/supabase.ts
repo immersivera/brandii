@@ -388,37 +388,3 @@ export async function deleteBrandKit(id: string): Promise<boolean> {
 
   return true;
 }
-
-export async function registerUser(email: string, password: string) {
-  const { data: { user }, error } = await supabase.auth.signUp({
-    email,
-    password,
-  });
-
-  if (error) {
-    throw error;
-  }
-
-  return user;
-}
-
-export async function loginUser(email: string, password: string) {
-  const { data: { user }, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error) {
-    throw error;
-  }
-
-  return user;
-}
-
-export async function logoutUser() {
-  const { error } = await supabase.auth.signOut();
-
-  if (error) {
-    throw error;
-  }
-}
