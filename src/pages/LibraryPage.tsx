@@ -92,12 +92,17 @@ export const LibraryPage: React.FC = () => {
     }
 
     // Then check for AI-generated logo
-    if (brandKit.generated_assets?.length && brandKit.logo_selected_asset_id) {
-      const selectedAsset = brandKit.generated_assets.find(
-        asset => asset.id === brandKit.logo_selected_asset_id && asset.type === 'logo'
-      );
-      if (selectedAsset?.image_data) {
-        return selectedAsset.image_data;
+    if (brandKit.generated_assets?.length) {
+      console.log('Checking AI-generated logo for brand kit:', brandKit.id);
+      // First try to find the selected logo
+      if (brandKit.logo_selected_asset_id) {
+        const selectedAsset = brandKit.generated_assets.find(
+          asset => asset.id === brandKit.logo_selected_asset_id && asset.type === 'logo'
+        );
+        console.log('Selected asset:', selectedAsset);
+        if (selectedAsset?.image_data) {
+          return selectedAsset.image_data;
+        }
       }
 
       // Fallback to first logo if no selected logo is found
