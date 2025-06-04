@@ -4,15 +4,16 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import { useAuthModal } from '../../context/AuthModalContext';
+import { useAuthActions } from '../../lib/hooks/useAuthActions';
 import { Moon, Sun, Menu, X, LogIn, LogOut, User, ChevronDown, Settings } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { logoutUser } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 
 export const Header: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const { userId, profile } = useUser();
   const { openModal } = useAuthModal();
+  const { signOut } = useAuthActions();
   const location = useLocation();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -42,7 +43,7 @@ export const Header: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      await logoutUser();
+      await signOut();
       toast.success('Signed out successfully');
       setIsDropdownOpen(false);
       navigate('/');
