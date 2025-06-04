@@ -1,5 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'npm:@supabase/supabase-js@2.49.8'
+import { createClient } from 'npm:@supabase/supabase-js@2'
 import OpenAI from 'npm:openai@4.28.4'
 
 const corsHeaders = {
