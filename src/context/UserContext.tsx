@@ -16,12 +16,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (id: string) => {
     try {
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
-        .eq('id', userId)
+        .eq('id', id)
         .single();
 
       if (error) throw error;
@@ -29,6 +29,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Error fetching user profile:', error);
       toast.error('Failed to load user profile');
+      setProfile(null);
     }
   };
 
@@ -36,31 +37,15 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
       await fetchProfile(session.user.id);
+    } else {
+      setProfile(null);
     }
   };
 
   useEffect(() => {
-    const initUser = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user) {
-          setUserId(session.user.id);
-          await fetchProfile(session.user.id);
-        } else {
-          setUserId(null);
-          setProfile(null);
-        }
-      } catch (error) {
-        console.error('Error initializing user:', error);
-        toast.error('Failed to initialize user session');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    let isInitialLoadHandled = false;
 
-    initUser();
-
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         setUserId(session.user.id);
@@ -68,6 +53,37 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setUserId(null);
         setProfile(null);
+      }
+
+      // Only set isLoading to false after the first event
+      if (!isInitialLoadHandled) {
+        setIsLoading(false);
+        isInitialLoadHandled = true;
+      }
+    });
+
+    // Immediately check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUserId(session.user.id);
+        fetchProfile(session.user.id);
+      } else {
+        setUserId(null);
+        setProfile(null);
+      }
+      
+      // Set isLoading to false if onAuthStateChange hasn't fired yet
+      if (!isInitialLoadHandled) {
+        setIsLoading(false);
+        isInitialLoadHandled = true;
+      }
+    }).catch(error => {
+      console.error('Error getting session on initial load:', error);
+      setUserId(null);
+      setProfile(null);
+      if (!isInitialLoadHandled) {
+        setIsLoading(false);
+        isInitialLoadHandled = true;
       }
     });
 
