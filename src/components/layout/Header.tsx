@@ -3,18 +3,18 @@ import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
+import { useAuthModal } from '../../context/AuthModalContext';
 import { Moon, Sun, Menu, X, LogIn, LogOut, User } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { AuthModal } from '../AuthModal';
 import { logoutUser } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 
 export const Header: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const { isAnonymous, profile } = useUser();
+  const { openModal } = useAuthModal();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
   
   const isHomePage = location.pathname === '/';
   const isTransparent = isHomePage && !isMenuOpen;
@@ -97,7 +97,7 @@ export const Header: React.FC = () => {
             {isAnonymous ? (
               <Button
                 size="sm"
-                onClick={() => setShowAuthModal(true)}
+                onClick={() => openModal()}
                 leftIcon={<LogIn className="h-4 w-4" />}
               >
                 Sign In
@@ -190,7 +190,7 @@ export const Header: React.FC = () => {
                 className="w-full"
                 onClick={() => {
                   setIsMenuOpen(false);
-                  setShowAuthModal(true);
+                  openModal();
                 }}
                 leftIcon={<LogIn className="h-4 w-4" />}
               >
@@ -212,12 +212,6 @@ export const Header: React.FC = () => {
           </nav>
         </motion.div>
       )}
-
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onSuccess={() => setShowAuthModal(false)}
-      />
     </motion.header>
   );
 };
