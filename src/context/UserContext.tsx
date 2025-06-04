@@ -84,6 +84,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUserId(session.user.id);
         await fetchProfile(session.user.id);
       } else {
+        console.log('set profile to null')
         setUserId(null);
         setProfile(null);
       }
