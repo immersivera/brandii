@@ -25,7 +25,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', id)
         .single();
 
-      if (error) throw error;
+      // if (error) throw error;
+    
       
         console.log('set profile to', data)
       setProfile(data);
