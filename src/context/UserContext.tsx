@@ -91,8 +91,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (session?.user) {
         setUserId(session.user.id);
-         const profiledata = fetchProfile(session.user.id);
-          console.log('profiledata', profiledata)
+         fetchProfile(session.user.id);
       } else {
         setUserId(null);
         setProfile(null);
