@@ -5,10 +5,17 @@ import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Textarea } from '../components/ui/Textarea';
+import { Select } from '../components/ui/Select';
 import { ArrowLeft, Sparkles, Download, X, Calendar, Clock } from 'lucide-react';
 import { BrandKit, fetchBrandKitById, saveGeneratedAssets } from '../lib/supabase';
-import { generateImageAssets } from '../lib/openai';
+import { generateImageAssets, type ImageSize } from '../lib/openai';
 import toast from 'react-hot-toast';
+
+const IMAGE_SIZES = [
+  { value: '1024x1024', label: 'Square (1024×1024)' },
+  { value: '1792x1024', label: 'Landscape (1792×1024)' },
+  { value: '1024x1792', label: 'Portrait (1024×1792)' },
+] as const;
 
 export const ImageGeneratorPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +26,7 @@ export const ImageGeneratorPage: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedSize, setSelectedSize] = useState<ImageSize>('1024x1024');
   
   // Brand asset controls
   const [includeBrandAssets, setIncludeBrandAssets] = useState(true);
@@ -92,7 +100,7 @@ export const ImageGeneratorPage: React.FC = () => {
     try {
       const fullPrompt = `${prompt}${getBrandAssetsPrompt()}`;
       const logoImage = getSelectedLogo();
-      const images = await generateImageAssets(fullPrompt, logoImage);
+      const images = await generateImageAssets(fullPrompt, logoImage, selectedSize);
       setGeneratedImages(images);
 
       // Save the generated images with the prompt
@@ -187,6 +195,14 @@ export const ImageGeneratorPage: React.FC = () => {
                     onChange={(e) => setPrompt(e.target.value)}
                     placeholder="Describe the image you want to generate..."
                     className="h-32"
+                  />
+
+                  <Select
+                    label="Image Size"
+                    options={IMAGE_SIZES}
+                    value={selectedSize}
+                    onChange={(value) => setSelectedSize(value as ImageSize)}
+                    helperText="Choose the dimensions for your generated image"
                   />
 
                   <div className="space-y-3">
@@ -291,7 +307,7 @@ export const ImageGeneratorPage: React.FC = () => {
                     isLoading={isGenerating}
                     disabled={isGenerating || !prompt.trim()}
                   >
-                    Generate Images
+                    Generate Image
                   </Button>
                 </div>
               </CardContent>
@@ -304,10 +320,10 @@ export const ImageGeneratorPage: React.FC = () => {
                 transition={{ duration: 0.5 }}
               >
                 <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
-                  Generated Images
+                  Generated Image
                 </h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6">
                   {generatedImages.map((imageUrl, index) => (
                     <Card 
                       key={index} 
