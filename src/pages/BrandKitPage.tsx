@@ -5,7 +5,8 @@ import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Trash2, Sparkles, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { fetchBrandKitById, updateBrandKit, generateLogoImages, saveGeneratedAssets } from '../lib/supabase';
+import { fetchBrandKitById, updateBrandKit, saveGeneratedAssets } from '../lib/supabase';
+import {generateLogoImages} from '../lib/openai';
 import type { BrandKit } from '../lib/supabase';
 
 export const BrandKitPage: React.FC = () => {
