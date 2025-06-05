@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardFooter } from '../components/ui/Card';
-import { ArrowLeft, ArrowRight, Download, Copy, Share2, Trash2, Image, Plus } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Download, Copy, Share2, Trash2, Image, Plus, Edit } from 'lucide-react';
 import { BrandKit, fetchBrandKitById, deleteBrandKit, updateBrandKit } from '../lib/supabase';
 import { generateBrandKitZip } from '../lib/download';
 import toast from 'react-hot-toast';
@@ -209,11 +209,20 @@ export const BrandKitPage: React.FC = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleDeleteBrandKit}
+                    onClick={() => handleDeleteBrandKit(brandKit.id)}
                     leftIcon={<Trash2 className="h-4 w-4" />}
                     className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
                   >
                     Delete
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/kit/${id}/edit`)}
+                    leftIcon={<Edit className="h-4 w-4" />}
+                  >
+                    Edit
                   </Button>
 
                   <Button
