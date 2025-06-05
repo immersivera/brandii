@@ -96,6 +96,23 @@ export const ResultPage: React.FC = () => {
   const industryName = BRAND_TYPES.find(t => t.id === brandDetails.industry)?.name || 'Not specified';
   const personalityName = BRAND_ADJECTIVES.find(a => a.id === brandDetails.adjective)?.name || 'Not specified';
 
+  const renderTextLogo = () => (
+    <div 
+      className="w-32 h-32 rounded-xl flex items-center justify-center"
+      style={{ 
+        backgroundColor: brandDetails.colors.background,
+        fontFamily: brandDetails.typography.headingFont
+      }}
+    >
+      <span 
+        className="text-2xl font-bold text-center px-4"
+        style={{ color: brandDetails.colors.primary }}
+      >
+        {brandDetails.name}
+      </span>
+    </div>
+  );
+
   return (
     <Layout>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
@@ -151,10 +168,16 @@ export const ResultPage: React.FC = () => {
                 <CardContent className="p-6">
                   <div className="flex flex-col md:flex-row items-start gap-6">
                     <div className="flex-1">
-                      <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
+                      <h2 
+                        className="text-2xl font-bold mb-2 text-gray-900 dark:text-white"
+                        style={{ fontFamily: brandDetails.typography.headingFont }}
+                      >
                         {brandDetails.name}
                       </h2>
-                      <p className="text-gray-600 dark:text-gray-400 mb-4">
+                      <p 
+                        className="text-gray-600 dark:text-gray-400 mb-4"
+                        style={{ fontFamily: brandDetails.typography.bodyFont }}
+                      >
                         {brandDetails.description}
                       </p>
                       
@@ -186,19 +209,19 @@ export const ResultPage: React.FC = () => {
                           className="w-32 h-32 object-contain rounded-xl"
                           style={{ backgroundColor: brandDetails.colors.background }}
                         />
+                      ) : brandDetails.logoChoice === 'none' ? (
+                        renderTextLogo()
                       ) : (
                         <div 
                           className="w-32 h-32 rounded-xl flex items-center justify-center"
-                          style={{ backgroundColor: brandDetails.colors.background }}
+                          style={{ 
+                            backgroundColor: brandDetails.colors.background,
+                            fontFamily: brandDetails.typography.headingFont
+                          }}
                         >
                           <span 
                             className="text-4xl font-bold"
-                            style={{ 
-                              color: brandDetails.colors.primary.startsWith('#f') || 
-                                     brandDetails.colors.primary.startsWith('#e') || 
-                                     brandDetails.colors.primary.startsWith('#d') || 
-                                     brandDetails.colors.primary.startsWith('#c') ? '#000' : '#fff'
-                            }}
+                            style={{ color: brandDetails.colors.primary }}
                           >
                             {brandDetails.name.charAt(0)}
                           </span>
@@ -270,10 +293,16 @@ export const ResultPage: React.FC = () => {
                         <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
                           Heading Font
                         </h4>
-                        <p className="text-2xl font-display font-semibold text-gray-900 dark:text-white">
+                        <p 
+                          className="text-2xl font-semibold text-gray-900 dark:text-white"
+                          style={{ fontFamily: brandDetails.typography.headingFont }}
+                        >
                           {brandDetails.typography.headingFont}
                         </p>
-                        <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        <div 
+                          className="mt-1 text-sm text-gray-500 dark:text-gray-400"
+                          style={{ fontFamily: brandDetails.typography.headingFont }}
+                        >
                           ABCDEFGHIJKLMNOPQRSTUVWXYZ<br />
                           abcdefghijklmnopqrstuvwxyz<br />
                           1234567890
@@ -284,10 +313,16 @@ export const ResultPage: React.FC = () => {
                         <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
                           Body Font
                         </h4>
-                        <p className="text-base text-gray-900 dark:text-white">
+                        <p 
+                          className="text-base text-gray-900 dark:text-white"
+                          style={{ fontFamily: brandDetails.typography.bodyFont }}
+                        >
                           {brandDetails.typography.bodyFont}
                         </p>
-                        <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        <div 
+                          className="mt-1 text-sm text-gray-500 dark:text-gray-400"
+                          style={{ fontFamily: brandDetails.typography.bodyFont }}
+                        >
                           ABCDEFGHIJKLMNOPQRSTUVWXYZ<br />
                           abcdefghijklmnopqrstuvwxyz<br />
                           1234567890
