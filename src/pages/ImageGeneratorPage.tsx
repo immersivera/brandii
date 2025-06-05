@@ -8,6 +8,7 @@ import { Textarea } from '../components/ui/Textarea';
 import { ArrowLeft, Sparkles, Download, X, Calendar, Clock } from 'lucide-react';
 import { BrandKit, fetchBrandKitById, saveGeneratedAssets } from '../lib/supabase';
 import { generateImageAssets } from '../lib/openai';
+import { resizeImageBase64 } from '../lib/utils';
 import toast from 'react-hot-toast';
 
 export const ImageGeneratorPage: React.FC = () => {
@@ -92,7 +93,11 @@ export const ImageGeneratorPage: React.FC = () => {
     try {
       const fullPrompt = `${prompt}${getBrandAssetsPrompt()}`;
       const logoImage = getSelectedLogo();
-      const images = await generateImageAssets(fullPrompt, logoImage);
+      
+      // Resize logo if present
+      const resizedLogoImage = logoImage ? await resizeImageBase64(logoImage, 512) : null;
+      
+      const images = await generateImageAssets(fullPrompt, resizedLogoImage);
       setGeneratedImages(images);
 
       // Save the generated images with the prompt
