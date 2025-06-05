@@ -66,17 +66,15 @@ export async function generateLogoImages(options: LogoGenerationOptions): Promis
 
 export async function generateImageAssets(
   prompt: string,
-  logoDescription?: string,
+  logoImage?: string,
   size: ImageSize = '1024x1024',
   count: number = 1
 ): Promise<string[]> {
   try {
-    const fullPrompt = logoDescription ? `${prompt}. Include a logo that is ${logoDescription}` : prompt;
-    
     const { data, error } = await supabase.functions.invoke('openai', {
       body: {
         action: 'generateImageAssets',
-        data: { prompt: fullPrompt, size, count }
+        data: { prompt, logoImage, size, count }
       }
     });
 

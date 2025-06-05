@@ -88,16 +88,13 @@ export const ImageGeneratorPage: React.FC = () => {
     return `\nUse the following brand assets in the image:\n${parts.join('\n')}`;
   };
 
-  const getLogoDescription = () => {
+  const getSelectedLogo = () => {
     if (!brandKit?.generated_assets || !brandKit.logo_selected_asset_id || !includeLogo) return null;
 
     const selectedLogo = brandKit.generated_assets.find(
       asset => asset.id === brandKit.logo_selected_asset_id
     );
-
-    if (!selectedLogo?.image_prompt) return null;
-
-    return selectedLogo.image_prompt;
+    return selectedLogo?.image_data || null;
   };
 
   const handleGenerate = async () => {
@@ -109,8 +106,8 @@ export const ImageGeneratorPage: React.FC = () => {
     setIsGenerating(true);
     try {
       const fullPrompt = `${prompt}${getBrandAssetsPrompt()}`;
-      const logoDescription = getLogoDescription();
-      const images = await generateImageAssets(fullPrompt, logoDescription, selectedSize, imageCount);
+      const logoImage = getSelectedLogo();
+      const images = await generateImageAssets(fullPrompt, logoImage, selectedSize, imageCount);
       setGeneratedImages(images);
 
       // Save the generated images with the prompt
