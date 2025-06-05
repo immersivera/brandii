@@ -4,7 +4,7 @@ import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
-import { Search, Plus, Trash2, Palette, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, Trash2, Palette, ChevronLeft, ChevronRight, Image } from 'lucide-react';
 import { fetchBrandKits, BrandKit, deleteBrandKit } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useBrand } from '../context/BrandContext';
@@ -93,13 +93,11 @@ export const LibraryPage: React.FC = () => {
 
     // Then check for AI-generated logo
     if (brandKit.generated_assets?.length) {
-      console.log('Checking AI-generated logo for brand kit:', brandKit.id);
       // First try to find the selected logo
       if (brandKit.logo_selected_asset_id) {
         const selectedAsset = brandKit.generated_assets.find(
           asset => asset.id === brandKit.logo_selected_asset_id && asset.type === 'logo'
         );
-        console.log('Selected asset:', selectedAsset);
         if (selectedAsset?.image_data) {
           return selectedAsset.image_data;
         }
@@ -116,6 +114,23 @@ export const LibraryPage: React.FC = () => {
 
     return null;
   };
+
+  const renderTextLogo = (brandKit: BrandKit) => (
+    <div 
+      className="h-24 w-24 rounded-lg flex items-center justify-center"
+      style={{ 
+        backgroundColor: brandKit.colors.background,
+        fontFamily: brandKit.typography.headingFont
+      }}
+    >
+      <span 
+        className="text-lg font-bold text-center px-2"
+        style={{ color: brandKit.colors.primary }}
+      >
+        {brandKit.name}
+      </span>
+    </div>
+  );
 
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
 
@@ -240,24 +255,21 @@ export const LibraryPage: React.FC = () => {
                                     alt={`${brandKit.name} logo`}
                                     className="h-24 w-24 object-contain"
                                   />
-                                ) : (
-                                  <span 
-                                    className="text-4xl font-bold font-display"
-                                    style={{ 
-                                      color: brandKit.colors.text
-                                    }}
-                                  >
-                                    {brandKit.name.charAt(0)}
-                                  </span>
-                                )}
+                                ) : renderTextLogo(brandKit)}
                               </div>
                             </div>
                             
                             <div className="p-6">
-                              <h3 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">
+                              <h3 
+                                className="text-xl font-semibold mb-1 text-gray-900 dark:text-white"
+                                style={{ fontFamily: brandKit.typography.headingFont }}
+                              >
                                 {brandKit.name}
                               </h3>
-                              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                              <p 
+                                className="text-sm text-gray-500 dark:text-gray-400 mb-4"
+                                style={{ fontFamily: brandKit.typography.bodyFont }}
+                              >
                                 {brandKit.description}
                               </p>
                               
@@ -280,25 +292,14 @@ export const LibraryPage: React.FC = () => {
                                   View Details
                                 </Button>
                                 
-                                <div className="flex gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleRemix(brandKit)}
-                                    leftIcon={<Palette className="h-4 w-4" />}
-                                  >
-                                    Remix
-                                  </Button>
-                                  
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleDeleteBrandKit(brandKit.id)}
-                                    className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => navigate(`/kit/${brandKit.id}/create`)}
+                                  leftIcon={<Image className="h-4 w-4" />}
+                                >
+                                  Create Images
+                                </Button>
                               </div>
                             </div>
                           </CardContent>

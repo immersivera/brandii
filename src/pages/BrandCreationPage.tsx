@@ -49,8 +49,7 @@ export const BrandCreationPage: React.FC = () => {
         logoStyle: suggestion.logoStyle,
         colors: suggestion.colors,
         typography: suggestion.typography,
-        logoChoice: 'ai',
-        typographyChoice: 'ai'
+        logoChoice: 'ai'
       });
       
       toast.success('Brand identity generated successfully!');
@@ -168,24 +167,6 @@ export const BrandCreationPage: React.FC = () => {
       setIsGeneratingLogos(false);
       setIsSaving(false);
     }
-  };
-
-  const handleCompleteClick = async () => {
-    if (brandDetails.id) {
-      try {
-        const existingKit = await fetchBrandKitById(brandDetails.id);
-        if (existingKit?.generated_assets?.length) {
-          if (window.confirm('This brand kit already has generated logos. Would you like to view them instead of generating new ones?')) {
-            navigate(`/kit/${brandDetails.id}`);
-            return;
-          }
-        }
-      } catch (error) {
-        console.error('Error checking existing brand kit:', error);
-      }
-    }
-    
-    handleComplete();
   };
 
   const handleStartOver = () => {
@@ -418,41 +399,13 @@ export const BrandCreationPage: React.FC = () => {
                 )}
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Typography
-                  </label>
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="radio"
-                        id="typographyAI"
-                        checked={brandDetails.typographyChoice === 'ai'}
-                        onChange={() => updateBrandDetails({ typographyChoice: 'ai' })}
-                        className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300"
-                      />
-                      <label htmlFor="typographyAI" className="text-sm text-gray-700 dark:text-gray-300">
-                        Let AI choose typography
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="radio"
-                        id="typographyCustom"
-                        checked={brandDetails.typographyChoice === 'custom'}
-                        onChange={() => updateBrandDetails({ typographyChoice: 'custom' })}
-                        className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300"
-                      />
-                      <label htmlFor="typographyCustom" className="text-sm text-gray-700 dark:text-gray-300">
-                        Choose custom fonts
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {brandDetails.typographyChoice === 'custom' && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Typography
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
                     <Select
                       label="Heading Font"
                       options={[
@@ -464,6 +417,18 @@ export const BrandCreationPage: React.FC = () => {
                         typography: { ...brandDetails.typography, headingFont: value }
                       })}
                     />
+                    <div 
+                      className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                      style={{ fontFamily: brandDetails.typography.headingFont }}
+                    >
+                      <p className="text-2xl font-bold mb-2">The quick brown fox</p>
+                      <p className="text-xl">ABCDEFGHIJKLMNOPQRSTUVWXYZ</p>
+                      <p className="text-lg">abcdefghijklmnopqrstuvwxyz</p>
+                      <p className="text-base">1234567890</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
                     <Select
                       label="Body Font"
                       options={[
@@ -475,8 +440,17 @@ export const BrandCreationPage: React.FC = () => {
                         typography: { ...brandDetails.typography, bodyFont: value }
                       })}
                     />
+                    <div 
+                      className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                      style={{ fontFamily: brandDetails.typography.bodyFont }}
+                    >
+                      <p className="text-base mb-2">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+                      <p className="text-sm">ABCDEFGHIJKLMNOPQRSTUVWXYZ</p>
+                      <p className="text-sm">abcdefghijklmnopqrstuvwxyz</p>
+                      <p className="text-sm">1234567890</p>
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
               
               <div className="pt-4 flex justify-between">
@@ -645,7 +619,7 @@ export const BrandCreationPage: React.FC = () => {
                 </div>
                 
                 <Button
-                  onClick={handleCompleteClick}
+                  onClick={handleComplete}
                   rightIcon={<Sparkles className="h-4 w-4" />}
                   isLoading={isSaving || isGeneratingLogos}
                   disabled={isSaving || isGeneratingLogos}
