@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useBrand } from '../context/BrandContext';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardFooter } from '../components/ui/Card';
-import { ArrowLeft, ArrowRight, Download, Copy, Share2, Trash2, Image as ImageIcon, Plus, Sparkles, Upload } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Download, Copy, Share2, Trash2, Image as ImageIcon, Plus, Sparkles, Upload, Palette } from 'lucide-react';
 import { BrandKit, fetchBrandKitById, deleteBrandKit, updateBrandKit, saveGeneratedAssets, deleteGeneratedAsset } from '../lib/supabase';
 import { generateLogoImages } from '../lib/openai';
 import { generateBrandKitZip } from '../lib/download';
@@ -21,7 +22,9 @@ export const BrandKitPage: React.FC = () => {
   const [isDeletingLogo, setIsDeletingLogo] = useState<string | null>(null);
   const [isDeletingAllLogos, setIsDeletingAllLogos] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isSelectingLogo, setIsSelectingLogo] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const { updateBrandDetails } = useBrand();
 
   useEffect(() => {
     const loadBrandKit = async () => {
@@ -113,6 +116,21 @@ export const BrandKitPage: React.FC = () => {
     }
   };
 
+  const handleRemix = () => {
+    if (!brandKit) return;
+    
+    updateBrandDetails({
+      name: `${brandKit.name} Remix`,
+      description: brandKit.description,
+      industry: brandKit.type,
+      colors: brandKit.colors,
+      typography: brandKit.typography,
+      logoStyle: brandKit.logo.type,
+      step: 1
+    });
+    navigate('/create');
+  };
+
   const handleGenerateMoreLogos = async () => {
     if (!brandKit) return;
 
@@ -153,6 +171,7 @@ export const BrandKitPage: React.FC = () => {
     if (!brandKit) return;
 
     try {
+      setIsSelectingLogo(assetId);
       const updatedBrandKit = await updateBrandKit(brandKit.id, {
         logo_selected_asset_id: assetId
       });
@@ -161,6 +180,8 @@ export const BrandKitPage: React.FC = () => {
     } catch (error) {
       console.error('Error updating logo:', error);
       toast.error('Failed to update logo');
+    } finally {
+      setIsSelectingLogo(null);
     }
   };
 
@@ -521,6 +542,15 @@ export const BrandKitPage: React.FC = () => {
                     >
                       Share
                     </Button>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRemix}
+                      leftIcon={<Palette className="h-4 w-4" />}
+                    >
+                      Remix
+                    </Button>
                   </div>
                 </CardFooter>
               </Card>
@@ -560,7 +590,7 @@ export const BrandKitPage: React.FC = () => {
                     <div className="flex-1 space-y-4">
                       <div>
                         <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Upload New Logo
+                        Upload Your Own Logo
                         </h4>
                         <div className="flex items-center space-x-2">
                           <input
@@ -756,7 +786,7 @@ export const BrandKitPage: React.FC = () => {
                                 <img
                                   src={asset.image_data}
                                   alt="Logo concept"
-                                  className="w-full h-auto"
+                                  className={`w-full h-auto ${isSelectingLogo === asset.id ? 'opacity-50' : ''}`}
                                   style={{ 
                                     backgroundColor: brandKit.colors.background
                                   }}
@@ -765,6 +795,11 @@ export const BrandKitPage: React.FC = () => {
                                     handleSelectLogo(asset.id);
                                   }}
                                 />
+                                {isSelectingLogo === asset.id && (
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-brand-600"></div>
+                                  </div>
+                                )}
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
