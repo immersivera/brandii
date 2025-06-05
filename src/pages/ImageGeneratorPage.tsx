@@ -5,10 +5,23 @@ import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Textarea } from '../components/ui/Textarea';
+import { Select } from '../components/ui/Select';
 import { ArrowLeft, Sparkles, Download, X, Calendar, Clock } from 'lucide-react';
 import { BrandKit, fetchBrandKitById, saveGeneratedAssets } from '../lib/supabase';
-import { generateImageAssets } from '../lib/openai';
+import { generateImageAssets, type ImageSize } from '../lib/openai';
 import toast from 'react-hot-toast';
+
+const IMAGE_SIZES = [
+  { value: '1024x1024', label: 'Square (1024×1024)' },
+  { value: '1536x1024', label: 'Landscape (1536×1024)' },
+  { value: '1024x1536', label: 'Portrait (1024×1536)' },
+  { value: 'auto', label: 'Auto (Optimized)' },
+] as const;
+
+const IMAGE_COUNTS = [
+  { value: '1', label: '1 Image' },
+  { value: '2', label: '2 Images' },
+] as const;
 
 export const ImageGeneratorPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +32,8 @@ export const ImageGeneratorPage: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedSize, setSelectedSize] = useState<ImageSize>('1024x1024');
+  const [imageCount, setImageCount] = useState<number>(1);
   
   // Brand asset controls
   const [includeBrandAssets, setIncludeBrandAssets] = useState(true);
@@ -92,7 +107,7 @@ export const ImageGeneratorPage: React.FC = () => {
     try {
       const fullPrompt = `${prompt}${getBrandAssetsPrompt()}`;
       const logoImage = getSelectedLogo();
-      const images = await generateImageAssets(fullPrompt, logoImage);
+      const images = await generateImageAssets(fullPrompt, logoImage, selectedSize, imageCount);
       setGeneratedImages(images);
 
       // Save the generated images with the prompt
@@ -188,6 +203,24 @@ export const ImageGeneratorPage: React.FC = () => {
                     placeholder="Describe the image you want to generate..."
                     className="h-32"
                   />
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Select
+                      label="Image Size"
+                      options={IMAGE_SIZES}
+                      value={selectedSize}
+                      onChange={(value) => setSelectedSize(value as ImageSize)}
+                      helperText="Choose the dimensions for your generated image"
+                    />
+
+                    <Select
+                      label="Number of Images"
+                      options={IMAGE_COUNTS}
+                      value={String(imageCount)}
+                      onChange={(value) => setImageCount(Number(value))}
+                      helperText="Choose how many images to generate"
+                    />
+                  </div>
 
                   <div className="space-y-3">
                     <div className="flex items-center space-x-2">
@@ -291,7 +324,7 @@ export const ImageGeneratorPage: React.FC = () => {
                     isLoading={isGenerating}
                     disabled={isGenerating || !prompt.trim()}
                   >
-                    Generate Images
+                    Generate {imageCount > 1 ? 'Images' : 'Image'}
                   </Button>
                 </div>
               </CardContent>
@@ -304,10 +337,10 @@ export const ImageGeneratorPage: React.FC = () => {
                 transition={{ duration: 0.5 }}
               >
                 <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
-                  Generated Images
+                  Generated {generatedImages.length > 1 ? 'Images' : 'Image'}
                 </h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className={`grid grid-cols-1 ${generatedImages.length > 1 ? 'md:grid-cols-2' : ''} gap-6`}>
                   {generatedImages.map((imageUrl, index) => (
                     <Card 
                       key={index} 

@@ -44,6 +44,8 @@ interface LogoGenerationOptions {
   personality: string;
 }
 
+export type ImageSize = '1024x1024' | '1024x1536' | '1536x1024' | 'auto';
+
 export async function generateLogoImages(options: LogoGenerationOptions): Promise<string[]> {
   try {
     const { data, error } = await supabase.functions.invoke('openai', {
@@ -62,12 +64,17 @@ export async function generateLogoImages(options: LogoGenerationOptions): Promis
   }
 }
 
-export async function generateImageAssets(prompt: string, logoImage?: string): Promise<string[]> {
+export async function generateImageAssets(
+  prompt: string,
+  logoImage?: string,
+  size: ImageSize = '1024x1024',
+  count: number = 1
+): Promise<string[]> {
   try {
     const { data, error } = await supabase.functions.invoke('openai', {
       body: {
         action: 'generateImageAssets',
-        data: { prompt, logoImage }
+        data: { prompt, logoImage, size, count }
       }
     });
 

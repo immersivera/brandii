@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
 import { CreatePage } from './pages/CreatePage';
 import { BrandCreationPage } from './pages/BrandCreationPage';
@@ -16,11 +16,22 @@ import { useAuthModal } from './context/AuthModalContext';
 import { useUser } from './context/UserContext';
 
 function App() {
-  const { isOpen, onClose, onSuccess } = useAuthModal();
+  const { isOpen, onClose, onSuccess, openModal } = useAuthModal();
   const { userId, isLoading } = useUser();
 
   // Protected route wrapper
   const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    React.useEffect(() => {
+      if (!isLoading && !userId) {
+        const intendedPath = location.pathname;
+        openModal(() => navigate(intendedPath));
+        navigate('/');
+      }
+    }, [isLoading, userId, navigate, location.pathname]);
+
     if (isLoading) {
       return <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-600"></div>
@@ -28,7 +39,7 @@ function App() {
     }
 
     if (!userId) {
-      return <Navigate to="/" />;
+      return null;
     }
 
     return <>{children}</>;
