@@ -30,21 +30,41 @@ export const DashboardPage: React.FC = () => {
   }, []);
 
   const getLogoForBrandKit = (brandKit: BrandKit) => {
-    if (!brandKit.generated_assets?.length) return null;
+    // if (!brandKit.logo.image) return null;
+    // Check for uploaded logo first
+    if (brandKit.logo.image && brandKit.logo.image.length > 0) {
+      return brandKit.logo.image;
+    }
+    
+    if (brandKit.generated_assets?.length) {
+      // First try to find the selected logo
+      if (brandKit.logo_selected_asset_id) {
+        const selectedAsset = brandKit.generated_assets.find(
+          asset => asset.id === brandKit.logo_selected_asset_id && asset.type === 'logo'
+        );
+        
+        // Check for image_data in different possible locations
+        const imageData = selectedAsset?.image_data || (selectedAsset as any)?.imageData;
+        if (imageData) {
+          return imageData;
+        }
+      }
 
-    // Try to get the selected logo first
-    if (brandKit.logo_selected_asset_id) {
-      const selectedAsset = brandKit.generated_assets.find(
-        asset => asset.id === brandKit.logo_selected_asset_id && asset.type === 'logo'
+      // Fallback to first logo if no selected logo is found
+      const firstLogoAsset = brandKit.generated_assets.find(
+        asset => asset.type === 'logo'
       );
-      if (selectedAsset?.image_data) return selectedAsset.image_data;
+      
+      if (firstLogoAsset) {
+        // Check for image_data in different possible locations
+        const imageData = firstLogoAsset.image_data || (firstLogoAsset as any)?.imageData;
+        if (imageData) {
+          return imageData;
+        }
+      }
     }
 
-    // Fallback to the first logo if no selected logo is found
-    const firstLogoAsset = brandKit.generated_assets.find(
-      asset => asset.type === 'logo'
-    );
-    return firstLogoAsset?.image_data || null;
+    return null;
   };
 
   if (isLoading) {

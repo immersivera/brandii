@@ -181,7 +181,7 @@ export async function fetchBrandKits(
     throw countError;
   }
 
-  // Then fetch the paginated data with minimal generated_assets data
+  // Then fetch the paginated data with generated_assets including image_data
   const dataQuery = supabase
     .from('brand_kits')
     .select(`
@@ -189,6 +189,7 @@ export async function fetchBrandKits(
       generated_assets!generated_assets_brand_kit_id_fkey (
         id,
         type,
+        image_data,
         created_at
       )
     `)
