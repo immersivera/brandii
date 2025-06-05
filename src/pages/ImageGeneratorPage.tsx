@@ -5,10 +5,23 @@ import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Textarea } from '../components/ui/Textarea';
+import { Select } from '../components/ui/Select';
 import { ArrowLeft, Sparkles, Download, X, Calendar, Clock } from 'lucide-react';
 import { BrandKit, fetchBrandKitById, saveGeneratedAssets } from '../lib/supabase';
-import { generateImageAssets } from '../lib/openai';
+import { generateImageAssets, type ImageSize } from '../lib/openai';
 import toast from 'react-hot-toast';
+
+const IMAGE_SIZES = [
+  { value: '1024x1024', label: 'Square (1024×1024)' },
+  { value: '1536x1024', label: 'Landscape (1536×1024)' },
+  { value: '1024x1536', label: 'Portrait (1024×1536)' },
+  { value: 'auto', label: 'Auto (Optimized)' },
+] as const;
+
+const IMAGE_COUNTS = [
+  { value: '1', label: '1 Image' },
+  { value: '2', label: '2 Images' },
+] as const;
 
 export const ImageGeneratorPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -18,9 +31,16 @@ export const ImageGeneratorPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedSize, setSelectedSize] = useState<ImageSize>('1024x1024');
+  const [imageCount, setImageCount] = useState<number>(1);
+  
+  // Brand asset controls
   const [includeBrandAssets, setIncludeBrandAssets] = useState(true);
   const [includeLogo, setIncludeLogo] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [includeBrandColors, setIncludeBrandColors] = useState(true);
+  const [includeBrandTypography, setIncludeBrandTypography] = useState(true);
+  const [includeBrandStyle, setIncludeBrandStyle] = useState(true);
 
   useEffect(() => {
     const loadBrandKit = async () => {
@@ -49,14 +69,23 @@ export const ImageGeneratorPage: React.FC = () => {
   const getBrandAssetsPrompt = () => {
     if (!brandKit || !includeBrandAssets) return '';
 
-    let assetsPrompt = `
-      Use the following brand assets in the image:
-      Colors: Primary ${brandKit.colors.primary}, Secondary ${brandKit.colors.secondary}, Accent ${brandKit.colors.accent}
-      Style: Match the brand's ${brandKit.type} industry style and maintain consistency with the brand's visual identity.
-      Typography: Use fonts similar to ${brandKit.typography.headingFont} for headings and ${brandKit.typography.bodyFont} for body text if text is included.
-    `;
+    const parts = [];
 
-    return assetsPrompt;
+    if (includeBrandColors) {
+      parts.push(`Colors: Primary ${brandKit.colors.primary}, Secondary ${brandKit.colors.secondary}, Accent ${brandKit.colors.accent}`);
+    }
+
+    if (includeBrandTypography) {
+      parts.push(`Typography: Use fonts similar to ${brandKit.typography.headingFont} for headings and ${brandKit.typography.bodyFont} for body text if text is included`);
+    }
+
+    if (includeBrandStyle) {
+      parts.push(`Style: Match the brand's ${brandKit.type} industry style and maintain consistency with the brand's visual identity`);
+    }
+
+    if (parts.length === 0) return '';
+
+    return `\nUse the following brand assets in the image:\n${parts.join('\n')}`;
   };
 
   const getSelectedLogo = () => {
@@ -78,7 +107,7 @@ export const ImageGeneratorPage: React.FC = () => {
     try {
       const fullPrompt = `${prompt}${getBrandAssetsPrompt()}`;
       const logoImage = getSelectedLogo();
-      const images = await generateImageAssets(fullPrompt, logoImage);
+      const images = await generateImageAssets(fullPrompt, logoImage, selectedSize, imageCount);
       setGeneratedImages(images);
 
       // Save the generated images with the prompt
@@ -175,6 +204,24 @@ export const ImageGeneratorPage: React.FC = () => {
                     className="h-32"
                   />
 
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Select
+                      label="Image Size"
+                      options={IMAGE_SIZES}
+                      value={selectedSize}
+                      onChange={(value) => setSelectedSize(value as ImageSize)}
+                      helperText="Choose the dimensions for your generated image"
+                    />
+
+                    <Select
+                      label="Number of Images"
+                      options={IMAGE_COUNTS}
+                      value={String(imageCount)}
+                      onChange={(value) => setImageCount(Number(value))}
+                      helperText="Choose how many images to generate"
+                    />
+                  </div>
+
                   <div className="space-y-3">
                     <div className="flex items-center space-x-2">
                       <input
@@ -185,6 +232,9 @@ export const ImageGeneratorPage: React.FC = () => {
                           setIncludeBrandAssets(e.target.checked);
                           if (!e.target.checked) {
                             setIncludeLogo(false);
+                            setIncludeBrandColors(false);
+                            setIncludeBrandTypography(false);
+                            setIncludeBrandStyle(false);
                           }
                         }}
                         className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
@@ -193,25 +243,77 @@ export const ImageGeneratorPage: React.FC = () => {
                         htmlFor="includeBrandAssets"
                         className="text-sm text-gray-700 dark:text-gray-300"
                       >
-                        Include brand colors, typography, and style in the generation
+                        Include brand assets in generation
                       </label>
                     </div>
 
-                    {includeBrandAssets && hasLogo && (
-                      <div className="flex items-center space-x-2 ml-6">
-                        <input
-                          type="checkbox"
-                          id="includeLogo"
-                          checked={includeLogo}
-                          onChange={(e) => setIncludeLogo(e.target.checked)}
-                          className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
-                        />
-                        <label 
-                          htmlFor="includeLogo"
-                          className="text-sm text-gray-700 dark:text-gray-300"
-                        >
-                          Include brand logo in the generated images
-                        </label>
+                    {includeBrandAssets && (
+                      <div className="space-y-2 ml-6">
+                        {hasLogo && (
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="includeLogo"
+                              checked={includeLogo}
+                              onChange={(e) => setIncludeLogo(e.target.checked)}
+                              className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
+                            />
+                            <label 
+                              htmlFor="includeLogo"
+                              className="text-sm text-gray-700 dark:text-gray-300"
+                            >
+                              Include brand logo
+                            </label>
+                          </div>
+                        )}
+
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="includeBrandColors"
+                            checked={includeBrandColors}
+                            onChange={(e) => setIncludeBrandColors(e.target.checked)}
+                            className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
+                          />
+                          <label 
+                            htmlFor="includeBrandColors"
+                            className="text-sm text-gray-700 dark:text-gray-300"
+                          >
+                            Include brand colors
+                          </label>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="includeBrandTypography"
+                            checked={includeBrandTypography}
+                            onChange={(e) => setIncludeBrandTypography(e.target.checked)}
+                            className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
+                          />
+                          <label 
+                            htmlFor="includeBrandTypography"
+                            className="text-sm text-gray-700 dark:text-gray-300"
+                          >
+                            Include brand typography
+                          </label>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="includeBrandStyle"
+                            checked={includeBrandStyle}
+                            onChange={(e) => setIncludeBrandStyle(e.target.checked)}
+                            className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
+                          />
+                          <label 
+                            htmlFor="includeBrandStyle"
+                            className="text-sm text-gray-700 dark:text-gray-300"
+                          >
+                            Include brand style
+                          </label>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -222,7 +324,7 @@ export const ImageGeneratorPage: React.FC = () => {
                     isLoading={isGenerating}
                     disabled={isGenerating || !prompt.trim()}
                   >
-                    Generate Images
+                    Generate {imageCount > 1 ? 'Images' : 'Image'}
                   </Button>
                 </div>
               </CardContent>
@@ -235,10 +337,10 @@ export const ImageGeneratorPage: React.FC = () => {
                 transition={{ duration: 0.5 }}
               >
                 <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
-                  Generated Images
+                  Generated {generatedImages.length > 1 ? 'Images' : 'Image'}
                 </h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className={`grid grid-cols-1 ${generatedImages.length > 1 ? 'md:grid-cols-2' : ''} gap-6`}>
                   {generatedImages.map((imageUrl, index) => (
                     <Card 
                       key={index} 

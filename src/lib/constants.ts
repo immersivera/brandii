@@ -56,6 +56,24 @@ export const COLOR_PALETTES = [
   },
 ];
 
+export const GOOGLE_FONTS = [
+  { value: 'Inter', label: 'Inter' },
+  { value: 'Plus Jakarta Sans', label: 'Plus Jakarta Sans' },
+  { value: 'Montserrat', label: 'Montserrat' },
+  { value: 'Open Sans', label: 'Open Sans' },
+  { value: 'Raleway', label: 'Raleway' },
+  { value: 'Source Sans Pro', label: 'Source Sans Pro' },
+  { value: 'Quicksand', label: 'Quicksand' },
+  { value: 'Nunito', label: 'Nunito' },
+  { value: 'Roboto', label: 'Roboto' },
+  { value: 'Lato', label: 'Lato' },
+  { value: 'Poppins', label: 'Poppins' },
+  { value: 'Work Sans', label: 'Work Sans' },
+  { value: 'DM Sans', label: 'DM Sans' },
+  { value: 'Space Grotesk', label: 'Space Grotesk' },
+  { value: 'Manrope', label: 'Manrope' }
+];
+
 export const FONT_PAIRINGS = [
   {
     name: 'Modern Tech',

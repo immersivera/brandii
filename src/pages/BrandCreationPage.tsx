@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
@@ -7,20 +7,26 @@ import { Input } from '../components/ui/Input';
 import { Textarea } from '../components/ui/Textarea';
 import { Select } from '../components/ui/Select';
 import { Card, CardContent } from '../components/ui/Card';
+import { FileUpload } from '../components/ui/FileUpload';
+import { AuthModal } from '../components/AuthModal';
 import { useBrand } from '../context/BrandContext';
+import { useUser } from '../context/UserContext';
 import { ArrowLeft, ArrowRight, Sparkles, RefreshCw, Loader } from 'lucide-react';
-import { BRAND_TYPES, BRAND_ADJECTIVES, LOGO_STYLES } from '../lib/constants';
+import { BRAND_TYPES, BRAND_ADJECTIVES, LOGO_STYLES, GOOGLE_FONTS } from '../lib/constants';
 import { ColorPicker } from '../components/ui/ColorPicker';
-import { saveBrandKit, fetchBrandKitById } from '../lib/supabase';
+import { saveBrandKit, fetchBrandKitById, uploadImageToStorage } from '../lib/supabase';
 import { generateBrandSuggestion, generateLogoImages } from '../lib/openai';
 import toast from 'react-hot-toast';
 
 export const BrandCreationPage: React.FC = () => {
   const { brandDetails, updateBrandDetails, setStep, resetBrandDetails } = useBrand();
+  const { userId, isAnonymous } = useUser();
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingColors, setIsGeneratingColors] = useState(false);
   const [isGeneratingLogos, setIsGeneratingLogos] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const navigate = useNavigate();
 
   const handleGenerateWithAI = async () => {
@@ -42,7 +48,8 @@ export const BrandCreationPage: React.FC = () => {
         adjective: suggestion.adjective,
         logoStyle: suggestion.logoStyle,
         colors: suggestion.colors,
-        typography: suggestion.typography
+        typography: suggestion.typography,
+        logoChoice: 'ai'
       });
       
       toast.success('Brand identity generated successfully!');
@@ -85,26 +92,51 @@ export const BrandCreationPage: React.FC = () => {
   };
 
   const handleComplete = async () => {
+    if (isAnonymous) {
+      setShowAuthModal(true);
+      return;
+    }
+
     try {
-      setIsGeneratingLogos(true);
-      
-      const logoUrls = await generateLogoImages({
-        brandName: brandDetails.name,
-        style: brandDetails.logoStyle || 'wordmark',
-        colors: {
-          primary: brandDetails.colors.primary,
-          secondary: brandDetails.colors.secondary,
-          accent: brandDetails.colors.accent
-        },
-        description: brandDetails.description,
-        industry: brandDetails.industry,
-        personality: brandDetails.adjective
-      });
-      
-      updateBrandDetails({ logoOptions: logoUrls });
-      
-      setIsGeneratingLogos(false);
       setIsSaving(true);
+
+      let logoUrls: string[] = [];
+      let uploadedLogoUrl: string | undefined;
+
+      // Handle logo based on user choice
+      if (brandDetails.logoChoice === 'ai') {
+        setIsGeneratingLogos(true);
+        try {
+          logoUrls = await generateLogoImages({
+            brandName: brandDetails.name,
+            style: brandDetails.logoStyle || 'wordmark',
+            colors: {
+              primary: brandDetails.colors.primary,
+              secondary: brandDetails.colors.secondary,
+              accent: brandDetails.colors.accent
+            },
+            description: brandDetails.description,
+            industry: brandDetails.industry,
+            personality: brandDetails.adjective
+          });
+        } catch (error) {
+          console.error('Error generating logos:', error);
+          toast.error('Failed to generate logos. Please try again.');
+          setIsGeneratingLogos(false);
+          setIsSaving(false);
+          return;
+        }
+        setIsGeneratingLogos(false);
+      } else if (brandDetails.logoChoice === 'upload' && uploadedFile) {
+        try {
+          uploadedLogoUrl = await uploadImageToStorage(uploadedFile, userId!);
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Failed to upload logo';
+          toast.error(errorMessage);
+          setIsSaving(false);
+          return;
+        }
+      }
       
       const brandKitData = {
         name: brandDetails.name,
@@ -114,6 +146,7 @@ export const BrandCreationPage: React.FC = () => {
         logo: {
           type: brandDetails.logoStyle || 'wordmark',
           text: brandDetails.name,
+          image: uploadedLogoUrl
         },
         typography: brandDetails.typography,
       };
@@ -123,35 +156,17 @@ export const BrandCreationPage: React.FC = () => {
         {
           loading: 'Saving your brand kit...',
           success: 'Brand kit saved successfully!',
-          error: 'Failed to save brand kit',
+          error: 'Failed to save brand kit. Please try again.'
         }
       );
 
       navigate('/result');
     } catch (error) {
       console.error('Error completing brand kit:', error);
-      toast.error('Failed to complete brand kit');
+      toast.error('Failed to complete brand kit. Please try again.');
       setIsGeneratingLogos(false);
       setIsSaving(false);
     }
-  };
-
-  const handleCompleteClick = async () => {
-    if (brandDetails.id) {
-      try {
-        const existingKit = await fetchBrandKitById(brandDetails.id);
-        if (existingKit?.generated_assets?.length) {
-          if (window.confirm('This brand kit already has generated logos. Would you like to view them instead of generating new ones?')) {
-            navigate(`/kit/${brandDetails.id}`);
-            return;
-          }
-        }
-      } catch (error) {
-        console.error('Error checking existing brand kit:', error);
-      }
-    }
-    
-    handleComplete();
   };
 
   const handleStartOver = () => {
@@ -307,17 +322,136 @@ export const BrandCreationPage: React.FC = () => {
                   />
                 </div>
               </div>
-              
-              <Select
-                label="Logo Style"
-                options={[
-                  { value: '', label: 'Select a logo style', disabled: true },
-                  ...LOGO_STYLES.map(style => ({ value: style.id, label: style.name }))
-                ]}
-                value={brandDetails.logoStyle}
-                onChange={(value) => updateBrandDetails({ logoStyle: value })}
-                helperText="Choose the type of logo that best represents your brand"
-              />
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Logo Options
+                  </label>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        id="logoAI"
+                        checked={brandDetails.logoChoice === 'ai'}
+                        onChange={() => updateBrandDetails({ logoChoice: 'ai' })}
+                        className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300"
+                      />
+                      <label htmlFor="logoAI" className="text-sm text-gray-700 dark:text-gray-300">
+                        Generate logo with AI
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        id="logoUpload"
+                        checked={brandDetails.logoChoice === 'upload'}
+                        onChange={() => updateBrandDetails({ logoChoice: 'upload' })}
+                        className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300"
+                      />
+                      <label htmlFor="logoUpload" className="text-sm text-gray-700 dark:text-gray-300">
+                        Upload your own logo
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        id="logoNone"
+                        checked={brandDetails.logoChoice === 'none'}
+                        onChange={() => updateBrandDetails({ logoChoice: 'none' })}
+                        className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300"
+                      />
+                      <label htmlFor="logoNone" className="text-sm text-gray-700 dark:text-gray-300">
+                        No logo needed
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {brandDetails.logoChoice === 'ai' && (
+                  <Select
+                    label="Logo Style"
+                    options={[
+                      { value: '', label: 'Select a logo style', disabled: true },
+                      ...LOGO_STYLES.map(style => ({ value: style.id, label: style.name }))
+                    ]}
+                    value={brandDetails.logoStyle}
+                    onChange={(value) => updateBrandDetails({ logoStyle: value })}
+                    helperText="Choose the type of logo that best represents your brand"
+                  />
+                )}
+
+                {brandDetails.logoChoice === 'upload' && (
+                  <FileUpload
+                    label="Upload Logo"
+                    onFileSelect={(file) => {
+                      setUploadedFile(file);
+                      const url = URL.createObjectURL(file);
+                      updateBrandDetails({ uploadedLogoUrl: url });
+                    }}
+                    onClear={() => {
+                      setUploadedFile(null);
+                      updateBrandDetails({ uploadedLogoUrl: undefined });
+                    }}
+                    preview={brandDetails.uploadedLogoUrl}
+                    helperText="Upload your existing logo file"
+                  />
+                )}
+              </div>
+
+              <div className="space-y-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Typography
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <Select
+                      label="Heading Font"
+                      options={[
+                        { value: '', label: 'Select a font', disabled: true },
+                        ...GOOGLE_FONTS.map(font => ({ value: font.value, label: font.label }))
+                      ]}
+                      value={brandDetails.typography.headingFont}
+                      onChange={(value) => updateBrandDetails({
+                        typography: { ...brandDetails.typography, headingFont: value }
+                      })}
+                    />
+                    <div 
+                      className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                      style={{ fontFamily: brandDetails.typography.headingFont }}
+                    >
+                      <p className="text-2xl font-bold mb-2">The quick brown fox</p>
+                      <p className="text-xl">ABCDEFGHIJKLMNOPQRSTUVWXYZ</p>
+                      <p className="text-lg">abcdefghijklmnopqrstuvwxyz</p>
+                      <p className="text-base">1234567890</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <Select
+                      label="Body Font"
+                      options={[
+                        { value: '', label: 'Select a font', disabled: true },
+                        ...GOOGLE_FONTS.map(font => ({ value: font.value, label: font.label }))
+                      ]}
+                      value={brandDetails.typography.bodyFont}
+                      onChange={(value) => updateBrandDetails({
+                        typography: { ...brandDetails.typography, bodyFont: value }
+                      })}
+                    />
+                    <div 
+                      className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                      style={{ fontFamily: brandDetails.typography.bodyFont }}
+                    >
+                      <p className="text-base mb-2">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+                      <p className="text-sm">ABCDEFGHIJKLMNOPQRSTUVWXYZ</p>
+                      <p className="text-sm">abcdefghijklmnopqrstuvwxyz</p>
+                      <p className="text-sm">1234567890</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
               
               <div className="pt-4 flex justify-between">
                 <Button
@@ -427,7 +561,7 @@ export const BrandCreationPage: React.FC = () => {
               <Card>
                 <CardContent className="p-6">
                   <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-                    Logo Concept
+                    Logo Preview
                   </h3>
                   
                   <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-8 flex items-center justify-center">
@@ -435,6 +569,17 @@ export const BrandCreationPage: React.FC = () => {
                       <div className="flex flex-col items-center gap-4">
                         <Loader className="h-8 w-8 animate-spin text-brand-600" />
                         <p className="text-sm text-gray-500">Generating logo options...</p>
+                      </div>
+                    ) : brandDetails.logoChoice === 'upload' && brandDetails.uploadedLogoUrl ? (
+                      <img
+                        src={brandDetails.uploadedLogoUrl}
+                        alt="Uploaded logo"
+                        className="max-h-32 w-auto"
+                      />
+                    ) : brandDetails.logoChoice === 'none' ? (
+                      <div className="text-center text-gray-500">
+                        <p>No logo selected</p>
+                        <p className="text-sm mt-2">Using text-based fallback</p>
                       </div>
                     ) : (
                       <div 
@@ -446,9 +591,11 @@ export const BrandCreationPage: React.FC = () => {
                     )}
                   </div>
                   
-                  <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-                    Click "Complete" to generate AI-powered logo concepts based on your brand details.
-                  </p>
+                  {brandDetails.logoChoice === 'ai' && (
+                    <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                      Click "Complete" to generate AI-powered logo concepts based on your brand details.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
               
@@ -472,7 +619,7 @@ export const BrandCreationPage: React.FC = () => {
                 </div>
                 
                 <Button
-                  onClick={handleCompleteClick}
+                  onClick={handleComplete}
                   rightIcon={<Sparkles className="h-4 w-4" />}
                   isLoading={isSaving || isGeneratingLogos}
                   disabled={isSaving || isGeneratingLogos}
@@ -544,6 +691,12 @@ export const BrandCreationPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={handleComplete}
+      />
     </Layout>
   );
 };

@@ -4,19 +4,27 @@ import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
-import { Plus, Image, ArrowRight } from 'lucide-react';
+import { Input } from '../components/ui/Input';
+import { Plus, Image, ArrowRight, Search } from 'lucide-react';
 import { fetchBrandKits, type BrandKit } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import { useDebounce } from '../lib/utils';
 
 export const DashboardPage: React.FC = () => {
   const [brandKits, setBrandKits] = useState<BrandKit[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+  
+  const handleSearch = (value: string) => {
+    setSearchQuery(value);
+  };
 
   useEffect(() => {
     const loadBrandKits = async () => {
       try {
-        const { data } = await fetchBrandKits();
+        const { data } = await fetchBrandKits(1, 100, debouncedSearchQuery);
         setBrandKits(data);
       } catch (error) {
         console.error('Failed to fetch brand kits:', error);
@@ -27,24 +35,44 @@ export const DashboardPage: React.FC = () => {
     };
 
     loadBrandKits();
-  }, []);
+  }, [debouncedSearchQuery]);
 
   const getLogoForBrandKit = (brandKit: BrandKit) => {
-    if (!brandKit.generated_assets?.length) return null;
+    // if (!brandKit.logo.image) return null;
+    // Check for uploaded logo first
+    if (brandKit.logo.image && brandKit.logo.image.length > 0) {
+      return brandKit.logo.image;
+    }
+    
+    if (brandKit.generated_assets?.length) {
+      // First try to find the selected logo
+      if (brandKit.logo_selected_asset_id) {
+        const selectedAsset = brandKit.generated_assets.find(
+          asset => asset.id === brandKit.logo_selected_asset_id && asset.type === 'logo'
+        );
+        
+        // Check for image_data in different possible locations
+        const imageData = selectedAsset?.image_data || (selectedAsset as any)?.imageData;
+        if (imageData) {
+          return imageData;
+        }
+      }
 
-    // Try to get the selected logo first
-    if (brandKit.logo_selected_asset_id) {
-      const selectedAsset = brandKit.generated_assets.find(
-        asset => asset.id === brandKit.logo_selected_asset_id && asset.type === 'logo'
+      // Fallback to first logo if no selected logo is found
+      const firstLogoAsset = brandKit.generated_assets.find(
+        asset => asset.type === 'logo'
       );
-      if (selectedAsset?.image_data) return selectedAsset.image_data;
+      
+      if (firstLogoAsset) {
+        // Check for image_data in different possible locations
+        const imageData = firstLogoAsset.image_data || (firstLogoAsset as any)?.imageData;
+        if (imageData) {
+          return imageData;
+        }
+      }
     }
 
-    // Fallback to the first logo if no selected logo is found
-    const firstLogoAsset = brandKit.generated_assets.find(
-      asset => asset.type === 'logo'
-    );
-    return firstLogoAsset?.image_data || null;
+    return null;
   };
 
   if (isLoading) {
@@ -71,7 +99,7 @@ export const DashboardPage: React.FC = () => {
       <div className="min-h-screen bg-white dark:bg-gray-900 py-12">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-6xl mx-auto">
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                   Create Brand Images
@@ -81,12 +109,22 @@ export const DashboardPage: React.FC = () => {
                 </p>
               </div>
               
-              <Button
-                onClick={() => navigate('/create')}
-                leftIcon={<Plus className="h-4 w-4" />}
-              >
-                New Brand Kit
-              </Button>
+              <div className="flex space-x-4">
+                <Input
+                  placeholder="Search brand kits..."
+                  value={searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  leftIcon={<Search className="h-4 w-4 text-gray-500" />}
+                  className="w-full md:w-auto h-8"
+                />
+                <Button
+                  size="sm"
+                  onClick={() => navigate('/create')}
+                  leftIcon={<Plus className="h-4 w-4" />}
+                >
+                  Create
+                </Button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -120,28 +158,54 @@ export const DashboardPage: React.FC = () => {
                               className="h-32 w-32 object-contain"
                             />
                           ) : (
-                            <span 
-                              className="text-6xl font-bold font-display"
+                            <div 
+                              className="h-24 w-24 rounded-lg flex items-center justify-center"
                               style={{ 
-                                color: brandKit.colors.text
+                                backgroundColor: brandKit.colors.background,
+                                fontFamily: brandKit.typography?.headingFont
                               }}
                             >
-                              {brandKit.name.charAt(0)}
-                            </span>
+                              <span 
+                                className="text-lg font-bold text-center px-2"
+                                style={{ color: brandKit.colors.primary }}
+                              >
+                                {brandKit.name}
+                              </span>
+                            </div>
                           )}
                         </div>
                         
                         <div className="p-6">
-                          <h3 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">
+                          <h3 
+                            className="text-xl font-semibold mb-2 text-gray-900 dark:text-white"
+                            style={{ fontFamily: brandKit.typography?.headingFont }}
+                          >
                             {brandKit.name}
                           </h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                          <p 
+                            className="text-sm text-gray-500 dark:text-gray-400 mb-4"
+                            style={{ fontFamily: brandKit.typography?.bodyFont }}
+                          >
                             {brandKit.description}
                           </p>
                           
+                          <div className="flex space-x-2 mb-4">
+                            {brandKit.colors && Object.values(brandKit.colors).slice(0, 4).map((color, i) => (
+                              <div
+                                key={i}
+                                className="w-6 h-6 rounded-full border border-gray-200 dark:border-gray-700"
+                                style={{ backgroundColor: color }}
+                                title={color}
+                              ></div>
+                            ))}
+                          </div>
+                          
                           <Button
                             size="sm"
-                            onClick={() => navigate(`/kit/${brandKit.id}/create`)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/kit/${brandKit.id}/create`);
+                            }}
                             leftIcon={<Image className="h-4 w-4" />}
                             rightIcon={<ArrowRight className="h-4 w-4" />}
                             className="w-full"

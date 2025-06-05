@@ -23,7 +23,7 @@ interface ImageDetails {
   } | null;
 }
 
-const ITEMS_PER_PAGE = 6;
+const ITEMS_PER_PAGE = 12;
 
 export const GlobalGalleryPage: React.FC = () => {
   const [images, setImages] = useState<ImageDetails[]>([]);
@@ -35,7 +35,8 @@ export const GlobalGalleryPage: React.FC = () => {
   const { userId } = useUser();
 
   const breakpointColumns = {
-    default: 3,
+    default: 4,
+    1536: 4,
     1280: 3,
     1024: 2,
     640: 1
@@ -83,7 +84,10 @@ export const GlobalGalleryPage: React.FC = () => {
           .range(from, to);
 
         if (error) throw error;
-        setImages(data || []);
+
+        // Ensure all required data is present
+        const validImages = data?.filter(img => img && img.image_data) || [];
+        setImages(validImages);
       } catch (error) {
         console.error('Error fetching images:', error);
         toast.error('Failed to load images');
@@ -199,6 +203,7 @@ export const GlobalGalleryPage: React.FC = () => {
                             src={image.image_data}
                             alt={`Generated image ${index + 1}`}
                             className="w-full h-auto object-cover rounded-xl transition-transform duration-300 group-hover:scale-105"
+                            loading="lazy"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
                             <div className="w-full flex justify-between items-center">

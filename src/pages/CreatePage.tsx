@@ -6,15 +6,19 @@ import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Plus, Image, ArrowRight } from 'lucide-react';
 import { fetchBrandKits } from '../lib/supabase';
+import { useUser } from '../context/UserContext';
 import toast from 'react-hot-toast';
 
 export const CreatePage: React.FC = () => {
   const [hasExistingBrandKits, setHasExistingBrandKits] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const { userId } = useUser();
   const navigate = useNavigate();
 
   useEffect(() => {
     const checkExistingBrandKits = async () => {
+      if (!userId) return;
+
       try {
         const { data } = await fetchBrandKits();
         setHasExistingBrandKits(data.length > 0);
@@ -27,7 +31,7 @@ export const CreatePage: React.FC = () => {
     };
 
     checkExistingBrandKits();
-  }, []);
+  }, [userId]);
 
   const handleMediaAssetsClick = () => {
     if (!hasExistingBrandKits) {

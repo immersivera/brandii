@@ -4,7 +4,7 @@ import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
-import { Search, Plus, Trash2, Palette, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, Trash2, Palette, ChevronLeft, ChevronRight, Image } from 'lucide-react';
 import { fetchBrandKits, BrandKit, deleteBrandKit } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useBrand } from '../context/BrandContext';
@@ -84,6 +84,53 @@ export const LibraryPage: React.FC = () => {
     });
     navigate('/create');
   };
+
+  const getLogoForBrandKit = (brandKit: BrandKit): string | null => {
+    // Check for uploaded logo first
+    if (brandKit.logo.image && brandKit.logo.image.length > 0) {
+      return brandKit.logo.image;
+    }
+
+    // Then check for AI-generated logo
+    if (brandKit.generated_assets?.length) {
+      // First try to find the selected logo
+      if (brandKit.logo_selected_asset_id) {
+        const selectedAsset = brandKit.generated_assets.find(
+          asset => asset.id === brandKit.logo_selected_asset_id && asset.type === 'logo'
+        );
+        if (selectedAsset?.image_data) {
+          return selectedAsset.image_data;
+        }
+      }
+
+      // Fallback to first logo if no selected logo is found
+      const firstLogoAsset = brandKit.generated_assets.find(
+        asset => asset.type === 'logo'
+      );
+      if (firstLogoAsset?.image_data) {
+        return firstLogoAsset.image_data;
+      }
+    }
+
+    return null;
+  };
+
+  const renderTextLogo = (brandKit: BrandKit) => (
+    <div 
+      className="h-24 w-24 rounded-lg flex items-center justify-center"
+      style={{ 
+        backgroundColor: brandKit.colors.background,
+        fontFamily: brandKit.typography.headingFont
+      }}
+    >
+      <span 
+        className="text-lg font-bold text-center px-2"
+        style={{ color: brandKit.colors.primary }}
+      >
+        {brandKit.name}
+      </span>
+    </div>
+  );
 
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
 
@@ -183,85 +230,83 @@ export const LibraryPage: React.FC = () => {
             ) : (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {brandKits.map((brandKit, index) => (
-                    <motion.div
-                      key={brandKit.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.05 }}
-                    >
-                      <Card hover interactive className="h-full">
-                        <CardContent className="p-0">
-                          <div className="relative">
-                            <div 
-                              className="h-32 w-full rounded-t-xl flex items-center justify-center"
-                              style={{ 
-                                backgroundColor: brandKit.colors.background
-                              }}
-                            >
-                              <span 
-                                className="text-4xl font-bold font-display"
+                  {brandKits.map((brandKit, index) => {
+                    const logoUrl = getLogoForBrandKit(brandKit);
+                    
+                    return (
+                      <motion.div
+                        key={brandKit.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                      >
+                        <Card hover interactive className="h-full">
+                          <CardContent className="p-0">
+                            <div className="relative">
+                              <div 
+                                className="h-32 w-full rounded-t-xl flex items-center justify-center"
                                 style={{ 
-                                  color: brandKit.colors.text
+                                  backgroundColor: brandKit.colors.background
                                 }}
                               >
-                                {brandKit.name.charAt(0)}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          <div className="p-6">
-                            <h3 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">
-                              {brandKit.name}
-                            </h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                              {brandKit.description}
-                            </p>
-                            
-                            <div className="flex space-x-2 mb-4">
-                              {Object.values(brandKit.colors).slice(0, 4).map((color, i) => (
-                                <div
-                                  key={i}
-                                  className="w-6 h-6 rounded-full"
-                                  style={{ backgroundColor: color }}
-                                ></div>
-                              ))}
+                                {logoUrl ? (
+                                  <img 
+                                    src={logoUrl}
+                                    alt={`${brandKit.name} logo`}
+                                    className="h-24 w-24 object-contain"
+                                  />
+                                ) : renderTextLogo(brandKit)}
+                              </div>
                             </div>
                             
-                            <div className="flex justify-between gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => navigate(`/kit/${brandKit.id}`)}
+                            <div className="p-6">
+                              <h3 
+                                className="text-xl font-semibold mb-1 text-gray-900 dark:text-white"
+                                style={{ fontFamily: brandKit.typography.headingFont }}
                               >
-                                View Details
-                              </Button>
+                                {brandKit.name}
+                              </h3>
+                              <p 
+                                className="text-sm text-gray-500 dark:text-gray-400 mb-4"
+                                style={{ fontFamily: brandKit.typography.bodyFont }}
+                              >
+                                {brandKit.description}
+                              </p>
                               
-                              <div className="flex gap-2">
+                              <div className="flex space-x-2 mb-4">
+                                {Object.values(brandKit.colors).slice(0, 4).map((color, i) => (
+                                  <div
+                                    key={i}
+                                    className="w-6 h-6 rounded-full"
+                                    style={{ backgroundColor: color }}
+                                  ></div>
+                                ))}
+                              </div>
+                              
+                              <div className="flex justify-between gap-2">
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleRemix(brandKit)}
-                                  leftIcon={<Palette className="h-4 w-4" />}
+                                  onClick={() => navigate(`/kit/${brandKit.id}`)}
                                 >
-                                  Remix
+                                  View Details
                                 </Button>
                                 
                                 <Button
-                                  variant="ghost"
+                                  variant="outline"
                                   size="sm"
-                                  onClick={() => handleDeleteBrandKit(brandKit.id)}
-                                  className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                  onClick={() => navigate(`/kit/${brandKit.id}/create`)}
+                                  leftIcon={<Image className="h-4 w-4" />}
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  Create Images
                                 </Button>
                               </div>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
                 </div>
 
                 {totalPages > 1 && (
