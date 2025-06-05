@@ -1,5 +1,4 @@
 import { supabase } from './supabase';
-import { optimizeImage } from './imageProcessing';
 
 export interface AIBrandSuggestion {
   name: string;
@@ -67,52 +66,19 @@ export async function generateLogoImages(options: LogoGenerationOptions): Promis
 
 export async function generateImageAssets(
   prompt: string,
-  logoImageUrl?: string,
+  logoImage?: string,
   size: ImageSize = '1024x1024',
   count: number = 1
 ): Promise<string[]> {
   try {
-    let optimizedLogo = null;
-    
-    if (logoImageUrl) {
-      optimizedLogo = await optimizeImage(logoImageUrl);
-      if (!optimizedLogo) {
-        throw new Error('Failed to optimize logo image');
-      }
-      
-      // Upload optimized logo to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('brand-logos')
-        .upload(`temp/${Date.now()}.png`, optimizedLogo.file);
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('brand-logos')
-        .getPublicUrl(uploadData.path);
-
-      logoImageUrl = publicUrl;
-    }
-
     const { data, error } = await supabase.functions.invoke('openai', {
       body: {
         action: 'generateImageAssets',
-        data: { 
-          prompt, 
-          logoImageUrl,
-          size, 
-          count 
-        }
+        data: { prompt, logoImage, size, count }
       }
     });
 
     if (error) throw error;
-
-    // Clean up temporary logo file if it exists
-    if (optimizedLogo) {
-      URL.revokeObjectURL(optimizedLogo.url);
-    }
 
     return data.map((image: any) => `data:image/png;base64,${image.b64_json}`);
   } catch (error) {

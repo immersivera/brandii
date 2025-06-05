@@ -7,12 +7,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-async function fetchImageAsBuffer(url: string): Promise<Uint8Array> {
-  const response = await fetch(url);
-  const arrayBuffer = await response.arrayBuffer();
-  return new Uint8Array(arrayBuffer);
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -81,34 +75,29 @@ serve(async (req) => {
       case 'generateImageAssets': {
         let response;
         
-        if (data.logoImageUrl) {
-          try {
-            const imageBuffer = await fetchImageAsBuffer(data.logoImageUrl);
-            
-            response = await openai.images.edit({
-              model: "gpt-image-1",
-              image: imageBuffer,
-              prompt: data.prompt,
-              n: data.count || 1,
-              size: data.size || "1024x1024",
-            });
-          } catch (error) {
-            console.error('Error processing logo:', error);
-            // Fallback to regular image generation if logo processing fails
-            response = await openai.images.generate({
-              model: "gpt-image-1",
-              prompt: data.prompt,
-              n: data.count || 1,
-              size: data.size || "1024x1024",
-            });
+        if (data.logoImage) {
+          // Convert base64 string to Uint8Array for image editing
+          const base64Data = data.logoImage.split(',')[1]
+          const binaryString = atob(base64Data)
+          const bytes = new Uint8Array(binaryString.length)
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i)
           }
+
+          response = await openai.images.edit({
+            model: "gpt-image-1",
+            image: bytes,
+            prompt: data.prompt,
+            n: data.count || 1,
+            size: data.size || "1024x1024",
+          })
         } else {
           response = await openai.images.generate({
             model: "gpt-image-1",
             prompt: data.prompt,
             n: data.count || 1,
             size: data.size || "1024x1024",
-          });
+          })
         }
 
         return new Response(JSON.stringify(response.data), {
