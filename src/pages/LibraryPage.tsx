@@ -4,7 +4,7 @@ import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
-import { Search, Plus, Trash2, Palette, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, Trash2, Palette, ChevronLeft, ChevronRight, Image } from 'lucide-react';
 import { fetchBrandKits, BrandKit, deleteBrandKit } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useBrand } from '../context/BrandContext';
@@ -292,25 +292,14 @@ export const LibraryPage: React.FC = () => {
                                   View Details
                                 </Button>
                                 
-                                <div className="flex gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleRemix(brandKit)}
-                                    leftIcon={<Palette className="h-4 w-4" />}
-                                  >
-                                    Remix
-                                  </Button>
-                                  
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleDeleteBrandKit(brandKit.id)}
-                                    className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => navigate(`/kit/${brandKit.id}/create`)}
+                                  leftIcon={<Image className="h-4 w-4" />}
+                                >
+                                  Create Images
+                                </Button>
                               </div>
                             </div>
                           </CardContent>

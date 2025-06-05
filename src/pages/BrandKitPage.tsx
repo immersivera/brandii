@@ -126,9 +126,12 @@ export const BrandKitPage: React.FC = () => {
       colors: brandKit.colors,
       typography: brandKit.typography,
       logoStyle: brandKit.logo.type,
-      step: 1
+      logoChoice: brandKit.logo.image ? 'upload' : 'ai',
+      step: 1 // Start at the design step
     });
-    navigate('/create');
+    
+    // Navigate to the create page with the brand kit data
+    navigate('/create/new');
   };
 
   const handleGenerateMoreLogos = async () => {
@@ -456,7 +459,7 @@ export const BrandKitPage: React.FC = () => {
                     onClick={() => navigate(`/kit/${id}/create`)}
                     leftIcon={<Plus className="h-4 w-4" />}
                   >
-                    Create Image
+                    Create Images
                   </Button>
                   
                   <Button
