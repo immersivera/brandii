@@ -63,11 +63,6 @@ function App() {
             <BrandCreationPage />
           </ProtectedRoute>
         } />
-        <Route path="/kit/:id/edit" element={
-          <ProtectedRoute>
-            <BrandCreationPage />
-          </ProtectedRoute>
-        } />
         <Route path="/dashboard" element={
           <ProtectedRoute>
             <DashboardPage />
