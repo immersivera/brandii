@@ -4,8 +4,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardFooter } from '../components/ui/Card';
-import { ArrowLeft, ArrowRight, Download, Copy, Share2, Trash2, Image, Plus } from 'lucide-react';
-import { BrandKit, fetchBrandKitById, deleteBrandKit, updateBrandKit } from '../lib/supabase';
+import { ArrowLeft, ArrowRight, Download, Copy, Share2, Trash2, Image, Plus, Sparkles } from 'lucide-react';
+import { BrandKit, fetchBrandKitById, deleteBrandKit, updateBrandKit, saveGeneratedAssets } from '../lib/supabase';
+import { generateLogoImages } from '../lib/openai';
 import { generateBrandKitZip } from '../lib/download';
 import toast from 'react-hot-toast';
 
@@ -15,6 +16,7 @@ export const BrandKitPage: React.FC = () => {
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isGeneratingLogos, setIsGeneratingLogos] = useState(false);
 
   useEffect(() => {
     const loadBrandKit = async () => {
@@ -103,6 +105,42 @@ export const BrandKitPage: React.FC = () => {
       }
     } else {
       handleCopy();
+    }
+  };
+
+  const handleGenerateMoreLogos = async () => {
+    if (!brandKit) return;
+
+    try {
+      setIsGeneratingLogos(true);
+      const logoUrls = await generateLogoImages({
+        brandName: brandKit.name,
+        style: brandKit.logo.type,
+        colors: {
+          primary: brandKit.colors.primary,
+          secondary: brandKit.colors.secondary,
+          accent: brandKit.colors.accent
+        },
+        description: brandKit.description,
+        industry: brandKit.type,
+        personality: 'modern' // Default to modern style
+      });
+
+      // Save the generated logos
+      const newAssets = await saveGeneratedAssets(brandKit.id, logoUrls, 'logo');
+      
+      // Update the brand kit with new assets
+      const updatedBrandKit = await fetchBrandKitById(brandKit.id);
+      if (updatedBrandKit) {
+        setBrandKit(updatedBrandKit);
+      }
+
+      toast.success('New logos generated successfully!');
+    } catch (error) {
+      console.error('Error generating logos:', error);
+      toast.error('Failed to generate logos');
+    } finally {
+      setIsGeneratingLogos(false);
     }
   };
 
@@ -430,57 +468,67 @@ export const BrandKitPage: React.FC = () => {
                 </Card>
               </div>
               
-              {logoAssets.length > 0 && (
-                <Card>
-                  <CardContent className="p-6">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-6">
                     <h3 
-                      className="text-xl font-semibold mb-4 text-gray-900 dark:text-white"
+                      className="text-xl font-semibold text-gray-900 dark:text-white"
                       style={{ fontFamily: brandKit.typography.headingFont }}
                     >
                       Logo Concepts
                     </h3>
-                    
-                    <div className="space-y-6">
-                      <div className="grid grid-cols-2 gap-4">
-                        {logoAssets.map((asset) => (
-                          <div
-                            key={asset.id}
-                            className={`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
-                              brandKit.logo_selected_asset_id === asset.id
-                                ? 'border-brand-600 shadow-lg'
-                                : 'border-gray-200 dark:border-gray-700'
-                            }`}
-                            onClick={() => handleSelectLogo(asset.id)}
-                          >
-                            <img
-                              src={asset.image_data}
-                              alt="Logo concept"
-                              className="w-full h-auto"
-                              style={{ 
-                                backgroundColor: brandKit.colors.background
-                              }}
-                            />
-                            {brandKit.logo_selected_asset_id === asset.id && (
-                              <div className="absolute inset-0 bg-brand-600/10 flex items-center justify-center">
-                                <div className="bg-brand-600 text-white px-3 py-1 rounded-full text-sm">
-                                  Selected
-                                </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGenerateMoreLogos}
+                      leftIcon={<Sparkles className="h-4 w-4" />}
+                      isLoading={isGeneratingLogos}
+                      disabled={isGeneratingLogos}
+                    >
+                      Generate More
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      {logoAssets.map((asset) => (
+                        <div
+                          key={asset.id}
+                          className={`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
+                            brandKit.logo_selected_asset_id === asset.id
+                              ? 'border-brand-600 shadow-lg'
+                              : 'border-gray-200 dark:border-gray-700'
+                          }`}
+                          onClick={() => handleSelectLogo(asset.id)}
+                        >
+                          <img
+                            src={asset.image_data}
+                            alt="Logo concept"
+                            className="w-full h-auto"
+                            style={{ 
+                              backgroundColor: brandKit.colors.background
+                            }}
+                          />
+                          {brandKit.logo_selected_asset_id === asset.id && (
+                            <div className="absolute inset-0 bg-brand-600/10 flex items-center justify-center">
+                              <div className="bg-brand-600 text-white px-3 py-1 rounded-full text-sm">
+                                Selected
                               </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                      
-                      <p 
-                        className="text-sm text-gray-500 dark:text-gray-400"
-                        style={{ fontFamily: brandKit.typography.bodyFont }}
-                      >
-                        Click on a logo concept to select it as your primary logo.
-                      </p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  </CardContent>
-                </Card>
-              )}
+                    
+                    <p 
+                      className="text-sm text-gray-500 dark:text-gray-400"
+                      style={{ fontFamily: brandKit.typography.bodyFont }}
+                    >
+                      Click on a logo concept to select it as your primary logo.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
 
               {imageAssets.length > 0 && (
                 <div className="mt-8">
