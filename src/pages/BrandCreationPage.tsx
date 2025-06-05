@@ -45,16 +45,19 @@ export const BrandCreationPage: React.FC = () => {
         if (brandKit) {
           setIsEditMode(true);
           setEditingBrandKit(brandKit);
+          
+          // Update brand details with existing data
           updateBrandDetails({
             name: brandKit.name,
             description: brandKit.description,
             industry: brandKit.type,
+            adjective: brandKit.adjective || '',
             colors: brandKit.colors,
             typography: brandKit.typography,
             logoStyle: brandKit.logo.type,
             logoChoice: brandKit.logo.image ? 'upload' : 'none',
             uploadedLogoUrl: brandKit.logo.image,
-            step: 1
+            step: brandDetails.step || 1 // Preserve current step or default to 1
           });
         } else {
           toast.error('Brand kit not found');
@@ -147,7 +150,7 @@ export const BrandCreationPage: React.FC = () => {
       let uploadedLogoUrl: string | undefined;
 
       // Handle logo based on user choice
-      if (brandDetails.logoChoice === 'ai') {
+      if (brandDetails.logoChoice === 'ai' && !isEditMode) {
         setIsGeneratingLogos(true);
         try {
           logoUrls = await generateLogoImages({
@@ -185,11 +188,12 @@ export const BrandCreationPage: React.FC = () => {
         name: brandDetails.name,
         description: brandDetails.description,
         type: brandDetails.industry,
+        adjective: brandDetails.adjective,
         colors: brandDetails.colors,
         logo: {
           type: brandDetails.logoStyle || 'wordmark',
           text: brandDetails.name,
-          image: uploadedLogoUrl
+          image: uploadedLogoUrl || (brandDetails.logoChoice === 'upload' ? brandDetails.uploadedLogoUrl : undefined)
         },
         typography: brandDetails.typography,
       };
@@ -217,7 +221,7 @@ export const BrandCreationPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error completing brand kit:', error);
-      toast.error('Failed to complete brand kit. Please try again.');
+      toast.error('Failed to complete brand kit');
       setIsGeneratingLogos(false);
       setIsSaving(false);
     }
@@ -253,6 +257,25 @@ export const BrandCreationPage: React.FC = () => {
     { name: 'Design', step: 2 },
     { name: 'Preview', step: 3 }
   ];
+
+  const canProceedToNextStep = (currentStep: number) => {
+    switch (currentStep) {
+      case 1:
+        return !!brandDetails.name && !!brandDetails.description;
+      case 2:
+        return true; // All fields in step 2 are optional
+      default:
+        return true;
+    }
+  };
+
+  const handleNextStep = () => {
+    if (canProceedToNextStep(brandDetails.step)) {
+      setStep(brandDetails.step + 1);
+    } else {
+      toast.error('Please fill in all required fields');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -334,9 +357,9 @@ export const BrandCreationPage: React.FC = () => {
                 )}
                 
                 <Button
-                  onClick={() => setStep(2)}
+                  onClick={handleNextStep}
                   rightIcon={<ArrowRight className="h-4 w-4" />}
-                  disabled={!brandDetails.name || !brandDetails.description}
+                  disabled={!canProceedToNextStep(1)}
                 >
                   Next Step
                 </Button>
