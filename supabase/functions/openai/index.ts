@@ -60,56 +60,20 @@ serve(async (req) => {
 
         const prompt = styleDescriptions[data.style as keyof typeof styleDescriptions] || styleDescriptions.wordmark
 
-        // Make two separate API calls to generate two images
-        const [response1, response2] = await Promise.all([
-          openai.images.generate({
-            model: "gpt-image-1",
-            prompt,
-            n: 1,
-            size: "1024x1024",
-          }),
-          openai.images.generate({
-            model: "gpt-image-1",
-            prompt,
-            n: 1,
-            size: "1024x1024",
-          })
-        ])
+        const response = await openai.images.generate({
+          model: "gpt-image-1",
+          prompt,
+          n: 2,
+          size: "1024x1024",
+        })
 
-        // Combine the results
-        const combinedData = [
-          ...response1.data,
-          ...response2.data
-        ]
-
-        return new Response(JSON.stringify(combinedData), {
+        return new Response(JSON.stringify(response.data), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
 
       case 'generateImageAssets': {
-        let images = []
-
-        // Function to generate a single image
-        const generateImage = async (prompt: string, logoImage?: Uint8Array) => {
-          if (logoImage) {
-            return await openai.images.edit({
-              model: "gpt-image-1",
-              image: logoImage,
-              mask: logoImage,
-              prompt,
-              n: 1,
-              size: "1024x1024",
-            })
-          } else {
-            return await openai.images.generate({
-              model: "gpt-image-1",
-              prompt,
-              n: 1,
-              size: "1024x1024",
-            })
-          }
-        }
+        let response;
         
         if (data.logoImage) {
           // Convert base64 string to Uint8Array for image editing
@@ -120,24 +84,24 @@ serve(async (req) => {
             bytes[i] = binaryString.charCodeAt(i)
           }
 
-          // Generate two images with the logo
-          const [response1, response2] = await Promise.all([
-            generateImage(data.prompt, bytes),
-            generateImage(data.prompt, bytes)
-          ])
-
-          images = [...response1.data, ...response2.data]
+          response = await openai.images.edit({
+            model: "gpt-image-1",
+            image: bytes,
+            mask: bytes,
+            prompt: data.prompt,
+            n: 2,
+            size: "1024x1024",
+          })
         } else {
-          // Generate two images without a logo
-          const [response1, response2] = await Promise.all([
-            generateImage(data.prompt),
-            generateImage(data.prompt)
-          ])
-
-          images = [...response1.data, ...response2.data]
+          response = await openai.images.generate({
+            model: "gpt-image-1",
+            prompt: data.prompt,
+            n: 2,
+            size: "1024x1024",
+          })
         }
 
-        return new Response(JSON.stringify(images), {
+        return new Response(JSON.stringify(response.data), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
