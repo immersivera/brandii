@@ -5,7 +5,7 @@ import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardFooter } from '../components/ui/Card';
 import { ArrowLeft, ArrowRight, Download, Copy, Share2, Trash2, Image, Plus, Sparkles } from 'lucide-react';
-import { BrandKit, fetchBrandKitById, deleteBrandKit, updateBrandKit, saveGeneratedAssets } from '../lib/supabase';
+import { BrandKit, fetchBrandKitById, deleteBrandKit, updateBrandKit, saveGeneratedAssets, deleteGeneratedAsset } from '../lib/supabase';
 import { generateLogoImages } from '../lib/openai';
 import { generateBrandKitZip } from '../lib/download';
 import toast from 'react-hot-toast';
@@ -17,6 +17,7 @@ export const BrandKitPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isGeneratingLogos, setIsGeneratingLogos] = useState(false);
+  const [isDeletingLogo, setIsDeletingLogo] = useState<string | null>(null);
 
   useEffect(() => {
     const loadBrandKit = async () => {
@@ -156,6 +157,40 @@ export const BrandKitPage: React.FC = () => {
     } catch (error) {
       console.error('Error updating logo:', error);
       toast.error('Failed to update logo');
+    }
+  };
+
+  const handleDeleteLogoAsset = async (assetId: string) => {
+    if (!brandKit || !confirm('Are you sure you want to delete this logo concept?')) return;
+
+    try {
+      setIsDeletingLogo(assetId);
+      
+      // First delete the asset from the database
+      await deleteGeneratedAsset(assetId);
+      
+      // Then update the local state to remove the asset
+      const updatedAssets = brandKit.generated_assets?.filter(asset => asset.id !== assetId) || [];
+      
+      // If the deleted logo was selected, clear the selection
+      const logoSelectedAssetId = brandKit.logo_selected_asset_id === assetId 
+        ? undefined 
+        : brandKit.logo_selected_asset_id;
+      
+      // Update the brand kit with the new assets and selection
+      const updatedBrandKit = {
+        ...brandKit,
+        generated_assets: updatedAssets,
+        logo_selected_asset_id: updatedAssets.length === 0 ? undefined : logoSelectedAssetId
+      };
+      
+      setBrandKit(updatedBrandKit);
+      toast.success('Logo concept deleted');
+    } catch (error) {
+      console.error('Error deleting logo concept:', error);
+      toast.error('Failed to delete logo concept');
+    } finally {
+      setIsDeletingLogo(null);
     }
   };
 
@@ -490,42 +525,95 @@ export const BrandKitPage: React.FC = () => {
                   </div>
                   
                   <div className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      {logoAssets.map((asset) => (
-                        <div
-                          key={asset.id}
-                          className={`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
-                            brandKit.logo_selected_asset_id === asset.id
-                              ? 'border-brand-600 shadow-lg'
-                              : 'border-gray-200 dark:border-gray-700'
-                          }`}
-                          onClick={() => handleSelectLogo(asset.id)}
-                        >
-                          <img
-                            src={asset.image_data}
-                            alt="Logo concept"
-                            className="w-full h-auto"
-                            style={{ 
-                              backgroundColor: brandKit.colors.background
-                            }}
-                          />
-                          {brandKit.logo_selected_asset_id === asset.id && (
-                            <div className="absolute inset-0 bg-brand-600/10 flex items-center justify-center">
-                              <div className="bg-brand-600 text-white px-3 py-1 rounded-full text-sm">
-                                Selected
+                    {logoAssets.length > 0 ? (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          {logoAssets.map((asset) => (
+                            <div
+                              key={asset.id}
+                              className={`relative group border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
+                                brandKit.logo_selected_asset_id === asset.id
+                                  ? 'border-brand-600 shadow-lg'
+                                  : 'border-gray-200 dark:border-gray-700'
+                              }`}
+                            >
+                              <div className="relative">
+                                <img
+                                  src={asset.image_data}
+                                  alt="Logo concept"
+                                  className="w-full h-auto"
+                                  style={{ 
+                                    backgroundColor: brandKit.colors.background
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSelectLogo(asset.id);
+                                  }}
+                                />
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteLogoAsset(asset.id);
+                                  }}
+                                  className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 disabled:opacity-100 disabled:bg-gray-300 dark:disabled:bg-gray-600"
+                                  aria-label="Delete logo"
+                                  disabled={isDeletingLogo === asset.id}
+                                >
+                                  {isDeletingLogo === asset.id ? (
+                                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4" />
+                                  )}
+                                </button>
                               </div>
+                              {brandKit.logo_selected_asset_id === asset.id && (
+                                <div className="absolute inset-0 bg-brand-600/10 flex items-center justify-center">
+                                  <div className="bg-brand-600 text-white px-3 py-1 rounded-full text-sm">
+                                    Selected
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          )}
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                    
-                    <p 
-                      className="text-sm text-gray-500 dark:text-gray-400"
-                      style={{ fontFamily: brandKit.typography.bodyFont }}
-                    >
-                      Click on a logo concept to select it as your primary logo.
-                    </p>
+                        <p 
+                          className="text-sm text-gray-500 dark:text-gray-400"
+                          style={{ fontFamily: brandKit.typography.bodyFont }}
+                        >
+                          Click on a logo concept to select it as your primary logo.
+                        </p>
+                      </>
+                    ) : (
+                      <div className="text-center py-8">
+                        <div className="mx-auto w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
+                          <Image className="h-8 w-8 text-gray-400" />
+                        </div>
+                        <h4 
+                          className="text-lg font-medium text-gray-900 dark:text-white mb-1"
+                          style={{ fontFamily: brandKit.typography.headingFont }}
+                        >
+                          No Logo Concepts
+                        </h4>
+                        <p 
+                          className="text-gray-500 dark:text-gray-400 max-w-md mx-auto"
+                          style={{ fontFamily: brandKit.typography.bodyFont }}
+                        >
+                          You haven't generated any logo concepts yet. Click the button below to get started.
+                        </p>
+                        <div className="mt-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleGenerateMoreLogos}
+                            leftIcon={<Sparkles className="h-4 w-4" />}
+                            isLoading={isGeneratingLogos}
+                            disabled={isGeneratingLogos}
+                          >
+                            Generate Logos
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
