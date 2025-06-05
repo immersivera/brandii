@@ -63,7 +63,7 @@ serve(async (req) => {
         const response = await openai.images.generate({
           model: "gpt-image-1",
           prompt,
-          n: 1,
+          n: 2,
           size: "1024x1024",
         })
 
@@ -87,7 +87,6 @@ serve(async (req) => {
           response = await openai.images.edit({
             model: "gpt-image-1",
             image: bytes,
-            mask: bytes,
             prompt: data.prompt,
             n: data.count || 1,
             size: data.size || "1024x1024",
