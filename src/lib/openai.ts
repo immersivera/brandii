@@ -44,7 +44,7 @@ interface LogoGenerationOptions {
   personality: string;
 }
 
-export type ImageSize = '1024x1024' | '1792x1024' | '1024x1792';
+export type ImageSize = '1024x1024' | '1024x1536' | '1536x1024' | 'auto';
 
 export async function generateLogoImages(options: LogoGenerationOptions): Promise<string[]> {
   try {

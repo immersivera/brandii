@@ -13,8 +13,9 @@ import toast from 'react-hot-toast';
 
 const IMAGE_SIZES = [
   { value: '1024x1024', label: 'Square (1024×1024)' },
-  { value: '1792x1024', label: 'Landscape (1792×1024)' },
-  { value: '1024x1792', label: 'Portrait (1024×1792)' },
+  { value: '1536x1024', label: 'Landscape (1536×1024)' },
+  { value: '1024x1536', label: 'Portrait (1024×1536)' },
+  { value: 'auto', label: 'Auto (Optimized)' },
 ] as const;
 
 const IMAGE_COUNTS = [
