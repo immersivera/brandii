@@ -35,7 +35,7 @@ const handleDeleteLogo = async (assetId: string, e: React.MouseEvent) => {
   {logoAssets.map((asset) => (
     <div
       key={asset.id}
-      className={`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
+      className={\`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
         brandKit.logo_selected_asset_id === asset.id
           ? 'border-brand-600 shadow-lg'
           : 'border-gray-200 dark:border-gray-700'
