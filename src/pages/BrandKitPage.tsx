@@ -23,7 +23,6 @@ export const BrandKitPage: React.FC = () => {
       try {
         const kit = await fetchBrandKitById(id);
         if (kit) {
-          console.log('Loaded brand kit logo:', kit.logo);
           setBrandKit(kit);
         } else {
           toast.error('Brand kit not found');
@@ -127,7 +126,6 @@ export const BrandKitPage: React.FC = () => {
 
     // Check for uploaded logo first
     if (brandKit.logo.image && brandKit.logo.image.length > 0) {
-      console.log('Using uploaded logo:', brandKit.logo.image);
       return brandKit.logo.image;
     }
 
@@ -138,7 +136,6 @@ export const BrandKitPage: React.FC = () => {
           asset => asset.id === brandKit.logo_selected_asset_id && asset.type === 'logo'
         );
         if (selectedAsset?.image_data) {
-          console.log('Using selected AI logo:', selectedAsset.id);
           return selectedAsset.image_data;
         }
       }
@@ -147,19 +144,34 @@ export const BrandKitPage: React.FC = () => {
         asset => asset.type === 'logo'
       );
       if (firstLogoAsset?.image_data) {
-        console.log('Using first AI logo:', firstLogoAsset.id);
         return firstLogoAsset.image_data;
       }
     }
 
-    console.log('No logo found');
     return null;
   };
+
+  const renderTextLogo = () => (
+    <div 
+      className="w-32 h-32 rounded-xl flex items-center justify-center"
+      style={{ 
+        backgroundColor: brandKit!.colors.background,
+        fontFamily: brandKit!.typography.headingFont
+      }}
+    >
+      <span 
+        className="text-2xl font-bold text-center px-4"
+        style={{ color: brandKit!.colors.primary }}
+      >
+        {brandKit!.name}
+      </span>
+    </div>
+  );
 
   if (isLoading) {
     return (
       <Layout>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
+        <div className="min-h-screen bg-white dark:bg-gray-900 py-12">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-center items-center py-20">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-600"></div>
@@ -178,7 +190,7 @@ export const BrandKitPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
+      <div className="min-h-screen bg-white dark:bg-gray-900 py-12">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto">
             <motion.div
@@ -197,10 +209,16 @@ export const BrandKitPage: React.FC = () => {
                   >
                     Back to Library
                   </Button>
-                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                  <h1 
+                    className="text-3xl font-bold text-gray-900 dark:text-white mb-2"
+                    style={{ fontFamily: brandKit.typography.headingFont }}
+                  >
                     {brandKit.name}
                   </h1>
-                  <p className="text-gray-600 dark:text-gray-400">
+                  <p 
+                    className="text-gray-600 dark:text-gray-400"
+                    style={{ fontFamily: brandKit.typography.bodyFont }}
+                  >
                     Created on {new Date(brandKit.created_at).toLocaleDateString()}
                   </p>
                 </div>
@@ -250,7 +268,10 @@ export const BrandKitPage: React.FC = () => {
                 <CardContent className="p-6">
                   <div className="flex flex-col md:flex-row items-start gap-6">
                     <div className="flex-1">
-                      <p className="text-gray-600 dark:text-gray-400 mb-4">
+                      <p 
+                        className="text-gray-600 dark:text-gray-400 mb-4"
+                        style={{ fontFamily: brandKit.typography.bodyFont }}
+                      >
                         {brandKit.description}
                       </p>
                       
@@ -259,7 +280,10 @@ export const BrandKitPage: React.FC = () => {
                           <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
                             Type
                           </h3>
-                          <p className="text-gray-900 dark:text-white capitalize">
+                          <p 
+                            className="text-gray-900 dark:text-white capitalize"
+                            style={{ fontFamily: brandKit.typography.bodyFont }}
+                          >
                             {brandKit.type || 'Not specified'}
                           </p>
                         </div>
@@ -267,7 +291,10 @@ export const BrandKitPage: React.FC = () => {
                           <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
                             Logo Style
                           </h3>
-                          <p className="text-gray-900 dark:text-white capitalize">
+                          <p 
+                            className="text-gray-900 dark:text-white capitalize"
+                            style={{ fontFamily: brandKit.typography.bodyFont }}
+                          >
                             {brandKit.logo.type}
                           </p>
                         </div>
@@ -284,23 +311,7 @@ export const BrandKitPage: React.FC = () => {
                             backgroundColor: brandKit.colors.background
                           }}
                         />
-                      ) : (
-                        <div 
-                          className="w-32 h-32 rounded-xl flex items-center justify-center"
-                          style={{ 
-                            backgroundColor: brandKit.colors.background
-                          }}
-                        >
-                          <span 
-                            className="text-4xl font-bold font-display"
-                            style={{ 
-                              color: brandKit.colors.text
-                            }}
-                          >
-                            {brandKit.name.charAt(0)}
-                          </span>
-                        </div>
-                      )}
+                      ) : renderTextLogo()}
                     </div>
                   </div>
                 </CardContent>
@@ -331,7 +342,10 @@ export const BrandKitPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                 <Card>
                   <CardContent className="p-6">
-                    <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+                    <h3 
+                      className="text-xl font-semibold mb-4 text-gray-900 dark:text-white"
+                      style={{ fontFamily: brandKit.typography.headingFont }}
+                    >
                       Color Palette
                     </h3>
                     
@@ -343,10 +357,16 @@ export const BrandKitPage: React.FC = () => {
                             style={{ backgroundColor: color }}
                           ></div>
                           <div>
-                            <h4 className="text-sm font-medium text-gray-900 dark:text-white capitalize">
+                            <h4 
+                              className="text-sm font-medium text-gray-900 dark:text-white capitalize"
+                              style={{ fontFamily: brandKit.typography.headingFont }}
+                            >
                               {key}
                             </h4>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                            <p 
+                              className="text-sm text-gray-500 dark:text-gray-400"
+                              style={{ fontFamily: brandKit.typography.bodyFont }}
+                            >
                               {color}
                             </p>
                           </div>
@@ -358,7 +378,10 @@ export const BrandKitPage: React.FC = () => {
                 
                 <Card>
                   <CardContent className="p-6">
-                    <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+                    <h3 
+                      className="text-xl font-semibold mb-4 text-gray-900 dark:text-white"
+                      style={{ fontFamily: brandKit.typography.headingFont }}
+                    >
                       Typography
                     </h3>
                     
@@ -367,10 +390,16 @@ export const BrandKitPage: React.FC = () => {
                         <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
                           Heading Font
                         </h4>
-                        <p className="text-2xl font-display font-semibold text-gray-900 dark:text-white">
+                        <p 
+                          className="text-2xl font-semibold text-gray-900 dark:text-white"
+                          style={{ fontFamily: brandKit.typography.headingFont }}
+                        >
                           {brandKit.typography.headingFont}
                         </p>
-                        <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        <div 
+                          className="mt-1 text-sm text-gray-500 dark:text-gray-400"
+                          style={{ fontFamily: brandKit.typography.headingFont }}
+                        >
                           ABCDEFGHIJKLMNOPQRSTUVWXYZ<br />
                           abcdefghijklmnopqrstuvwxyz<br />
                           1234567890
@@ -381,10 +410,16 @@ export const BrandKitPage: React.FC = () => {
                         <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
                           Body Font
                         </h4>
-                        <p className="text-base text-gray-900 dark:text-white">
+                        <p 
+                          className="text-base text-gray-900 dark:text-white"
+                          style={{ fontFamily: brandKit.typography.bodyFont }}
+                        >
                           {brandKit.typography.bodyFont}
                         </p>
-                        <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        <div 
+                          className="mt-1 text-sm text-gray-500 dark:text-gray-400"
+                          style={{ fontFamily: brandKit.typography.bodyFont }}
+                        >
                           ABCDEFGHIJKLMNOPQRSTUVWXYZ<br />
                           abcdefghijklmnopqrstuvwxyz<br />
                           1234567890
@@ -398,7 +433,10 @@ export const BrandKitPage: React.FC = () => {
               {logoAssets.length > 0 && (
                 <Card>
                   <CardContent className="p-6">
-                    <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+                    <h3 
+                      className="text-xl font-semibold mb-4 text-gray-900 dark:text-white"
+                      style={{ fontFamily: brandKit.typography.headingFont }}
+                    >
                       Logo Concepts
                     </h3>
                     
@@ -433,7 +471,10 @@ export const BrandKitPage: React.FC = () => {
                         ))}
                       </div>
                       
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <p 
+                        className="text-sm text-gray-500 dark:text-gray-400"
+                        style={{ fontFamily: brandKit.typography.bodyFont }}
+                      >
                         Click on a logo concept to select it as your primary logo.
                       </p>
                     </div>
@@ -444,7 +485,10 @@ export const BrandKitPage: React.FC = () => {
               {imageAssets.length > 0 && (
                 <div className="mt-8">
                   <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    <h3 
+                      className="text-xl font-semibold text-gray-900 dark:text-white"
+                      style={{ fontFamily: brandKit.typography.headingFont }}
+                    >
                       Recent Images
                     </h3>
                     <Button
