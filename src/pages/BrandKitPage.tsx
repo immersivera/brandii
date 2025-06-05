@@ -4,11 +4,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardFooter } from '../components/ui/Card';
-import { ArrowLeft, ArrowRight, Download, Copy, Share2, Trash2, Image, Plus, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Download, Copy, Share2, Trash2, Image as ImageIcon, Plus, Sparkles, Upload } from 'lucide-react';
 import { BrandKit, fetchBrandKitById, deleteBrandKit, updateBrandKit, saveGeneratedAssets, deleteGeneratedAsset } from '../lib/supabase';
 import { generateLogoImages } from '../lib/openai';
 import { generateBrandKitZip } from '../lib/download';
 import toast from 'react-hot-toast';
+import { supabase } from '../lib/supabase';
 
 export const BrandKitPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +20,8 @@ export const BrandKitPage: React.FC = () => {
   const [isGeneratingLogos, setIsGeneratingLogos] = useState(false);
   const [isDeletingLogo, setIsDeletingLogo] = useState<string | null>(null);
   const [isDeletingAllLogos, setIsDeletingAllLogos] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const loadBrandKit = async () => {
@@ -227,6 +230,83 @@ export const BrandKitPage: React.FC = () => {
     }
   };
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !brandKit) return;
+
+    try {
+      setIsUploadingLogo(true);
+      
+      // Upload the file to storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${brandKit.id}-logo-${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('brand-logos')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get the public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('brand-logos')
+        .getPublicUrl(filePath);
+
+      // Update the brand kit with the new logo
+      const updatedBrandKit = await updateBrandKit(brandKit.id, {
+        logo: {
+          ...brandKit.logo,
+          image: publicUrl
+        }
+      });
+
+      setBrandKit(updatedBrandKit);
+      toast.success('Logo uploaded successfully');
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      toast.error('Failed to upload logo');
+    } finally {
+      setIsUploadingLogo(false);
+      // Reset the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    if (!brandKit?.logo.image || !confirm('Are you sure you want to remove the logo?')) return;
+
+    try {
+      // Extract the file path from the URL
+      const url = new URL(brandKit.logo.image);
+      const pathParts = url.pathname.split('/');
+      const filePath = pathParts[pathParts.length - 1];
+
+      // Delete the file from storage
+      const { error: deleteError } = await supabase.storage
+        .from('brand-logos')
+        .remove([filePath]);
+
+      if (deleteError) throw deleteError;
+
+      // Update the brand kit to remove the logo
+      const updatedBrandKit = await updateBrandKit(brandKit.id, {
+        logo: {
+          ...brandKit.logo,
+          image: undefined
+        }
+      });
+
+      setBrandKit(updatedBrandKit);
+      toast.success('Logo removed successfully');
+    } catch (error) {
+      console.error('Error removing logo:', error);
+      toast.error('Failed to remove logo');
+    }
+  };
+
   const getSelectedLogo = () => {
     if (!brandKit) return null;
 
@@ -344,7 +424,7 @@ export const BrandKitPage: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => navigate(`/kit/${id}/gallery`)}
-                    leftIcon={<Image className="h-4 w-4" />}
+                    leftIcon={<ImageIcon className="h-4 w-4" />}
                   >
                     View Gallery
                   </Button>
@@ -443,6 +523,93 @@ export const BrandKitPage: React.FC = () => {
                     </Button>
                   </div>
                 </CardFooter>
+              </Card>
+              
+              <Card className="mb-8">
+                <CardContent className="p-6">
+                  <h3 
+                    className="text-xl font-semibold text-gray-900 dark:text-white mb-6"
+                    style={{ fontFamily: brandKit.typography.headingFont }}
+                  >
+                    Brand Logo
+                  </h3>
+                  
+                  <div className="flex flex-col md:flex-row items-start gap-8">
+                    <div className="w-full md:w-1/3">
+                      <div 
+                        className="w-full aspect-square flex items-center justify-center rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 overflow-hidden"
+                        style={{ backgroundColor: brandKit.colors.background }}
+                      >
+                        {brandKit.logo.image ? (
+                          <img 
+                            src={brandKit.logo.image} 
+                            alt="Brand Logo" 
+                            className="w-full h-full object-contain p-4"
+                          />
+                        ) : (
+                          <div className="text-center p-4">
+                            <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              {brandKit.logo.text || 'No logo uploaded'}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex-1 space-y-4">
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Upload New Logo
+                        </h4>
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleLogoUpload}
+                            accept="image/*"
+                            className="hidden"
+                            id="logo-upload"
+                            disabled={isUploadingLogo}
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isUploadingLogo}
+                            leftIcon={isUploadingLogo ? undefined : <Upload className="h-4 w-4" />}
+                            isLoading={isUploadingLogo}
+                          >
+                            {isUploadingLogo ? 'Uploading...' : 'Choose File'}
+                          </Button>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            PNG, JPG, or SVG (max 5MB)
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {brandKit.logo.image && (
+                        <div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleRemoveLogo}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                            leftIcon={<Trash2 className="h-4 w-4" />}
+                          >
+                            Remove Logo
+                          </Button>
+                        </div>
+                      )}
+                      
+                      <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Your logo will be used across your brand assets. For best results, use a high-resolution image with a transparent background.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
               </Card>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
@@ -634,7 +801,7 @@ export const BrandKitPage: React.FC = () => {
                     ) : (
                       <div className="text-center py-8">
                         <div className="mx-auto w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
-                          <Image className="h-8 w-8 text-gray-400" />
+                          <ImageIcon className="h-8 w-8 text-gray-400" />
                         </div>
                         <h4 
                           className="text-lg font-medium text-gray-900 dark:text-white mb-1"
