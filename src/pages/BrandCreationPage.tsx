@@ -11,6 +11,7 @@ import { FileUpload } from '../components/ui/FileUpload';
 import { AuthModal } from '../components/AuthModal';
 import { useBrand } from '../context/BrandContext';
 import { useUser } from '../context/UserContext';
+import { useAuthModal } from '../context/AuthModalContext';
 import { ArrowLeft, ArrowRight, Sparkles, RefreshCw, Loader } from 'lucide-react';
 import { BRAND_TYPES, BRAND_ADJECTIVES, LOGO_STYLES, GOOGLE_FONTS } from '../lib/constants';
 import { ColorPicker } from '../components/ui/ColorPicker';
@@ -20,14 +21,22 @@ import toast from 'react-hot-toast';
 
 export const BrandCreationPage: React.FC = () => {
   const { brandDetails, updateBrandDetails, setStep, resetBrandDetails } = useBrand();
-  const { userId, isAnonymous } = useUser();
+  const { userId } = useUser();
+  const { openModal } = useAuthModal();
+  const navigate = useNavigate();
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingColors, setIsGeneratingColors] = useState(false);
   const [isGeneratingLogos, setIsGeneratingLogos] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!userId) {
+      openModal(() => navigate('/create/new'));
+      navigate('/');
+    }
+  }, [userId, navigate, openModal]);
 
   const handleGenerateWithAI = async () => {
     if (!brandDetails.name || !brandDetails.description) {
@@ -93,7 +102,7 @@ export const BrandCreationPage: React.FC = () => {
   };
 
   const handleComplete = async () => {
-    if (isAnonymous) {
+    if (!userId) {
       setShowAuthModal(true);
       return;
     }
@@ -104,7 +113,6 @@ export const BrandCreationPage: React.FC = () => {
       let logoUrls: string[] = [];
       let uploadedLogoUrl: string | undefined;
 
-      // Handle logo based on user choice
       if (brandDetails.logoChoice === 'ai') {
         setIsGeneratingLogos(true);
         try {
@@ -130,7 +138,7 @@ export const BrandCreationPage: React.FC = () => {
         setIsGeneratingLogos(false);
       } else if (brandDetails.logoChoice === 'upload' && uploadedFile) {
         try {
-          uploadedLogoUrl = await uploadImageToStorage(uploadedFile, userId!);
+          uploadedLogoUrl = await uploadImageToStorage(uploadedFile, userId);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to upload logo';
           toast.error(errorMessage);
