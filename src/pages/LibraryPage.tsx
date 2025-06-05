@@ -93,13 +93,11 @@ export const LibraryPage: React.FC = () => {
 
     // Then check for AI-generated logo
     if (brandKit.generated_assets?.length) {
-      console.log('Checking AI-generated logo for brand kit:', brandKit.id);
       // First try to find the selected logo
       if (brandKit.logo_selected_asset_id) {
         const selectedAsset = brandKit.generated_assets.find(
           asset => asset.id === brandKit.logo_selected_asset_id && asset.type === 'logo'
         );
-        console.log('Selected asset:', selectedAsset);
         if (selectedAsset?.image_data) {
           return selectedAsset.image_data;
         }
@@ -116,6 +114,23 @@ export const LibraryPage: React.FC = () => {
 
     return null;
   };
+
+  const renderTextLogo = (brandKit: BrandKit) => (
+    <div 
+      className="h-24 w-24 rounded-lg flex items-center justify-center"
+      style={{ 
+        backgroundColor: brandKit.colors.background,
+        fontFamily: brandKit.typography.headingFont
+      }}
+    >
+      <span 
+        className="text-lg font-bold text-center px-2"
+        style={{ color: brandKit.colors.primary }}
+      >
+        {brandKit.name}
+      </span>
+    </div>
+  );
 
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
 
@@ -240,24 +255,21 @@ export const LibraryPage: React.FC = () => {
                                     alt={`${brandKit.name} logo`}
                                     className="h-24 w-24 object-contain"
                                   />
-                                ) : (
-                                  <span 
-                                    className="text-4xl font-bold font-display"
-                                    style={{ 
-                                      color: brandKit.colors.text
-                                    }}
-                                  >
-                                    {brandKit.name.charAt(0)}
-                                  </span>
-                                )}
+                                ) : renderTextLogo(brandKit)}
                               </div>
                             </div>
                             
                             <div className="p-6">
-                              <h3 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">
+                              <h3 
+                                className="text-xl font-semibold mb-1 text-gray-900 dark:text-white"
+                                style={{ fontFamily: brandKit.typography.headingFont }}
+                              >
                                 {brandKit.name}
                               </h3>
-                              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                              <p 
+                                className="text-sm text-gray-500 dark:text-gray-400 mb-4"
+                                style={{ fontFamily: brandKit.typography.bodyFont }}
+                              >
                                 {brandKit.description}
                               </p>
                               
