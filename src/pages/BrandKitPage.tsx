@@ -18,6 +18,7 @@ export const BrandKitPage: React.FC = () => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isGeneratingLogos, setIsGeneratingLogos] = useState(false);
   const [isDeletingLogo, setIsDeletingLogo] = useState<string | null>(null);
+  const [isDeletingAllLogos, setIsDeletingAllLogos] = useState(false);
 
   useEffect(() => {
     const loadBrandKit = async () => {
@@ -191,6 +192,38 @@ export const BrandKitPage: React.FC = () => {
       toast.error('Failed to delete logo concept');
     } finally {
       setIsDeletingLogo(null);
+    }
+  };
+
+  const handleDeleteAllLogoConcepts = async () => {
+    if (!brandKit || !confirm('Are you sure you want to delete all logo concepts? This action cannot be undone.')) return;
+
+    try {
+      setIsDeletingAllLogos(true);
+      
+      // Delete all logo assets from the database
+      if (brandKit.generated_assets?.length) {
+        const deletePromises = brandKit.generated_assets
+          .filter(asset => asset.type === 'logo')
+          .map(asset => deleteGeneratedAsset(asset.id));
+        
+        await Promise.all(deletePromises);
+      }
+      
+      // Update the local state to remove all logo assets and clear the selected logo
+      const updatedBrandKit = {
+        ...brandKit,
+        generated_assets: brandKit.generated_assets?.filter(asset => asset.type !== 'logo') || [],
+        logo_selected_asset_id: undefined
+      };
+      
+      setBrandKit(updatedBrandKit);
+      toast.success('All logo concepts deleted');
+    } catch (error) {
+      console.error('Error deleting all logo concepts:', error);
+      toast.error('Failed to delete logo concepts');
+    } finally {
+      setIsDeletingAllLogos(false);
     }
   };
 
@@ -512,16 +545,31 @@ export const BrandKitPage: React.FC = () => {
                     >
                       Logo Concepts
                     </h3>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleGenerateMoreLogos}
-                      leftIcon={<Sparkles className="h-4 w-4" />}
-                      isLoading={isGeneratingLogos}
-                      disabled={isGeneratingLogos}
-                    >
-                      Generate More
-                    </Button>
+                    <div className="flex items-center space-x-2">
+                      {logoAssets.length > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDeleteAllLogoConcepts}
+                          leftIcon={<Trash2 className="h-4 w-4" />}
+                          isLoading={isDeletingAllLogos}
+                          disabled={isDeletingAllLogos}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        >
+                          Delete All
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleGenerateMoreLogos}
+                        leftIcon={<Sparkles className="h-4 w-4" />}
+                        isLoading={isGeneratingLogos}
+                        disabled={isGeneratingLogos}
+                      >
+                        Generate More
+                      </Button>
+                    </div>
                   </div>
                   
                   <div className="space-y-6">
