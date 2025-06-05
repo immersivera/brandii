@@ -17,6 +17,7 @@ export const BrandKitPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isGeneratingLogos, setIsGeneratingLogos] = useState(false);
+  const [isDeletingLogos, setIsDeletingLogos] = useState(false);
 
   useEffect(() => {
     const loadBrandKit = async () => {
@@ -141,6 +142,28 @@ export const BrandKitPage: React.FC = () => {
       toast.error('Failed to generate logos');
     } finally {
       setIsGeneratingLogos(false);
+    }
+  };
+
+  const handleDeleteAllLogos = async () => {
+    if (!brandKit || !confirm('Are you sure you want to delete all generated logos? This action cannot be undone.')) return;
+
+    try {
+      setIsDeletingLogos(true);
+
+      // Update brand kit to remove logo selection and clear generated assets
+      const updatedBrandKit = await updateBrandKit(brandKit.id, {
+        logo_selected_asset_id: null,
+        generated_assets: []
+      });
+
+      setBrandKit(updatedBrandKit);
+      toast.success('All logos deleted successfully');
+    } catch (error) {
+      console.error('Error deleting logos:', error);
+      toast.error('Failed to delete logos');
+    } finally {
+      setIsDeletingLogos(false);
     }
   };
 
@@ -467,6 +490,27 @@ export const BrandKitPage: React.FC = () => {
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Uploaded Logo Section */}
+              {brandKit.logo.image && (
+                <Card className="mb-8">
+                  <CardContent className="p-6">
+                    <h3 
+                      className="text-xl font-semibold mb-4 text-gray-900 dark:text-white"
+                      style={{ fontFamily: brandKit.typography.headingFont }}
+                    >
+                      Uploaded Logo
+                    </h3>
+                    <div className="flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg p-8">
+                      <img
+                        src={brandKit.logo.image}
+                        alt="Uploaded logo"
+                        className="max-h-32 w-auto"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
               
               <Card>
                 <CardContent className="p-6">
@@ -477,55 +521,83 @@ export const BrandKitPage: React.FC = () => {
                     >
                       Logo Concepts
                     </h3>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleGenerateMoreLogos}
-                      leftIcon={<Sparkles className="h-4 w-4" />}
-                      isLoading={isGeneratingLogos}
-                      disabled={isGeneratingLogos}
-                    >
-                      Generate More
-                    </Button>
+                    <div className="flex gap-2">
+                      {logoAssets.length > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDeleteAllLogos}
+                          leftIcon={<Trash2 className="h-4 w-4" />}
+                          isLoading={isDeletingLogos}
+                          disabled={isDeletingLogos}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        >
+                          Delete All
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleGenerateMoreLogos}
+                        leftIcon={<Sparkles className="h-4 w-4" />}
+                        isLoading={isGeneratingLogos}
+                        disabled={isGeneratingLogos}
+                      >
+                        Generate More
+                      </Button>
+                    </div>
                   </div>
                   
                   <div className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      {logoAssets.map((asset) => (
-                        <div
-                          key={asset.id}
-                          className={`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
-                            brandKit.logo_selected_asset_id === asset.id
-                              ? 'border-brand-600 shadow-lg'
-                              : 'border-gray-200 dark:border-gray-700'
-                          }`}
-                          onClick={() => handleSelectLogo(asset.id)}
-                        >
-                          <img
-                            src={asset.image_data}
-                            alt="Logo concept"
-                            className="w-full h-auto"
-                            style={{ 
-                              backgroundColor: brandKit.colors.background
-                            }}
-                          />
-                          {brandKit.logo_selected_asset_id === asset.id && (
-                            <div className="absolute inset-0 bg-brand-600/10 flex items-center justify-center">
-                              <div className="bg-brand-600 text-white px-3 py-1 rounded-full text-sm">
-                                Selected
-                              </div>
+                    {logoAssets.length > 0 ? (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          {logoAssets.map((asset) => (
+                            <div
+                              key={asset.id}
+                              className={`relative border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
+                                brandKit.logo_selected_asset_id === asset.id
+                                  ? 'border-brand-600 shadow-lg'
+                                  : 'border-gray-200 dark:border-gray-700'
+                              }`}
+                              onClick={() => handleSelectLogo(asset.id)}
+                            >
+                              <img
+                                src={asset.image_data}
+                                alt="Logo concept"
+                                className="w-full h-auto"
+                                style={{ 
+                                  backgroundColor: brandKit.colors.background
+                                }}
+                              />
+                              {brandKit.logo_selected_asset_id === asset.id && (
+                                <div className="absolute inset-0 bg-brand-600/10 flex items-center justify-center">
+                                  <div className="bg-brand-600 text-white px-3 py-1 rounded-full text-sm">
+                                    Selected
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          )}
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                    
-                    <p 
-                      className="text-sm text-gray-500 dark:text-gray-400"
-                      style={{ fontFamily: brandKit.typography.bodyFont }}
-                    >
-                      Click on a logo concept to select it as your primary logo.
-                    </p>
+                        
+                        <p 
+                          className="text-sm text-gray-500 dark:text-gray-400"
+                          style={{ fontFamily: brandKit.typography.bodyFont }}
+                        >
+                          Click on a logo concept to select it as your primary logo.
+                        </p>
+                      </>
+                    ) : (
+                      <div className="text-center py-8">
+                        <p 
+                          className="text-gray-500 dark:text-gray-400 mb-4"
+                          style={{ fontFamily: brandKit.typography.bodyFont }}
+                        >
+                          No generated logos yet. Click "Generate More" to create logo concepts.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
