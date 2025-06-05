@@ -74,7 +74,7 @@ export async function generateImageAssets(
     const { data, error } = await supabase.functions.invoke('openai', {
       body: {
         action: 'generateImageAssets',
-        data: { prompt:prompt.tirm(), logoImage, size, count }
+        data: { prompt:prompt.trim(), logoImage, size, count }
       }
     });
 
