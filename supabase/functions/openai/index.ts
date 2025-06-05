@@ -73,32 +73,12 @@ serve(async (req) => {
       }
 
       case 'generateImageAssets': {
-        let response;
-        
-        if (data.logoImage) {
-          // Convert base64 string to Uint8Array for image editing
-          const base64Data = data.logoImage.split(',')[1]
-          const binaryString = atob(base64Data)
-          const bytes = new Uint8Array(binaryString.length)
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i)
-          }
-
-          response = await openai.images.edit({
-            model: "gpt-image-1",
-            image: bytes,
-            prompt: data.prompt,
-            n: data.count || 1,
-            size: data.size || "1024x1024",
-          })
-        } else {
-          response = await openai.images.generate({
-            model: "gpt-image-1",
-            prompt: data.prompt,
-            n: data.count || 1,
-            size: data.size || "1024x1024",
-          })
-        }
+        const response = await openai.images.generate({
+          model: "gpt-image-1",
+          prompt: data.prompt,
+          n: data.count || 1,
+          size: data.size || "1024x1024",
+        })
 
         return new Response(JSON.stringify(response.data), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
