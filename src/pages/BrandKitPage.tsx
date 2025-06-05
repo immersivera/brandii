@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
+import toast from 'react-hot-toast';
 import { updateBrandKit } from '@/lib/supabase';
 
 export const BrandKitPage: React.FC = () => {
