@@ -9,6 +9,7 @@ import { Select } from '../components/ui/Select';
 import { ArrowLeft, Sparkles, Download, X, Calendar, Clock } from 'lucide-react';
 import { BrandKit, fetchBrandKitById, saveGeneratedAssets } from '../lib/supabase';
 import { generateImageAssets, type ImageSize } from '../lib/openai';
+import { optimizeImage } from '../lib/imageProcessing';
 import toast from 'react-hot-toast';
 
 const IMAGE_SIZES = [
@@ -88,13 +89,20 @@ export const ImageGeneratorPage: React.FC = () => {
     return `\nUse the following brand assets in the image:\n${parts.join('\n')}`;
   };
 
-  const getSelectedLogo = () => {
+  const getSelectedLogoSource = () => {
     if (!brandKit?.generated_assets || !brandKit.logo_selected_asset_id || !includeLogo) return null;
 
-    const selectedLogo = brandKit.generated_assets.find(
-      asset => asset.id === brandKit.logo_selected_asset_id
+    // Check for uploaded logo first
+    if (brandKit.logo.image && brandKit.logo.image.length > 0) {
+      return brandKit.logo.image;
+    }
+
+    // Then check for AI-generated logo
+    const selectedAsset = brandKit.generated_assets.find(
+      asset => asset.id === brandKit.logo_selected_asset_id && asset.type === 'logo'
     );
-    return selectedLogo?.image_data || null;
+
+    return selectedAsset?.image_data || null;
   };
 
   const handleGenerate = async () => {
@@ -106,8 +114,20 @@ export const ImageGeneratorPage: React.FC = () => {
     setIsGenerating(true);
     try {
       const fullPrompt = `${prompt}${getBrandAssetsPrompt()}`;
-      const logoImage = getSelectedLogo();
-      const images = await generateImageAssets(fullPrompt, logoImage, selectedSize, imageCount);
+      const logoSource = getSelectedLogoSource();
+      
+      let optimizedLogoUrl: string | undefined;
+      
+      if (logoSource) {
+        const optimizedLogo = await optimizeImage(logoSource);
+        if (optimizedLogo) {
+          optimizedLogoUrl = optimizedLogo.url;
+        } else {
+          toast.error('Failed to optimize logo image');
+        }
+      }
+
+      const images = await generateImageAssets(fullPrompt, optimizedLogoUrl, selectedSize, imageCount);
       setGeneratedImages(images);
 
       // Save the generated images with the prompt
@@ -353,6 +373,7 @@ export const ImageGeneratorPage: React.FC = () => {
                           src={imageUrl}
                           alt={`Generated image ${index + 1}`}
                           className="w-full h-auto rounded-lg mb-4"
+                          loading="lazy"
                         />
                         <Button
                           variant="outline"
