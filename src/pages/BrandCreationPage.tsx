@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -14,7 +14,7 @@ import { useUser } from '../context/UserContext';
 import { ArrowLeft, ArrowRight, Sparkles, RefreshCw, Loader } from 'lucide-react';
 import { BRAND_TYPES, BRAND_ADJECTIVES, LOGO_STYLES, GOOGLE_FONTS } from '../lib/constants';
 import { ColorPicker } from '../components/ui/ColorPicker';
-import { saveBrandKit, fetchBrandKitById, uploadImageToStorage, updateBrandKit } from '../lib/supabase';
+import { saveBrandKit, fetchBrandKitById, uploadImageToStorage } from '../lib/supabase';
 import { generateBrandSuggestion, generateLogoImages } from '../lib/openai';
 import toast from 'react-hot-toast';
 
@@ -27,52 +27,7 @@ export const BrandCreationPage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [editingBrandKit, setEditingBrandKit] = useState<any>(null);
   const navigate = useNavigate();
-  const { id } = useParams();
-
-  useEffect(() => {
-    const loadBrandKit = async () => {
-      if (!id) {
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const brandKit = await fetchBrandKitById(id);
-        if (brandKit) {
-          setIsEditMode(true);
-          setEditingBrandKit(brandKit);
-          
-          // Update brand details with existing data
-          updateBrandDetails({
-            name: brandKit.name,
-            description: brandKit.description,
-            industry: brandKit.type,
-            adjective: brandKit.adjective || '',
-            colors: brandKit.colors,
-            typography: brandKit.typography,
-            logoStyle: brandKit.logo.type,
-            logoChoice: brandKit.logo.image ? 'upload' : 'none',
-            uploadedLogoUrl: brandKit.logo.image,
-            step: brandDetails.step || 1 // Preserve current step or default to 1
-          });
-        } else {
-          toast.error('Brand kit not found');
-          navigate('/library');
-        }
-      } catch (error) {
-        console.error('Error loading brand kit:', error);
-        toast.error('Failed to load brand kit');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadBrandKit();
-  }, [id, navigate, updateBrandDetails]);
 
   const handleGenerateWithAI = async () => {
     if (!brandDetails.name || !brandDetails.description) {
@@ -150,7 +105,7 @@ export const BrandCreationPage: React.FC = () => {
       let uploadedLogoUrl: string | undefined;
 
       // Handle logo based on user choice
-      if (brandDetails.logoChoice === 'ai' && !isEditMode) {
+      if (brandDetails.logoChoice === 'ai') {
         setIsGeneratingLogos(true);
         try {
           logoUrls = await generateLogoImages({
@@ -188,40 +143,28 @@ export const BrandCreationPage: React.FC = () => {
         name: brandDetails.name,
         description: brandDetails.description,
         type: brandDetails.industry,
-        adjective: brandDetails.adjective,
         colors: brandDetails.colors,
         logo: {
           type: brandDetails.logoStyle || 'wordmark',
           text: brandDetails.name,
-          image: uploadedLogoUrl || (brandDetails.logoChoice === 'upload' ? brandDetails.uploadedLogoUrl : undefined)
+          image: uploadedLogoUrl
         },
         typography: brandDetails.typography,
       };
 
-      if (isEditMode && editingBrandKit) {
-        await toast.promise(
-          updateBrandKit(editingBrandKit.id, brandKitData),
-          {
-            loading: 'Updating your brand kit...',
-            success: 'Brand kit updated successfully!',
-            error: 'Failed to update brand kit. Please try again.'
-          }
-        );
-        navigate(`/kit/${editingBrandKit.id}`);
-      } else {
-        await toast.promise(
-          saveBrandKit(brandKitData, logoUrls),
-          {
-            loading: 'Saving your brand kit...',
-            success: 'Brand kit saved successfully!',
-            error: 'Failed to save brand kit. Please try again.'
-          }
-        );
-        navigate('/result');
-      }
+      await toast.promise(
+        saveBrandKit(brandKitData, logoUrls),
+        {
+          loading: 'Saving your brand kit...',
+          success: 'Brand kit saved successfully!',
+          error: 'Failed to save brand kit. Please try again.'
+        }
+      );
+
+      navigate('/result');
     } catch (error) {
       console.error('Error completing brand kit:', error);
-      toast.error('Failed to complete brand kit');
+      toast.error('Failed to complete brand kit. Please try again.');
       setIsGeneratingLogos(false);
       setIsSaving(false);
     }
@@ -258,39 +201,6 @@ export const BrandCreationPage: React.FC = () => {
     { name: 'Preview', step: 3 }
   ];
 
-  const canProceedToNextStep = (currentStep: number) => {
-    switch (currentStep) {
-      case 1:
-        return !!brandDetails.name && !!brandDetails.description;
-      case 2:
-        return true; // All fields in step 2 are optional
-      default:
-        return true;
-    }
-  };
-
-  const handleNextStep = () => {
-    if (canProceedToNextStep(brandDetails.step)) {
-      setStep(brandDetails.step + 1);
-    } else {
-      toast.error('Please fill in all required fields');
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <Layout>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-center items-center py-20">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-600"></div>
-            </div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
   const renderStep = () => {
     switch (brandDetails.step) {
       case 1:
@@ -301,7 +211,7 @@ export const BrandCreationPage: React.FC = () => {
             exit={{ opacity: 0 }}
           >
             <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
-              {isEditMode ? 'Edit Brand Information' : 'Tell us about your brand'}
+              Tell us about your brand
             </h2>
             
             <div className="space-y-6">
@@ -345,21 +255,19 @@ export const BrandCreationPage: React.FC = () => {
               />
               
               <div className="pt-4 flex justify-between">
-                {!isEditMode && (
-                  <Button
-                    variant="outline"
-                    onClick={handleGenerateWithAI}
-                    leftIcon={<Sparkles className="h-4 w-4" />}
-                    isLoading={isGenerating}
-                  >
-                    Generate with AI
-                  </Button>
-                )}
+                <Button
+                  variant="outline"
+                  onClick={handleGenerateWithAI}
+                  leftIcon={<Sparkles className="h-4 w-4" />}
+                  isLoading={isGenerating}
+                >
+                  Generate with AI
+                </Button>
                 
                 <Button
-                  onClick={handleNextStep}
+                  onClick={() => setStep(2)}
                   rightIcon={<ArrowRight className="h-4 w-4" />}
-                  disabled={!canProceedToNextStep(1)}
+                  disabled={!brandDetails.name || !brandDetails.description}
                 >
                   Next Step
                 </Button>
@@ -377,7 +285,7 @@ export const BrandCreationPage: React.FC = () => {
           >
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {isEditMode ? 'Edit Brand Design' : 'Design your brand identity'}
+                Design your brand identity
               </h2>
               <Button
                 variant="outline"
@@ -440,20 +348,18 @@ export const BrandCreationPage: React.FC = () => {
                     Logo Options
                   </label>
                   <div className="space-y-2">
-                    {!isEditMode && (
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          id="logoAI"
-                          checked={brandDetails.logoChoice === 'ai'}
-                          onChange={() => updateBrandDetails({ logoChoice: 'ai' })}
-                          className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300"
-                        />
-                        <label htmlFor="logoAI" className="text-sm text-gray-700 dark:text-gray-300">
-                          Generate logo with AI
-                        </label>
-                      </div>
-                    )}
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        id="logoAI"
+                        checked={brandDetails.logoChoice === 'ai'}
+                        onChange={() => updateBrandDetails({ logoChoice: 'ai' })}
+                        className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300"
+                      />
+                      <label htmlFor="logoAI" className="text-sm text-gray-700 dark:text-gray-300">
+                        Generate logo with AI
+                      </label>
+                    </div>
                     <div className="flex items-center space-x-2">
                       <input
                         type="radio"
@@ -601,7 +507,7 @@ export const BrandCreationPage: React.FC = () => {
             exit={{ opacity: 0 }}
           >
             <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
-              {isEditMode ? 'Preview Changes' : 'Preview your brand kit'}
+              Preview your brand kit
             </h2>
             
             <div className="space-y-8">
@@ -711,7 +617,7 @@ export const BrandCreationPage: React.FC = () => {
                     )}
                   </div>
                   
-                  {brandDetails.logoChoice === 'ai' && !isEditMode && (
+                  {brandDetails.logoChoice === 'ai' && (
                     <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
                       Click "Complete" to generate AI-powered logo concepts based on your brand details.
                     </p>
@@ -744,7 +650,7 @@ export const BrandCreationPage: React.FC = () => {
                   isLoading={isSaving || isGeneratingLogos}
                   disabled={isSaving || isGeneratingLogos}
                 >
-                  {isEditMode ? 'Save Changes' : 'Complete'}
+                  Complete
                 </Button>
               </div>
             </div>
@@ -764,7 +670,7 @@ export const BrandCreationPage: React.FC = () => {
             <div className="mb-8">
               <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {isEditMode ? 'Edit Brand Kit' : 'Create Your Brand Kit'}
+                  Create Your Brand Kit
                 </h1>
                 
                 <div className="flex items-center space-x-1 text-sm font-medium text-gray-500 dark:text-gray-400">
