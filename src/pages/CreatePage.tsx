@@ -5,29 +5,23 @@ import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Plus, Image, ArrowRight } from 'lucide-react';
-import { fetchBrandKits, type BrandKit } from '../lib/supabase';
+import { fetchBrandKits } from '../lib/supabase';
 import { useUser } from '../context/UserContext';
-import { useAuthModal } from '../context/AuthModalContext';
 import toast from 'react-hot-toast';
 
 export const CreatePage: React.FC = () => {
-  const [brandKits, setBrandKits] = useState<BrandKit[]>([]);
+  const [hasExistingBrandKits, setHasExistingBrandKits] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { userId } = useUser();
-  const { openModal } = useAuthModal();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!userId) {
-      openModal(() => navigate('/create'));
-      navigate('/');
-      return;
-    }
-
     const checkExistingBrandKits = async () => {
+      if (!userId) return;
+
       try {
         const { data } = await fetchBrandKits();
-        setBrandKits(data);
+        setHasExistingBrandKits(data.length > 0);
       } catch (error) {
         console.error('Error checking brand kits:', error);
         toast.error('Failed to check existing brand kits');
@@ -37,10 +31,10 @@ export const CreatePage: React.FC = () => {
     };
 
     checkExistingBrandKits();
-  }, [userId, navigate, openModal]);
+  }, [userId]);
 
   const handleMediaAssetsClick = () => {
-    if (brandKits.length === 0) {
+    if (!hasExistingBrandKits) {
       toast.error('Please create a brand kit first before generating media assets');
       return;
     }
@@ -111,7 +105,7 @@ export const CreatePage: React.FC = () => {
                   hover 
                   interactive 
                   onClick={handleMediaAssetsClick}
-                  className={`h-full ${brandKits.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`h-full ${!hasExistingBrandKits ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <CardContent className="p-8 flex flex-col items-center text-center">
                     <div className="w-16 h-16 bg-accent-100 dark:bg-accent-900/30 rounded-full flex items-center justify-center mb-6">
@@ -124,19 +118,19 @@ export const CreatePage: React.FC = () => {
                       Generate images and assets using your existing brand kit styles
                     </p>
                     <Button
-                      variant={brandKits.length > 0 ? 'primary' : 'outline'}
+                      variant={hasExistingBrandKits ? 'primary' : 'outline'}
                       rightIcon={<ArrowRight className="h-4 w-4" />}
-                      disabled={brandKits.length === 0}
+                      disabled={!hasExistingBrandKits}
                       className="mt-auto"
                     >
-                      {brandKits.length > 0 ? 'Continue' : 'No Brand Kits Available'}
+                      {hasExistingBrandKits ? 'Continue' : 'No Brand Kits Available'}
                     </Button>
                   </CardContent>
                 </Card>
               </motion.div>
             </div>
 
-            {brandKits.length === 0 && (
+            {!hasExistingBrandKits && (
               <motion.p 
                 className="text-center mt-6 text-sm text-gray-500 dark:text-gray-400"
                 initial={{ opacity: 0 }}
