@@ -113,7 +113,7 @@ export const HomePage: React.FC = () => {
                 variant="outline" 
                 size="lg" 
                 className="bg-white/10 backdrop-blur-sm border-white/20 text-gray-900 dark:text-white hover:bg-white/20"
-                onClick={() => navigate('/library')}
+                onClick={() => navigate('/gallery')}
               >
                 View Examples
               </Button>
