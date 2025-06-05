@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { updateBrandKit } from '@/lib/supabase';
+import { updateBrandKit } from '../lib/supabase';
 
 export const BrandKitPage: React.FC = () => {
   const { id } = useParams();
