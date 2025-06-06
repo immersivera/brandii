@@ -1,5 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.39.7'
 import OpenAI from 'npm:openai@4.28.4'
 
 const corsHeaders = {
@@ -76,28 +76,51 @@ serve(async (req) => {
         let response;
         
         if (data.logoImage) {
-          // Convert base64 string to Uint8Array for image editing
-          const base64Data = data.logoImage.split(',')[1]
-          const binaryString = atob(base64Data)
-          const bytes = new Uint8Array(binaryString.length)
+          // Extract base64 data (remove data URL prefix if present)
+          const base64Data = data.logoImage.startsWith('data:') 
+            ? data.logoImage.split(',')[1] 
+            : data.logoImage;
+            
+          // Convert base64 to Uint8Array
+          const binaryString = atob(base64Data);
+          const bytes = new Uint8Array(binaryString.length);
           for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i)
+            bytes[i] = binaryString.charCodeAt(i);
           }
-
-          response = await openai.images.edit({
-            model: "gpt-image-1",
-            image: bytes,
-            prompt: data.prompt,
-            n: data.count || 1,
-            size: data.size || "1024x1024",
-          })
+          
+          // Create FormData for the request
+          const formData = new FormData();
+          formData.append('model', 'gpt-image-1');
+          formData.append('image', new Blob([bytes], { type: 'image/png' }), 'image.png');
+          formData.append('prompt', data.prompt);
+          formData.append('n', String(data.count || 1));
+          formData.append('size', data.size || '1024x1024');
+          
+          // Make the request to OpenAI's API
+          const openaiResponse = await fetch('https://api.openai.com/v1/images/edits', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+            },
+            body: formData
+          });
+          
+          if (!openaiResponse.ok) {
+            const error = await openaiResponse.json();
+            console.error('OpenAI API Error:', error);
+            throw new Error(error.error?.message || 'Failed to generate images');
+          }
+          
+          const result = await openaiResponse.json();
+          response = { data: result.data };
         } else {
+          // Standard image generation when no logo is provided
           response = await openai.images.generate({
             model: "gpt-image-1",
             prompt: data.prompt,
             n: data.count || 1,
             size: data.size || "1024x1024",
-          })
+          });
         }
 
         return new Response(JSON.stringify(response.data), {
