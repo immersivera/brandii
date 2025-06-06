@@ -1,5 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'npm:@supabase/supabase-js@2.39.7'
+import { createClient } from 'npm:@supabase/supabase-js@2'
 import OpenAI from 'npm:openai@4.28.4'
 
 const corsHeaders = {
@@ -76,34 +76,21 @@ serve(async (req) => {
         let response;
         
         if (data.logoImage) {
-          // Extract the MIME type and base64 data
-          const [header, base64Data] = data.logoImage.split(',');
-          const mimeType = header.match(/data:(.*?);/)?.[1] || 'image/png';
-          
-          if (!['image/jpeg', 'image/png', 'image/webp'].includes(mimeType)) {
-            throw new Error(`Unsupported image format. Please use JPEG, PNG, or WebP.`);
-          }
-          
-          // Convert base64 to Uint8Array
-          const binaryString = atob(base64Data);
-          const bytes = new Uint8Array(binaryString.length);
+          // Convert base64 string to Uint8Array for image editing
+          const base64Data = data.logoImage.split(',')[1]
+          const binaryString = atob(base64Data)
+          const bytes = new Uint8Array(binaryString.length)
           for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
+            bytes[i] = binaryString.charCodeAt(i)
           }
-          
-          // Create a File object with the correct MIME type
-          const file = new File([bytes], 'image.' + mimeType.split('/')[1], { 
-            type: mimeType,
-            lastModified: new Date().getTime()
-          });
 
           response = await openai.images.edit({
             model: "gpt-image-1",
-            image: file,
+            image: bytes,
             prompt: data.prompt,
             n: data.count || 1,
             size: data.size || "1024x1024",
-          });
+          })
         } else {
           response = await openai.images.generate({
             model: "gpt-image-1",
