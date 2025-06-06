@@ -254,9 +254,16 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
         base64: img.url,
         type: img.file.type || 'image/png' // Default to png if type is not available
       }));
+    
+      // Get the brand assets prompt and combine with the user's prompt
+      const brandAssetsPrompt = getBrandAssetsPrompt();
+      const fullPrompt = `${prompt.trim()}\n\n${brandAssetsPrompt}`.trim();
+
+      console.log('Sending to API with prompt:', fullPrompt);
+      console.log('Images being sent to API:', imagesForApi);
 
       const images = await generateImageAssets(
-        prompt.trim(),
+        fullPrompt,
         imagesForApi.length > 0 ? imagesForApi : undefined,
         selectedSize as ImageSize,
         imageCount
