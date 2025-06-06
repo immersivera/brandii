@@ -137,32 +137,10 @@ export const ResultPage: React.FC = () => {
                 
                 <div className="flex space-x-3">
                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleStartOver}
-                    leftIcon={<Plus className="h-4 w-4" />}
-                  >
-                    Create New
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
                     onClick={() => navigate(`/kit/${brandKitId}/create`)}
                     leftIcon={<Image className="h-4 w-4" />}
-                    className="mr-2"
                   >
                     Create Images
-                  </Button>
-                  
-                  <Button
-                    size="sm"
-                    onClick={handleDownload}
-                    leftIcon={<Download className="h-4 w-4" />}
-                    isLoading={isDownloading}
-                    disabled={isDownloading}
-                  >
-                    Download
                   </Button>
                 </div>
               </div>
@@ -375,12 +353,13 @@ export const ResultPage: React.FC = () => {
                 
                 <Button
                   size="lg"
+                  variant='secondary'
                   onClick={handleDownload}
                   leftIcon={<Download className="h-5 w-5" />}
                   isLoading={isDownloading}
                   disabled={isDownloading}
                 >
-                  Download Complete Brand Kit
+                  Download Brand Kit
                 </Button>
               </div>
             </motion.div>

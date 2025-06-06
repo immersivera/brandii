@@ -159,7 +159,6 @@ export const BrandCreationPage: React.FC = () => {
           error: 'Failed to save brand kit. Please try again.'
         }
       );
-
       navigate(`/result?brandKitId=${savedBrandKit.id}`);
     } catch (error) {
       console.error('Error completing brand kit:', error);
