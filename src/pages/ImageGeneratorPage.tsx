@@ -34,12 +34,12 @@ export const ImageGeneratorPage: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<ImageSize>('1024x1024');
   const [imageCount, setImageCount] = useState<number>(1);
-  const [promptImage, setPromptImage] = useState<string | null>(null);
+  const [promptImages, setPromptImages] = useState<Array<{ url: string; file: File }>>([]);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   
   // Brand asset controls
   const [includeBrandAssets, setIncludeBrandAssets] = useState(true);
-  const [includeLogo, setIncludeLogo] = useState(false); // Disabled - coming soon
+  const [includeLogo, setIncludeLogo] = useState(false);
   const [includeBrandColors, setIncludeBrandColors] = useState(true);
   const [includeBrandTypography, setIncludeBrandTypography] = useState(true);
   const [includeBrandStyle, setIncludeBrandStyle] = useState(true);
@@ -99,65 +99,117 @@ export const ImageGeneratorPage: React.FC = () => {
     return selectedLogo?.image_data || null;
   };
   
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    // Validate files
+    const validFiles = Array.from(files).filter(file => {
+      // Check file type
+      if (!file.type.startsWith('image/')) {
+        toast.error(`Skipped ${file.name}: Not an image file`);
+        return false;
+      }
+      
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(`Skipped ${file.name}: File size exceeds 5MB`);
+        return false;
+      }
+      
+      return true;
+    });
     
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file');
+    if (validFiles.length === 0) {
+      toast.error('No valid images to upload');
       return;
     }
-    
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image size should be less than 5MB');
-      return;
-    }
-    
+
     setIsUploadingImage(true);
-    try {
-      // Convert file to base64 for preview
+    const newImages: Array<{ url: string; file: File }> = [];
+    let processedCount = 0;
+
+    validFiles.forEach((file) => {
       const reader = new FileReader();
       reader.onload = (e) => {
-        setPromptImage(e.target?.result as string);
+        if (e.target?.result) {
+          newImages.push({
+            url: e.target.result as string,
+            file
+          });
+        }
+
+        // When all files are processed
+        processedCount++;
+        if (processedCount === validFiles.length) {
+          setPromptImages(prev => [...prev, ...newImages]);
+          setIsUploadingImage(false);
+          // Clear the input to allow re-uploading the same files
+          event.target.value = '';
+        }
+      };
+      reader.onerror = () => {
+        console.error('Error reading file:', file.name);
+        processedCount++;
+        if (processedCount === validFiles.length) {
+          setPromptImages(prev => [...prev, ...newImages]);
+          setIsUploadingImage(false);
+          event.target.value = '';
+        }
       };
       reader.readAsDataURL(file);
-      
-      // Clear the input value to allow uploading the same file again if needed
-      event.target.value = '';
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      toast.error('Failed to upload image');
-    } finally {
-      setIsUploadingImage(false);
-    }
+    });
   };
-  
-  const handleRemoveImage = () => {
-    setPromptImage(null);
+
+  const handleRemoveImage = (index: number) => {
+    setPromptImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleGenerate = async () => {
-    if (!brandKit || !prompt.trim()) {
+    if (!prompt.trim() || !brandKit) {
       toast.error('Please enter a prompt');
       return;
     }
 
     setIsGenerating(true);
-    try {
-      const fullPrompt = `${prompt}${getBrandAssetsPrompt()}`;
-      // Use prompt image if available, otherwise fall back to logo if enabled
-      const imageToUse = promptImage || getSelectedLogo();
-      const images = await generateImageAssets(fullPrompt, imageToUse || undefined, selectedSize, imageCount);
-      setGeneratedImages(images);
+    setGeneratedImages([]);
+    setSelectedImage(null);
 
+    try {
+      const logoImage = includeLogo ? getSelectedLogo() : undefined;
+      
+      // Prepare images for the API call
+      const imagesForApi = promptImages.map(img => ({
+        base64: img.url,
+        type: img.file.type || 'image/png' // Default to png if type is not available
+      }));
+
+      // If no images are uploaded but logo is included, use the logo
+      if (imagesForApi.length === 0 && logoImage) {
+        imagesForApi.push({
+          base64: logoImage,
+          type: 'image/png'
+        });
+      }
+
+      const images = await generateImageAssets(
+        prompt.trim(),
+        imagesForApi.length > 0 ? imagesForApi : undefined,
+        selectedSize as ImageSize,
+        imageCount
+      );
+
+      setGeneratedImages(images);
       // Save the generated images with the prompt
       await saveGeneratedAssets(brandKit.id, images, 'image', prompt);
       toast.success('Images generated and saved successfully!');
+      
+      if (images.length > 0) {
+        setSelectedImage(images[0]);
+      }
     } catch (error) {
       console.error('Error generating images:', error);
-      toast.error('Failed to generate images');
+      toast.error(error instanceof Error ? error.message : 'Failed to generate images');
     } finally {
       setIsGenerating(false);
     }
@@ -190,247 +242,254 @@ export const ImageGeneratorPage: React.FC = () => {
     }).format(date);
   };
 
-  if (isLoading) {
-    return (
-      <Layout>
-        <div className="min-h-screen bg-white dark:bg-gray-900 py-12">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-center items-center py-20">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-600"></div>
-            </div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (!brandKit) return null;
-
-  const hasLogo = (brandKit.logo_selected_asset_id && brandKit.generated_assets?.some(
-    asset => asset.id === brandKit.logo_selected_asset_id
-  )) || !!brandKit.logo?.image;
-
+if (isLoading) {
   return (
     <Layout>
       <div className="min-h-screen bg-white dark:bg-gray-900 py-12">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate(`/kit/${id}`)}
-                  leftIcon={<ArrowLeft className="h-4 w-4" />}
-                  className="mb-4"
-                >
-                  Back to Brand Kit
-                </Button>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                  Generate Images for {brandKit.name}
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Create custom images that match your brand identity
-                </p>
-              </div>
-            </div>
+          <div className="flex justify-center items-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-600"></div>
+          </div>
+        </div>
+      </div>
+    </Layout>
+  );
+}
 
-            <Card className="mb-8">
-              <CardContent className="p-6">
-                <div className="space-y-6">
-                  <Textarea
-                    label="Image Prompt"
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="Describe the image you want to generate..."
-                    className="h-32"
+if (!brandKit) return null;
+
+const hasLogo = (brandKit.logo_selected_asset_id && brandKit.generated_assets?.some(
+  asset => asset.id === brandKit.logo_selected_asset_id
+)) || !!brandKit.logo?.image;
+
+return (
+  <Layout>
+    <div className="min-h-screen bg-white dark:bg-gray-900 py-12">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate(`/kit/${id}`)}
+                leftIcon={<ArrowLeft className="h-4 w-4" />}
+                className="mb-4"
+              >
+                Back to Brand Kit
+              </Button>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                Generate Images for {brandKit.name}
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400">
+                Create custom images that match your brand identity
+              </p>
+            </div>
+          </div>
+
+          <Card className="mb-8">
+            <CardContent className="p-6">
+              <div className="space-y-6">
+                <Textarea
+                  label="Image Prompt"
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="Describe the image you want to generate..."
+                  className="h-32"
+                />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Select
+                    label="Image Size"
+                    options={IMAGE_SIZES} 
+                    value={selectedSize}
+                    onChange={(value) => setSelectedSize(value as ImageSize)}
+                    helperText="Choose the dimensions for your generated image"
                   />
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Select
-                      label="Image Size"
-                      options={IMAGE_SIZES} 
-                      value={selectedSize}
-                      onChange={(value) => setSelectedSize(value as ImageSize)}
-                      helperText="Choose the dimensions for your generated image"
-                    />
+                  <Select
+                    label="Number of Images"
+                    options={IMAGE_COUNTS}
+                    value={String(imageCount)}
+                    onChange={(value) => setImageCount(Number(value))}
+                    helperText="Choose how many images to generate"
+                  />
+                </div>
 
-                    <Select
-                      label="Number of Images"
-                      options={IMAGE_COUNTS}
-                      value={String(imageCount)}
-                      onChange={(value) => setImageCount(Number(value))}
-                      helperText="Choose how many images to generate"
-                    />
+                {/* Image Upload Section */}
+                <div className="mt-4">
+                  <div className="flex items-center space-x-2">
+                    <ImageIcon className="h-4 w-4 text-gray-500" />
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Reference Images</h3>
                   </div>
-
+                  
+                  <div className="mt-2">
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {promptImages.map((img, index) => (
+                        <div key={index} className="relative group">
+                          <img 
+                            src={img.url} 
+                            alt={`Reference ${index + 1}`}
+                            className="h-24 w-24 object-cover rounded-md border border-gray-200 dark:border-gray-700"
+                          />
+                          <button
+                            onClick={() => handleRemoveImage(index)}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Remove image"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                     
-                    {/* Image Upload Section */}
-                    <div className="mt-4">
-                      <div className="flex items-center space-x-2">
-                        <ImageIcon className="h-4 w-4 text-gray-500" />
-                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Reference Image</h3>
-                      </div>
-                      
-                      <div className="mt-2">
-                        {!promptImage ? (
-                          <div className="flex items-center">
-                            <label 
-                              htmlFor="image-upload"
-                              className="flex items-center space-x-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
-                            >
-                              <Upload className="h-4 w-4" />
-                              <span>Upload reference image</span>
-                              <input
-                                id="image-upload"
-                                type="file"
-                                accept="image/*"
-                                className="sr-only"
-                                onChange={handleImageUpload}
-                                disabled={isUploadingImage}
-                              />
-                            </label>
-                            {isUploadingImage && (
-                              <div className="ml-2 animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-brand-600"></div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="relative rounded-md overflow-hidden border border-gray-300 dark:border-gray-700">
-                            <img 
-                              src={promptImage} 
-                              alt="Uploaded reference image" 
-                              className="max-h-32 w-auto object-contain"
-                            />
-                            <button
-                              onClick={handleRemoveImage}
-                              className="absolute top-1 right-1 bg-black bg-opacity-50 rounded-full p-1 hover:bg-opacity-70 transition-opacity"
-                              title="Remove image"
-                            >
-                              <Trash2 className="h-4 w-4 text-white" />
-                            </button>
-                          </div>
-                        )}
-                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                          Upload an image to use as reference for generation
-                        </p>
-                      </div>
-                    </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-2">
+                    <label className="flex items-center justify-center px-4 py-2 border border-dashed border-gray-300 dark:border-gray-700 rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                      <Upload className="h-4 w-4 mr-2 text-gray-500" />
+                      <span className="text-sm text-gray-600 dark:text-gray-300">
+                        {promptImages.length > 0 ? 'Add more images' : 'Upload reference images'}
+                      </span>
                       <input
-                        type="checkbox"
-                        id="includeBrandAssets"
-                        checked={includeBrandAssets}
-                        onChange={(e) => {
-                          setIncludeBrandAssets(e.target.checked);
-                          if (!e.target.checked) {
-                            setIncludeLogo(includeLogo);
-                            setIncludeBrandColors(false);
-                            setIncludeBrandTypography(false);
-                            setIncludeBrandStyle(false);
-                          }
-                        }}
-                        className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
+                        id="image-upload"
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        className="sr-only"
+                        onChange={handleImageUpload}
+                        disabled={isUploadingImage}
                       />
-                      <label 
-                        htmlFor="includeBrandAssets"
-                        className="text-sm text-gray-700 dark:text-gray-300"
-                      >
-                        Include brand assets in generation
-                      </label>
-                    </div>
-
-                    {includeBrandAssets && (
-                      <div className="space-y-2 ml-6">
-                        {hasLogo && (
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              id="includeLogo"
-                              checked={includeLogo}
-                              onChange={(e) => setIncludeLogo(e.target.checked)}
-                              className="h-4 w-4 text-gray-400 focus:ring-gray-400 border-gray-300 rounded"
-                            />
-                            <label 
-                              htmlFor="includeLogo"
-                              className="text-sm text-gray-700 dark:text-gray-300"
-                            >
-                              Include brand logo</label>
-                          </div>
-                        )}
-
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id="includeBrandColors"
-                            checked={includeBrandColors}
-                            onChange={(e) => setIncludeBrandColors(e.target.checked)}
-                            className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
-                          />
-                          <label 
-                            htmlFor="includeBrandColors"
-                            className="text-sm text-gray-700 dark:text-gray-300"
-                          >
-                            Include brand colors
-                          </label>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id="includeBrandTypography"
-                            checked={includeBrandTypography}
-                            onChange={(e) => setIncludeBrandTypography(e.target.checked)}
-                            className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
-                          />
-                          <label 
-                            htmlFor="includeBrandTypography"
-                            className="text-sm text-gray-700 dark:text-gray-300"
-                          >
-                            Include brand typography
-                          </label>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id="includeBrandStyle"
-                            checked={includeBrandStyle}
-                            onChange={(e) => setIncludeBrandStyle(e.target.checked)}
-                            className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
-                          />
-                          <label 
-                            htmlFor="includeBrandStyle"
-                            className="text-sm text-gray-700 dark:text-gray-300"
-                          >
-                            Include brand style
-                          </label>
-                        </div>
+                    </label>
+                    
+                    {isUploadingImage && (
+                      <div className="mt-2 flex items-center text-sm text-gray-500 dark:text-gray-400">
+                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-brand-600 mr-2"></div>
+                        Uploading images...
                       </div>
                     )}
+                    
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Upload one or more images to use as reference for generation
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="includeBrandAssets"
+                      checked={includeBrandAssets}
+                      onChange={(e) => {
+                        setIncludeBrandAssets(e.target.checked);
+                        if (!e.target.checked) {
+                          setIncludeLogo(includeLogo);
+                          setIncludeBrandColors(false);
+                          setIncludeBrandTypography(false);
+                          setIncludeBrandStyle(false);
+                        }
+                      }}
+                      className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
+                    />
+                    <label 
+                      htmlFor="includeBrandAssets"
+                      className="text-sm text-gray-700 dark:text-gray-300"
+                    >
+                      Include brand assets in generation
+                    </label>
                   </div>
 
-                  <Button
-                    onClick={handleGenerate}
-                    leftIcon={<Sparkles className="h-4 w-4" />}
-                    isLoading={isGenerating}
-                    disabled={isGenerating || !prompt.trim()}
-                  >
-                    Generate {imageCount > 1 ? 'Images' : 'Image'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                  {includeBrandAssets && (
+                    <div className="space-y-2 ml-6">
+                      {hasLogo && (
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="includeLogo"
+                            checked={includeLogo}
+                            onChange={(e) => setIncludeLogo(e.target.checked)}
+                            className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
+                          />
+                          <label 
+                            htmlFor="includeLogo"
+                            className="text-sm text-gray-700 dark:text-gray-300"
+                          >
+                            Include brand logo
+                          </label>
+                        </div>
+                      )}
 
-            {generatedImages.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
-                  Generated {generatedImages.length > 1 ? 'Images' : 'Image'}
-                </h2>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="includeBrandColors"
+                          checked={includeBrandColors}
+                          onChange={(e) => setIncludeBrandColors(e.target.checked)}
+                          className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
+                        />
+                        <label 
+                          htmlFor="includeBrandColors"
+                          className="text-sm text-gray-700 dark:text-gray-300"
+                        >
+                          Include brand colors
+                        </label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="includeBrandTypography"
+                          checked={includeBrandTypography}
+                          onChange={(e) => setIncludeBrandTypography(e.target.checked)}
+                          className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
+                        />
+                        <label 
+                          htmlFor="includeBrandTypography"
+                          className="text-sm text-gray-700 dark:text-gray-300"
+                        >
+                          Include brand typography
+                        </label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="includeBrandStyle"
+                          checked={includeBrandStyle}
+                          onChange={(e) => setIncludeBrandStyle(e.target.checked)}
+                          className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
+                        />
+                        <label 
+                          htmlFor="includeBrandStyle"
+                          className="text-sm text-gray-700 dark:text-gray-300"
+                        >
+                          Include brand style
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <Button
+                  onClick={handleGenerate}
+                  leftIcon={<Sparkles className="h-4 w-4" />}
+                  isLoading={isGenerating}
+                  disabled={isGenerating || !prompt.trim()}
+                  className="w-full md:w-auto"
+                >
+                  Generate {imageCount > 1 ? 'Images' : 'Image'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {generatedImages.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="mt-12"
+            >
+              <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
+                Generated {generatedImages.length > 1 ? 'Images' : 'Image'}
+              </h2>
 
                 <div className={`grid grid-cols-1 ${generatedImages.length > 1 ? 'md:grid-cols-2' : ''} gap-6`}>
                   {generatedImages.map((imageUrl, index) => (
@@ -551,4 +610,4 @@ export const ImageGeneratorPage: React.FC = () => {
       </AnimatePresence>
     </Layout>
   );
-};
+}; // Closing brace for ImageGeneratorPage component
