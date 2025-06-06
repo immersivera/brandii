@@ -76,21 +76,30 @@ serve(async (req) => {
         let response;
         
         if (data.logoImage) {
-          // Convert base64 string to Uint8Array for image editing
-          const base64Data = data.logoImage.split(',')[1]
-          const binaryString = atob(base64Data)
-          const bytes = new Uint8Array(binaryString.length)
+          // Extract the MIME type and base64 data
+          const [header, base64Data] = data.logoImage.split(',');
+          const mimeType = header.split(':')[1].split(';')[0];
+          
+          // Convert base64 to Uint8Array
+          const binaryString = atob(base64Data);
+          const bytes = new Uint8Array(binaryString.length);
           for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i)
+            bytes[i] = binaryString.charCodeAt(i);
           }
+          
+          // Create a Blob from the Uint8Array
+          const blob = new Blob([bytes], { type: mimeType });
+          
+          // Create a File object from the Blob (OpenAI expects a File)
+          const file = new File([blob], 'image.png', { type: mimeType });
 
           response = await openai.images.edit({
             model: "gpt-image-1",
-            image: bytes,
+            image: file,
             prompt: data.prompt,
             n: data.count || 1,
             size: data.size || "1024x1024",
-          })
+          });
         } else {
           response = await openai.images.generate({
             model: "gpt-image-1",
