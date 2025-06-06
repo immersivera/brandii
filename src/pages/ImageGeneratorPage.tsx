@@ -264,30 +264,6 @@ export const ImageGeneratorPage: React.FC = () => {
                     />
                   </div>
 
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="includeBrandAssets"
-                        checked={includeBrandAssets}
-                        onChange={(e) => {
-                          setIncludeBrandAssets(e.target.checked);
-                          if (!e.target.checked) {
-                            setIncludeLogo(includeLogo);
-                            setIncludeBrandColors(false);
-                            setIncludeBrandTypography(false);
-                            setIncludeBrandStyle(false);
-                          }
-                        }}
-                        className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
-                      />
-                      <label 
-                        htmlFor="includeBrandAssets"
-                        className="text-sm text-gray-700 dark:text-gray-300"
-                      >
-                        Include brand assets in generation
-                      </label>
-                    </div>
                     
                     {/* Image Upload Section */}
                     <div className="mt-4">
@@ -339,6 +315,30 @@ export const ImageGeneratorPage: React.FC = () => {
                         </p>
                       </div>
                     </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="includeBrandAssets"
+                        checked={includeBrandAssets}
+                        onChange={(e) => {
+                          setIncludeBrandAssets(e.target.checked);
+                          if (!e.target.checked) {
+                            setIncludeLogo(includeLogo);
+                            setIncludeBrandColors(false);
+                            setIncludeBrandTypography(false);
+                            setIncludeBrandStyle(false);
+                          }
+                        }}
+                        className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
+                      />
+                      <label 
+                        htmlFor="includeBrandAssets"
+                        className="text-sm text-gray-700 dark:text-gray-300"
+                      >
+                        Include brand assets in generation
+                      </label>
+                    </div>
 
                     {includeBrandAssets && (
                       <div className="space-y-2 ml-6">
@@ -349,14 +349,13 @@ export const ImageGeneratorPage: React.FC = () => {
                               id="includeLogo"
                               checked={includeLogo}
                               onChange={(e) => setIncludeLogo(e.target.checked)}
-                              className="h-4 w-4 text-gray-400 focus:ring-gray-400 border-gray-300 rounded cursor-not-allowed"
+                              className="h-4 w-4 text-gray-400 focus:ring-gray-400 border-gray-300 rounded"
                             />
                             <label 
                               htmlFor="includeLogo"
-                              className="text-sm text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                              className="text-sm text-gray-700 dark:text-gray-300"
                             >
-                              Include brand logo <span className="ml-1 text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded">Coming soon</span>
-                            </label>
+                              Include brand logo</label>
                           </div>
                         )}
 
