@@ -6,7 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Textarea } from '../components/ui/Textarea';
 import { Select } from '../components/ui/Select';
-import { ArrowLeft, Sparkles, Download, X, Calendar, Clock } from 'lucide-react';
+import { ArrowLeft, Sparkles, Download, X, Calendar, Clock, Upload, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { BrandKit, fetchBrandKitById, saveGeneratedAssets } from '../lib/supabase';
 import { generateImageAssets, type ImageSize } from '../lib/openai';
 import toast from 'react-hot-toast';
@@ -34,6 +34,8 @@ export const ImageGeneratorPage: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<ImageSize>('1024x1024');
   const [imageCount, setImageCount] = useState<number>(1);
+  const [promptImage, setPromptImage] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   
   // Brand asset controls
   const [includeBrandAssets, setIncludeBrandAssets] = useState(true);
@@ -96,6 +98,45 @@ export const ImageGeneratorPage: React.FC = () => {
     );
     return selectedLogo?.image_data || null;
   };
+  
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+    
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should be less than 5MB');
+      return;
+    }
+    
+    setIsUploadingImage(true);
+    try {
+      // Convert file to base64 for preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPromptImage(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+      
+      // Clear the input value to allow uploading the same file again if needed
+      event.target.value = '';
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error('Failed to upload image');
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+  
+  const handleRemoveImage = () => {
+    setPromptImage(null);
+  };
 
   const handleGenerate = async () => {
     if (!brandKit || !prompt.trim()) {
@@ -106,8 +147,9 @@ export const ImageGeneratorPage: React.FC = () => {
     setIsGenerating(true);
     try {
       const fullPrompt = `${prompt}${getBrandAssetsPrompt()}`;
-      const logoImage = getSelectedLogo() || undefined;
-      const images = await generateImageAssets(fullPrompt, logoImage, selectedSize, imageCount);
+      // Use prompt image if available, otherwise fall back to logo if enabled
+      const imageToUse = promptImage || getSelectedLogo();
+      const images = await generateImageAssets(fullPrompt, imageToUse || undefined, selectedSize, imageCount);
       setGeneratedImages(images);
 
       // Save the generated images with the prompt
@@ -245,6 +287,57 @@ export const ImageGeneratorPage: React.FC = () => {
                       >
                         Include brand assets in generation
                       </label>
+                    </div>
+                    
+                    {/* Image Upload Section */}
+                    <div className="mt-4">
+                      <div className="flex items-center space-x-2">
+                        <ImageIcon className="h-4 w-4 text-gray-500" />
+                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Reference Image</h3>
+                      </div>
+                      
+                      <div className="mt-2">
+                        {!promptImage ? (
+                          <div className="flex items-center">
+                            <label 
+                              htmlFor="image-upload"
+                              className="flex items-center space-x-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                            >
+                              <Upload className="h-4 w-4" />
+                              <span>Upload reference image</span>
+                              <input
+                                id="image-upload"
+                                type="file"
+                                accept="image/*"
+                                className="sr-only"
+                                onChange={handleImageUpload}
+                                disabled={isUploadingImage}
+                              />
+                            </label>
+                            {isUploadingImage && (
+                              <div className="ml-2 animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-brand-600"></div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="relative rounded-md overflow-hidden border border-gray-300 dark:border-gray-700">
+                            <img 
+                              src={promptImage} 
+                              alt="Uploaded reference image" 
+                              className="max-h-32 w-auto object-contain"
+                            />
+                            <button
+                              onClick={handleRemoveImage}
+                              className="absolute top-1 right-1 bg-black bg-opacity-50 rounded-full p-1 hover:bg-opacity-70 transition-opacity"
+                              title="Remove image"
+                            >
+                              <Trash2 className="h-4 w-4 text-white" />
+                            </button>
+                          </div>
+                        )}
+                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                          Upload an image to use as reference for generation
+                        </p>
+                      </div>
                     </div>
 
                     {includeBrandAssets && (
@@ -447,7 +540,7 @@ export const ImageGeneratorPage: React.FC = () => {
                   <Button
                     className="w-full mt-6"
                     leftIcon={<Download className="h-4 w-4" />}
-                    onClick={() => handleDownload(selectedImage, generatedImages.indexOf(selectedImage))}
+                    onClick={() => selectedImage && handleDownload(selectedImage, generatedImages.indexOf(selectedImage))}
                   >
                     Download Image
                   </Button>
