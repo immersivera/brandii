@@ -37,7 +37,7 @@ export const ImageGeneratorPage: React.FC = () => {
   
   // Brand asset controls
   const [includeBrandAssets, setIncludeBrandAssets] = useState(true);
-  const [includeLogo, setIncludeLogo] = useState(false);
+  const [includeLogo, setIncludeLogo] = useState(false); // Disabled - coming soon
   const [includeBrandColors, setIncludeBrandColors] = useState(true);
   const [includeBrandTypography, setIncludeBrandTypography] = useState(true);
   const [includeBrandStyle, setIncludeBrandStyle] = useState(true);
@@ -164,9 +164,9 @@ export const ImageGeneratorPage: React.FC = () => {
 
   if (!brandKit) return null;
 
-  const hasLogo = brandKit.logo_selected_asset_id && brandKit.generated_assets?.some(
+  const hasLogo = (brandKit.logo_selected_asset_id && brandKit.generated_assets?.some(
     asset => asset.id === brandKit.logo_selected_asset_id
-  );
+  )) || !!brandKit.logo?.image;
 
   return (
     <Layout>
@@ -254,15 +254,15 @@ export const ImageGeneratorPage: React.FC = () => {
                             <input
                               type="checkbox"
                               id="includeLogo"
-                              checked={includeLogo}
-                              onChange={(e) => setIncludeLogo(e.target.checked)}
-                              className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
+                              checked={false}
+                              disabled={true}
+                              className="h-4 w-4 text-gray-400 focus:ring-gray-400 border-gray-300 rounded cursor-not-allowed"
                             />
                             <label 
                               htmlFor="includeLogo"
-                              className="text-sm text-gray-700 dark:text-gray-300"
+                              className="text-sm text-gray-500 dark:text-gray-400 cursor-not-allowed"
                             >
-                              Include brand logo
+                              Include brand logo <span className="ml-1 text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded">Coming soon</span>
                             </label>
                           </div>
                         )}
