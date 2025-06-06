@@ -78,7 +78,11 @@ serve(async (req) => {
         if (data.logoImage) {
           // Extract the MIME type and base64 data
           const [header, base64Data] = data.logoImage.split(',');
-          const mimeType = header.split(':')[1].split(';')[0];
+          const mimeType = header.match(/data:(.*?);/)?.[1] || 'image/png';
+          
+          if (!['image/jpeg', 'image/png', 'image/webp'].includes(mimeType)) {
+            throw new Error(`Unsupported image format. Please use JPEG, PNG, or WebP.`);
+          }
           
           // Convert base64 to Uint8Array
           const binaryString = atob(base64Data);
@@ -87,11 +91,11 @@ serve(async (req) => {
             bytes[i] = binaryString.charCodeAt(i);
           }
           
-          // Create a Blob from the Uint8Array
-          const blob = new Blob([bytes], { type: mimeType });
-          
-          // Create a File object from the Blob (OpenAI expects a File)
-          const file = new File([blob], 'image.png', { type: mimeType });
+          // Create a File object with the correct MIME type
+          const file = new File([bytes], 'image.' + mimeType.split('/')[1], { 
+            type: mimeType,
+            lastModified: new Date().getTime()
+          });
 
           response = await openai.images.edit({
             model: "gpt-image-1",
