@@ -151,7 +151,7 @@ export const BrandCreationPage: React.FC = () => {
         typography: brandDetails.typography,
       };
 
-      await toast.promise(
+      const savedBrandKit = await toast.promise(
         saveBrandKit(brandKitData, logoUrls),
         {
           loading: 'Saving your brand kit...',
@@ -159,8 +159,7 @@ export const BrandCreationPage: React.FC = () => {
           error: 'Failed to save brand kit. Please try again.'
         }
       );
-
-      navigate('/result');
+      navigate(`/result?brandKitId=${savedBrandKit.id}`);
     } catch (error) {
       console.error('Error completing brand kit:', error);
       toast.error('Failed to complete brand kit. Please try again.');

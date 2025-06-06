@@ -7,6 +7,7 @@ interface UserContextType {
   isLoading: boolean;
   profile: UserProfile | null;
   refreshProfile: () => Promise<void>;
+  isAnonymous: boolean;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -104,7 +105,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       userId, 
       isLoading, 
       profile,
-      refreshProfile 
+      refreshProfile,
+      isAnonymous: !userId 
     }}>
       {children}
     </UserContext.Provider>

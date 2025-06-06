@@ -8,13 +8,14 @@ import { Plus, Image, ArrowRight } from 'lucide-react';
 import { fetchBrandKits } from '../lib/supabase';
 import { useUser } from '../context/UserContext';
 import toast from 'react-hot-toast';
+import { useBrand } from '../context/BrandContext';
 
 export const CreatePage: React.FC = () => {
   const [hasExistingBrandKits, setHasExistingBrandKits] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { userId } = useUser();
   const navigate = useNavigate();
-
+  const { resetBrandDetails } = useBrand();
   useEffect(() => {
     const checkExistingBrandKits = async () => {
       if (!userId) return;
@@ -75,7 +76,7 @@ export const CreatePage: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
               >
-                <Card hover interactive onClick={() => navigate('/create/new')} className="h-full">
+                <Card hover interactive onClick={() => { resetBrandDetails(); navigate('/create/new');}} className="h-full">
                   <CardContent className="p-8 flex flex-col items-center text-center">
                     <div className="w-16 h-16 bg-brand-100 dark:bg-brand-900/30 rounded-full flex items-center justify-center mb-6">
                       <Plus className="h-8 w-8 text-brand-600" />

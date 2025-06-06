@@ -26,7 +26,7 @@ interface ImageDetails {
 const ITEMS_PER_PAGE = 12;
 
 export const GlobalGalleryPage: React.FC = () => {
-  const [images, setImages] = useState<ImageDetails[]>([]);
+  const [images, setImages] = useState<ImageDetails[] | any>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPageLoading, setIsPageLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<ImageDetails | null>(null);
@@ -187,7 +187,7 @@ export const GlobalGalleryPage: React.FC = () => {
                     className="flex -ml-4 w-auto"
                     columnClassName="pl-4 bg-clip-padding"
                   >
-                    {images.map((image, index) => (
+                    {images?.map((image: any, index: any) => (
                       <motion.div
                         key={image.id}
                         initial={{ opacity: 0, y: 20 }}
