@@ -5,7 +5,19 @@ import { useBrand } from '../context/BrandContext';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardFooter } from '../components/ui/Card';
-import { ArrowLeft, ArrowRight, Download, Copy, Share2, Trash2, Image as ImageIcon, Plus, Sparkles, Upload, Palette } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Download, Copy, Share2, Trash2, Image as ImageIcon, Plus, Sparkles, Upload, Palette, X, FileText, FileImage } from 'lucide-react';
+
+// Add this interface for download options
+interface DownloadOptions {
+  brandKit: boolean;
+  allImages: boolean;
+  selectedImages: boolean;
+}
+
+// Add this new interface for selected images
+interface SelectedImages {
+  [key: string]: boolean;
+}
 import { BrandKit, fetchBrandKitById, deleteBrandKit, updateBrandKit, saveGeneratedAssets, deleteGeneratedAsset } from '../lib/supabase';
 import { generateLogoImages } from '../lib/openai';
 import { generateBrandKitZip } from '../lib/download';
@@ -23,8 +35,75 @@ export const BrandKitPage: React.FC = () => {
   const [isDeletingAllLogos, setIsDeletingAllLogos] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isSelectingLogo, setIsSelectingLogo] = useState<string | null>(null);
+  const [showDownloadOptions, setShowDownloadOptions] = useState(false);
+  const [downloadOptions, setDownloadOptions] = useState<DownloadOptions>({
+    brandKit: true,
+    allImages: false,
+    selectedImages: false
+  });
+  // Add state for selected images
+  const [selectedImages, setSelectedImages] = useState<SelectedImages>({});
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const { updateBrandDetails } = useBrand();
+  const popupRef = React.useRef<HTMLDivElement>(null);
+
+  // Initialize selected images when brand kit loads
+  useEffect(() => {
+    if (brandKit?.generated_assets) {
+      const initialSelected: SelectedImages = {};
+      brandKit.generated_assets
+        .filter(asset => asset.type === 'image')
+        .forEach(asset => {
+          initialSelected[asset.id] = true;
+        });
+      setSelectedImages(initialSelected);
+    }
+  }, [brandKit]);
+
+  // Close popup when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
+        setShowDownloadOptions(false);
+      }
+    };
+
+    if (showDownloadOptions) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDownloadOptions]);
+
+  // Toggle selection for a single image
+  const toggleImageSelection = (id: string) => {
+    setSelectedImages(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  // Toggle select all images
+  const toggleSelectAllImages = () => {
+    const allSelected = Object.values(selectedImages).every(Boolean);
+    const newSelected: SelectedImages = {};
+    
+    if (brandKit?.generated_assets) {
+      brandKit.generated_assets
+        .filter(asset => asset.type === 'image')
+        .forEach(asset => {
+          newSelected[asset.id] = !allSelected;
+        });
+    }
+    
+    setSelectedImages(newSelected);
+  };
+
+  // Get the count of selected images
+  const selectedImageCount = Object.values(selectedImages).filter(Boolean).length;
+  const totalImageCount = brandKit?.generated_assets?.filter(asset => asset.type === 'image').length || 0;
 
   useEffect(() => {
     const loadBrandKit = async () => {
@@ -49,33 +128,284 @@ export const BrandKitPage: React.FC = () => {
     loadBrandKit();
   }, [id, navigate]);
 
-  const handleDownload = async () => {
+  const handleDownload = async (options: DownloadOptions) => {
     if (!brandKit) return;
 
     try {
       setIsDownloading(true);
+      setShowDownloadOptions(false);
       
-      const zipBlob = await generateBrandKitZip(brandKit);
+      // Filter gallery assets based on selection if "Selected Images" is chosen
+      let filteredBrandKit = { ...brandKit };
+      if (options.selectedImages && !options.allImages) {
+        filteredBrandKit = {
+          ...brandKit,
+          generated_assets: brandKit.generated_assets?.filter(
+            asset => asset.type !== 'image' || selectedImages[asset.id]
+          )
+        };
+      }
+      
+      // Generate the zip with selected options
+      const zipBlob = await generateBrandKitZip(filteredBrandKit, {
+        includeLogos: options.brandKit || options.allImages,
+        includeGallery: options.allImages || options.selectedImages
+      });
       
       const url = URL.createObjectURL(zipBlob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${brandKit.name.toLowerCase().replace(/\s+/g, '-')}-brand-kit.zip`;
+      
+      // Set filename based on selected options
+      let filename = brandKit.name.toLowerCase().replace(/\s+/g, '-');
+      if (options.brandKit && !options.allImages && !options.selectedImages) {
+        filename += '-brand-kit';
+      } else if (options.allImages) {
+        filename += '-all-assets';
+      } else if (options.selectedImages) {
+        filename += `-${selectedImageCount}-selected-images`;
+      } else {
+        filename += '-download';
+      }
+      
+      link.download = `${filename}.zip`;
       
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       
-      URL.revokeObjectURL(url);
+      // Clean up
+      setTimeout(() => URL.revokeObjectURL(url), 100);
       
-      toast.success('Brand kit downloaded successfully!');
+      toast.success('Download started successfully!');
     } catch (error) {
-      console.error('Error downloading brand kit:', error);
-      toast.error('Failed to download brand kit');
+      console.error('Error generating download:', error);
+      toast.error('Failed to prepare download. Please try again.');
     } finally {
       setIsDownloading(false);
     }
   };
+
+  const handleDownloadClick = () => {
+    setShowDownloadOptions(true);
+  };
+
+  const DownloadOptionsPopup = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <motion.div 
+        ref={popupRef}
+        className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto"
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        transition={{ duration: 0.2 }}
+      >
+        <div className="flex justify-between items-center mb-4 sticky top-0 bg-white dark:bg-gray-800 pb-4 z-10">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Download Options</h3>
+          <button 
+            onClick={() => setShowDownloadOptions(false)}
+            className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        
+        <div className="space-y-4">
+          {/* Brand Kit Option */}
+          <div 
+            className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+              downloadOptions.brandKit 
+                ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' 
+                : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+            }`}
+            onClick={() => setDownloadOptions({
+              brandKit: true,
+              allImages: false,
+              selectedImages: false
+            })}
+          >
+            <div className="flex items-start">
+              <div className={`flex-shrink-0 h-5 w-5 rounded-full border flex items-center justify-center mr-3 mt-0.5 ${
+                downloadOptions.brandKit 
+                  ? 'border-brand-500 bg-brand-500 text-white' 
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}>
+                {downloadOptions.brandKit && (
+                  <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-900 dark:text-white flex items-center">
+                  <FileText className="h-4 w-4 mr-2 text-brand-500" />
+                  Brand Kit (Style Guide)
+                </h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Includes logo, color palette, typography, and brand guidelines
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* All Images Option */}
+          <div 
+            className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+              downloadOptions.allImages 
+                ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' 
+                : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+            }`}
+            onClick={() => setDownloadOptions({
+              brandKit: false,
+              allImages: true,
+              selectedImages: false
+            })}
+          >
+            <div className="flex items-start">
+              <div className={`flex-shrink-0 h-5 w-5 rounded-full border flex items-center justify-center mr-3 mt-0.5 ${
+                downloadOptions.allImages 
+                  ? 'border-brand-500 bg-brand-500 text-white' 
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}>
+                {downloadOptions.allImages && (
+                  <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-900 dark:text-white flex items-center">
+                  <FileImage className="h-4 w-4 mr-2 text-brand-500" />
+                  All Generated Images
+                </h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Download all generated gallery images
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Selected Images Option */}
+          <div className="border rounded-lg overflow-hidden">
+            <div 
+              className={`p-4 cursor-pointer transition-colors ${
+                downloadOptions.selectedImages 
+                  ? 'border-b border-brand-500 bg-brand-50 dark:bg-brand-900/20' 
+                  : 'border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+              }`}
+              onClick={() => setDownloadOptions({
+                brandKit: false,
+                allImages: false,
+                selectedImages: true
+              })}
+            >
+              <div className="flex items-start">
+                <div className={`flex-shrink-0 h-5 w-5 rounded-full border flex items-center justify-center mr-3 mt-0.5 ${
+                  downloadOptions.selectedImages 
+                    ? 'border-brand-500 bg-brand-500 text-white' 
+                    : 'border-gray-300 dark:border-gray-600'
+                }`}>
+                  {downloadOptions.selectedImages && (
+                    <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <div className="flex justify-between items-start">
+                    <h4 className="font-medium text-gray-900 dark:text-white flex items-center">
+                      <FileImage className="h-4 w-4 mr-2 text-brand-500" />
+                      Selected Images
+                    </h4>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      {selectedImageCount} of {totalImageCount} selected
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Choose specific images to download
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Image Selection Grid */}
+            {downloadOptions.selectedImages && brandKit?.generated_assets && (
+              <div className="p-4 bg-gray-50 dark:bg-gray-700/30">
+                <div className="mb-3 flex justify-between items-center">
+                  <button
+                    type="button"
+                    onClick={toggleSelectAllImages}
+                    className="text-sm text-brand-600 dark:text-brand-400 hover:underline"
+                  >
+                    {selectedImageCount === totalImageCount ? 'Deselect All' : 'Select All'}
+                  </button>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {selectedImageCount} selected
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto p-1">
+                  {brandKit.generated_assets
+                    .filter(asset => asset.type === 'image')
+                    .map(asset => (
+                      <div 
+                        key={asset.id}
+                        className={`relative aspect-square rounded-md overflow-hidden border-2 ${
+                          selectedImages[asset.id] 
+                            ? 'border-brand-500 ring-2 ring-brand-500' 
+                            : 'border-transparent'
+                        }`}
+                        onClick={() => toggleImageSelection(asset.id)}
+                      >
+                        <img 
+                          src={asset.image_data} 
+                          alt={`Generated image ${asset.id}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className={`absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 transition-opacity ${
+                          selectedImages[asset.id] ? 'opacity-100' : 'opacity-0 hover:opacity-100'
+                        }`}>
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                            selectedImages[asset.id] 
+                              ? 'bg-brand-500 text-white' 
+                              : 'bg-white/80 text-transparent'
+                          }`}>
+                            <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+                {totalImageCount === 0 && (
+                  <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
+                    No gallery images available
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-6 flex justify-end space-x-3">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowDownloadOptions(false)}
+            disabled={isDownloading}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => handleDownload(downloadOptions)}
+            disabled={isDownloading || (!downloadOptions.brandKit && !downloadOptions.allImages && !downloadOptions.selectedImages)}
+            isLoading={isDownloading}
+          >
+            {isDownloading ? 'Preparing Download...' : 'Download'}
+          </Button>
+        </div>
+      </motion.div>
+    </div>
+  );
 
   const handleDeleteBrandKit = async () => {
     if (!brandKit || !confirm('Are you sure you want to delete this brand kit?')) return;
@@ -464,13 +794,17 @@ export const BrandKitPage: React.FC = () => {
                   
                   <Button
                     size="sm"
-                    onClick={handleDownload}
+                    onClick={handleDownloadClick}
                     leftIcon={<Download className="h-4 w-4" />}
                     isLoading={isDownloading}
                     disabled={isDownloading}
                   >
                     Download
                   </Button>
+                  
+                  <AnimatePresence>
+                    {showDownloadOptions && <DownloadOptionsPopup />}
+                  </AnimatePresence>
                 </div>
               </div>
               

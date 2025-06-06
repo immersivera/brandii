@@ -1,33 +1,107 @@
 import JSZip from 'jszip';
 import { BrandKit } from './supabase';
 
-export async function generateBrandKitZip(brandKit: BrandKit): Promise<Blob> {
+export async function generateBrandKitZip(brandKit: BrandKit, options: { includeLogos: boolean; includeGallery: boolean } = { includeLogos: true, includeGallery: true }): Promise<Blob> {
   const zip = new JSZip();
+  const { includeLogos, includeGallery } = options;
 
   // Add README.md
   zip.file('README.md', generateReadme(brandKit));
 
-  // Add colors.css
-  zip.file('styles/colors.css', generateColorCSS(brandKit));
-
-  // Add typography.css
-  zip.file('styles/typography.css', generateTypographyCSS(brandKit));
+  // Add styles folder
+  const stylesFolder = zip.folder('styles');
+  if (stylesFolder) {
+    stylesFolder.file('colors.css', generateColorCSS(brandKit));
+    stylesFolder.file('typography.css', generateTypographyCSS(brandKit));
+  }
 
   // Add brand guidelines
   zip.file('guidelines.md', generateGuidelines(brandKit));
 
-  // Add logo if available
-  if (brandKit.logo.image) {
-    const base64Data = brandKit.logo.image.split(',')[1];
-    zip.file('logo/logo.png', base64Data, { base64: true });
+  // Add logos if requested and available
+  if (includeLogos) {
+    const logosFolder = zip.folder('logos');
+    if (logosFolder) {
+      try {
+        // Check if there's an uploaded logo
+        const hasUploadedLogo = brandKit.logo.image && brandKit.logo.image.startsWith('http');
+        
+        // Get all logo assets (both selected and concepts)
+        const logoAssets = (brandKit.generated_assets || []).filter(asset => asset.type === 'logo');
+        const selectedLogoAsset = brandKit.logo_selected_asset_id 
+          ? logoAssets.find(asset => asset.id === brandKit.logo_selected_asset_id)
+          : null;
+
+        // Add the main logo (prefer selected logo, then uploaded logo, then first available logo)
+        if (selectedLogoAsset?.image_data) {
+          // Add selected logo from generated assets
+          const base64Data = selectedLogoAsset.image_data.split(',')[1];
+          if (base64Data) {
+            logosFolder.file('main-logo.png', base64Data, { base64: true });
+          }
+        } else if (hasUploadedLogo) {
+          // Add uploaded logo
+          const logoUrl = brandKit.logo.image as string;
+          if (logoUrl.startsWith('data:')) {
+            // Handle base64 encoded image
+            const base64Data = logoUrl.split(',')[1];
+            if (base64Data) {
+              logosFolder.file('main-logo.png', base64Data, { base64: true });
+            }
+          } else {
+            // Handle URL to image (fetch and add to zip)
+            try {
+              const response = await fetch(logoUrl);
+              const blob = await response.blob();
+              logosFolder.file('main-logo.png', blob);
+            } catch (error) {
+              console.warn('Could not fetch uploaded logo:', error);
+            }
+          }
+        } else if (logoAssets.length > 0 && logoAssets[0].image_data) {
+          // Fallback to first available logo
+          const base64Data = logoAssets[0].image_data.split(',')[1];
+          if (base64Data) {
+            logosFolder.file('main-logo.png', base64Data, { base64: true });
+          }
+        }
+
+        // Add other logo concepts (excluding the main/selected logo)
+        logoAssets
+          .filter(asset => asset !== selectedLogoAsset)
+          .forEach((asset, index) => {
+            try {
+              const base64Data = asset.image_data?.split(',')[1];
+              if (base64Data) {
+                logosFolder.file(`concept-${index + 1}.png`, base64Data, { base64: true });
+              }
+            } catch (error) {
+              console.warn(`Could not process logo concept ${index + 1}:`, error);
+            }
+          });
+
+      } catch (error) {
+        console.error('Error processing logos:', error);
+      }
+    }
   }
 
-  // Add all generated assets if available
-  if (brandKit.generated_assets && brandKit.generated_assets.length > 0) {
-    brandKit.generated_assets.forEach((asset, index) => {
-      const base64Data = asset.image_data.split(',')[1];
-      zip.file(`logo/concept-${index + 1}.png`, base64Data, { base64: true });
-    });
+  // Add gallery images if requested and available
+  if (includeGallery && brandKit.generated_assets?.length) {
+    const galleryFolder = zip.folder('gallery');
+    if (galleryFolder) {
+      const galleryAssets = brandKit.generated_assets.filter(asset => asset.type === 'image');
+      galleryAssets.forEach((asset, index) => {
+        try {
+          const base64Data = asset.image_data?.split(',')[1];
+          if (base64Data) {
+            galleryFolder.file(`image-${index + 1}.png`, base64Data, { base64: true });
+          }
+        } catch (error) {
+          console.warn(`Could not process gallery image ${index + 1}:`, error);
+        }
+      });
+    }
   }
 
   // Create the ZIP file
