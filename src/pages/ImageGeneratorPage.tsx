@@ -273,7 +273,7 @@ export const ImageGeneratorPage: React.FC = () => {
                         onChange={(e) => {
                           setIncludeBrandAssets(e.target.checked);
                           if (!e.target.checked) {
-                            setIncludeLogo(false);
+                            setIncludeLogo(includeLogo);
                             setIncludeBrandColors(false);
                             setIncludeBrandTypography(false);
                             setIncludeBrandStyle(false);
@@ -347,8 +347,8 @@ export const ImageGeneratorPage: React.FC = () => {
                             <input
                               type="checkbox"
                               id="includeLogo"
-                              checked={false}
-                              disabled={true}
+                              checked={includeLogo}
+                              onChange={(e) => setIncludeLogo(e.target.checked)}
                               className="h-4 w-4 text-gray-400 focus:ring-gray-400 border-gray-300 rounded cursor-not-allowed"
                             />
                             <label 
