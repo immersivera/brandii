@@ -75,23 +75,28 @@ serve(async (req) => {
       case 'generateImageAssets': {
         let response;
         
-        if (data.logoImage) {
-          // Extract base64 data (remove data URL prefix if present)
-          const base64Data = data.logoImage.startsWith('data:') 
-            ? data.logoImage.split(',')[1] 
-            : data.logoImage;
-            
-          // Convert base64 to Uint8Array
-          const binaryString = atob(base64Data);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          
-          // Create FormData for the request
+        if (data.images && data.images.length > 0) {
           const formData = new FormData();
           formData.append('model', 'gpt-image-1');
-          formData.append('image', new Blob([bytes], { type: 'image/png' }), 'image.png');
+          
+          // Add each image to the form data
+          for (const img of data.images) {
+            const base64Data = img.base64.startsWith('data:') 
+              ? img.base64.split(',')[1] 
+              : img.base64;
+              
+            const binaryString = atob(base64Data);
+            const bytes = new Uint8Array(binaryString.length);
+            
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            
+            // Use the correct MIME type from the uploaded file
+            const fileExtension = img.type.split('/')[1] || 'png';
+            formData.append('image[]', new Blob([bytes], { type: img.type }), `image.${fileExtension}`);
+          }
+          
           formData.append('prompt', data.prompt);
           formData.append('n', String(data.count || 1));
           formData.append('size', data.size || '1024x1024');
@@ -114,7 +119,7 @@ serve(async (req) => {
           const result = await openaiResponse.json();
           response = { data: result.data };
         } else {
-          // Standard image generation when no logo is provided
+          // Standard image generation when no images are provided
           response = await openai.images.generate({
             model: "gpt-image-1",
             prompt: data.prompt,
