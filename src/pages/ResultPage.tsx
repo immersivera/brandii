@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardFooter } from '../components/ui/Card';
-import { ArrowLeft, Download, Copy, Share2, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Download, Copy, Share2, RefreshCw, Image, Plus } from 'lucide-react';
 import { useBrand } from '../context/BrandContext';
 import { generateBrandKitZip } from '../lib/download';
 import { BRAND_TYPES, BRAND_ADJECTIVES } from '../lib/constants';
@@ -13,6 +13,8 @@ import toast from 'react-hot-toast';
 export const ResultPage: React.FC = () => {
   const { brandDetails, resetBrandDetails } = useBrand();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const brandKitId = searchParams.get('brandKitId') || '';
   const [isDownloading, setIsDownloading] = useState(false);
   const [selectedLogo, setSelectedLogo] = useState<string | null>(
     brandDetails.logoChoice === 'upload' 
@@ -138,18 +140,19 @@ export const ResultPage: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={handleStartOver}
-                    leftIcon={<RefreshCw className="h-4 w-4" />}
+                    leftIcon={<Plus className="h-4 w-4" />}
                   >
-                    Start Over
+                    Create New
                   </Button>
                   
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => navigate('/create')}
-                    leftIcon={<ArrowLeft className="h-4 w-4" />}
+                    onClick={() => navigate(`/kit/${brandKitId}/create`)}
+                    leftIcon={<Image className="h-4 w-4" />}
+                    className="mr-2"
                   >
-                    Back to Editor
+                    Create Images
                   </Button>
                   
                   <Button
@@ -209,24 +212,7 @@ export const ResultPage: React.FC = () => {
                           className="w-32 h-32 object-contain rounded-xl"
                           style={{ backgroundColor: brandDetails.colors.background }}
                         />
-                      ) : brandDetails.logoChoice === 'none' ? (
-                        renderTextLogo()
-                      ) : (
-                        <div 
-                          className="w-32 h-32 rounded-xl flex items-center justify-center"
-                          style={{ 
-                            backgroundColor: brandDetails.colors.background,
-                            fontFamily: brandDetails.typography.headingFont
-                          }}
-                        >
-                          <span 
-                            className="text-4xl font-bold"
-                            style={{ color: brandDetails.colors.primary }}
-                          >
-                            {brandDetails.name.charAt(0)}
-                          </span>
-                        </div>
-                      )}
+                      ) : renderTextLogo()}
                     </div>
                   </div>
                 </CardContent>
@@ -378,6 +364,15 @@ export const ResultPage: React.FC = () => {
               )}
               
               <div className="flex justify-center mt-8">
+                <Button
+                  size="lg"
+                  onClick={() => navigate(`/kit/${brandKitId}/create`)}
+                  leftIcon={<Image className="h-5 w-5" />}
+                  className="mr-2"
+                >
+                  Create Images
+                </Button>
+                
                 <Button
                   size="lg"
                   onClick={handleDownload}
