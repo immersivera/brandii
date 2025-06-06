@@ -106,7 +106,7 @@ export const ImageGeneratorPage: React.FC = () => {
     setIsGenerating(true);
     try {
       const fullPrompt = `${prompt}${getBrandAssetsPrompt()}`;
-      const logoImage = getSelectedLogo();
+      const logoImage = getSelectedLogo() || undefined;
       const images = await generateImageAssets(fullPrompt, logoImage, selectedSize, imageCount);
       setGeneratedImages(images);
 
@@ -207,7 +207,7 @@ export const ImageGeneratorPage: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Select
                       label="Image Size"
-                      options={IMAGE_SIZES}
+                      options={IMAGE_SIZES} 
                       value={selectedSize}
                       onChange={(value) => setSelectedSize(value as ImageSize)}
                       helperText="Choose the dimensions for your generated image"
