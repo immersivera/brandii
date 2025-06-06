@@ -91,12 +91,26 @@ export const ImageGeneratorPage: React.FC = () => {
   };
 
   const getSelectedLogo = () => {
-    if (!brandKit?.generated_assets || !brandKit.logo_selected_asset_id || !includeLogo) return null;
+    if (!brandKit) return null;
+    
+    if (!includeLogo) return null;
 
-    const selectedLogo = brandKit.generated_assets.find(
-      asset => asset.id === brandKit.logo_selected_asset_id
-    );
-    return selectedLogo?.image_data || null;
+    // Check for uploaded logo first
+    if (brandKit.logo.image && brandKit.logo.image.length > 0) {
+      return brandKit.logo.image;
+    }
+
+    // Then check for AI-generated logo
+    if (brandKit.generated_assets?.length && brandKit.logo_selected_asset_id) {
+      const selectedAsset = brandKit.generated_assets.find(
+        asset => asset.id === brandKit.logo_selected_asset_id && asset.type === 'logo'
+      );
+      if (selectedAsset?.image_data) {
+        return selectedAsset.image_data;
+      }
+    }
+
+    return null;
   };
   
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -164,7 +178,15 @@ export const ImageGeneratorPage: React.FC = () => {
   const handleRemoveImage = (index: number) => {
     setPromptImages(prev => prev.filter((_, i) => i !== index));
   };
-
+// Helper function to convert blob to base64
+const blobToBase64 = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
   const handleGenerate = async () => {
     if (!prompt.trim() || !brandKit) {
       toast.error('Please enter a prompt');
@@ -176,21 +198,62 @@ export const ImageGeneratorPage: React.FC = () => {
     setSelectedImage(null);
 
     try {
-      const logoImage = includeLogo ? getSelectedLogo() : undefined;
+
+      const allImages = [...promptImages];
+      let logoAdded = false;
       
+      // If logo is included, add it to promptImages
+      if (includeLogo) {
+        const logoImage = getSelectedLogo();
+        if (logoImage) {
+          // Check if logo is already in the images to avoid duplicates
+          const logoAlreadyAdded = allImages.some(img => 
+            img.url === logoImage || 
+            (img.file && img.file.name === 'logo.png')
+          );
+          
+          if (!logoAlreadyAdded) {
+          
+          if (logoImage.startsWith('http')) {
+            try {
+              const response = await fetch(logoImage);
+              const blob = await response.blob();
+              const base64 = await blobToBase64(blob);
+              const file = new File([blob], 'logo.png', { type: blob.type || 'image/png' });
+            
+              
+              // Add to both state and local array
+            setPromptImages(prev => [...prev, { url: base64, file }]);
+            allImages.push({ url: base64, file });
+            logoAdded = true;
+              toast.success('Brand logo added to references');
+            } catch (error) {
+              console.error('Error loading logo from URL:', error);
+              toast.error('Failed to load brand logo');
+            }
+          } else {
+            // Already in base64 format, no processing needed
+            const base64 = logoImage;
+            const blob = await fetch(logoImage).then(res => res.blob());
+            const file = new File([blob], 'logo.png', { type: 'image/png' });
+            
+            setPromptImages(prev => [...prev, { url: base64, file }]);
+            allImages.push({ url: base64, file });
+            logoAdded = true;
+            toast.success('Brand logo added to references');
+          }
+        
+          // Wait a moment for state to update
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+      }
+
       // Prepare images for the API call
-      const imagesForApi = promptImages.map(img => ({
+      const imagesForApi = allImages.map(img => ({
         base64: img.url,
         type: img.file.type || 'image/png' // Default to png if type is not available
       }));
-
-      // If no images are uploaded but logo is included, use the logo
-      if (imagesForApi.length === 0 && logoImage) {
-        imagesForApi.push({
-          base64: logoImage,
-          type: 'image/png'
-        });
-      }
 
       const images = await generateImageAssets(
         prompt.trim(),
