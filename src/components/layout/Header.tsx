@@ -142,7 +142,7 @@ export const Header: React.FC = () => {
                 >
                   <User className="h-4 w-4" />
                   <span className="max-w-[120px] truncate">
-                    {profile?.full_name || profile?.email}
+                    {profile?.username || profile?.full_name || profile?.email}
                   </span>
                   <ChevronDown className={`h-4 w-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
                 </Button>
