@@ -40,6 +40,7 @@ export type GeneratedAsset = {
   id: string;
   brand_kit_id: string;
   image_data: string;
+  image_url?: string;
   image_prompt?: string;
   type: 'logo' | 'image';
   created_at: string;
@@ -272,6 +273,53 @@ export async function updateBrandKit(id: string, updates: Partial<BrandKit>): Pr
   return data;
 }
 
+export async function uploadGeneratedImage(imageData: string, brandKitId: string): Promise<string> {
+  try {
+    // Extract the base64 data
+    const base64Data = imageData.split(';base64,').pop();
+    if (!base64Data) {
+      throw new Error('Invalid image data');
+    }
+
+    // Convert base64 to blob
+    const byteCharacters = atob(base64Data);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: 'image/png' });
+
+    // Generate a unique filename
+    const fileName = `${brandKitId}/${uuidv4()}.png`;
+    const filePath = `generated-images/${fileName}`;
+
+    // Upload to storage
+    const { error: uploadError } = await supabase.storage
+      .from('brand-assets')
+      .upload(filePath, blob, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: 'image/png'
+      });
+
+    if (uploadError) {
+      console.error('Error uploading generated image:', uploadError);
+      throw new Error('Failed to upload image to storage');
+    }
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('brand-assets')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
+  } catch (error) {
+    console.error('Error in uploadGeneratedImage:', error);
+    throw error;
+  }
+}
+
 export async function saveGeneratedAssets(
   brandKitId: string, 
   imageDataArray: string[], 
@@ -284,9 +332,27 @@ export async function saveGeneratedAssets(
     throw new Error('Authentication required');
   }
 
-  const assets = imageDataArray.map(imageData => ({
+  // No need to explicitly create directories in Supabase Storage
+  // The path will be created automatically when uploading the file
+
+  // Upload each image and get URLs
+  const imageUrls: (string | null)[] = [];
+  for (const imageData of imageDataArray) {
+    try {
+      const url = await uploadGeneratedImage(imageData, brandKitId);
+      imageUrls.push(url);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      // Push null for failed uploads to maintain array length
+      imageUrls.push(null);
+    }
+  }
+
+  // Prepare assets with both image_data (base64) and image_url
+  const assets = imageDataArray.map((imageData, index) => ({
     brand_kit_id: brandKitId,
-    image_data: imageData,
+    image_data: imageData, // Keep base64 for backward compatibility
+    image_url: imageUrls[index],
     type,
     image_prompt: imagePrompt
   }));
