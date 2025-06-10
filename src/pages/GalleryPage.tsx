@@ -187,7 +187,7 @@ export const GalleryPage: React.FC = () => {
                       onClick={() => setSelectedImage(asset)}
                     >
                       <img
-                        src={asset.image_data}
+                        src={asset.image_url || asset.image_data}
                         alt={`Generated image ${index + 1}`}
                         className="w-full h-auto object-cover rounded-xl transition-transform duration-300 group-hover:scale-105"
                       />
@@ -220,7 +220,7 @@ export const GalleryPage: React.FC = () => {
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleDownload(asset.image_data, index);
+                                handleDownload(asset.image_url || asset.image_data, index);
                               }}
                               leftIcon={<Download className="h-4 w-4" />}
                               className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
@@ -260,7 +260,7 @@ export const GalleryPage: React.FC = () => {
                 {/* Image Section */}
                 <div className="w-full md:w-2/3 bg-black p-4 flex items-center justify-center">
                   <img
-                    src={selectedImage.image_data}
+                    src={selectedImage.image_url || selectedImage.image_data}
                     alt="Selected image"
                     className="max-w-full max-h-[50vh] md:max-h-[80vh] object-contain rounded-lg"
                   />
@@ -322,7 +322,7 @@ export const GalleryPage: React.FC = () => {
                     <Button
                       className="w-1/2"
                       leftIcon={<Download className="h-4 w-4" />}
-                      onClick={() => handleDownload(selectedImage.image_data, imageAssets.indexOf(selectedImage))}
+                      onClick={() => handleDownload(selectedImage.image_url || selectedImage.image_data, imageAssets.indexOf(selectedImage))}
                     >
                       Download
                     </Button>

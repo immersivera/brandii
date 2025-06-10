@@ -8,10 +8,13 @@ import { useUser } from '../context/UserContext';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Masonry from 'react-masonry-css';
+import OptimizedImage from '../components/ui/OptimizedImage';
+import { Skeleton } from '../components/ui/Skeleton';
 
 interface ImageDetails {
   id: string;
   image_data: string;
+  image_url: string;
   image_prompt?: string;
   created_at: string;
   brand_kit: {
@@ -51,46 +54,39 @@ export const GlobalGalleryPage: React.FC = () => {
           setIsPageLoading(true);
         }
 
-        // First get the total count
-        const { count, error: countError } = await supabase
+        // Use a single query with count and data
+        const { data, error, count } = await supabase
           .from('generated_assets')
-          .select('id', { count: 'exact' })
-          .eq('type', 'image');
-
-        if (countError) throw countError;
-        setTotalItems(count || 0);
-
-        // Calculate pagination range
-        const from = (currentPage - 1) * ITEMS_PER_PAGE;
-        const to = from + ITEMS_PER_PAGE - 1;
-
-        const { data, error } = await supabase
-          .from('generated_assets')
-          .select(`
-            id, 
-            image_data, 
+          .select(
+            `
+            id,
+            image_url,
+            image_data,
             image_prompt,
             created_at,
-            brand_kit:brand_kit_id (
-              id,
-              name,
-              description,
-              type,
-              user_id
-            )
-          `)
+            brand_kit:brand_kit_id (id, name, type, user_id)
+            `,
+            { count: 'exact' }
+          )
           .eq('type', 'image')
+          // .not('image_url', 'is', null)
           .order('created_at', { ascending: false })
-          .range(from, to);
+          .range(
+            (currentPage - 1) * ITEMS_PER_PAGE,
+            currentPage * ITEMS_PER_PAGE - 1
+          );
 
         if (error) throw error;
 
-        // Ensure all required data is present
-        const validImages = data?.filter(img => img && img.image_data) || [];
-        setImages(validImages);
+        setTotalItems(count || 0);
+        
+        setImages((prev: any) => currentPage === 1 
+          ? data 
+          : [...prev, ...data]);
+        
       } catch (error) {
         console.error('Error fetching images:', error);
-        toast.error('Failed to load images');
+        toast.error('Failed to load images. Please try again.');
       } finally {
         setIsLoading(false);
         setIsPageLoading(false);
@@ -143,8 +139,10 @@ export const GlobalGalleryPage: React.FC = () => {
       <Layout>
         <div className="min-h-screen bg-white dark:bg-gray-900 py-12">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-center items-center py-20">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-600"></div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {[...Array(8)].map((_, i) => (
+                <Skeleton key={i} className="aspect-square rounded-xl" />
+              ))}
             </div>
           </div>
         </div>
@@ -169,9 +167,9 @@ export const GlobalGalleryPage: React.FC = () => {
             </div>
 
             {images.length === 0 ? (
-              <div className="text-center py-20">
-                <p className="text-gray-600 dark:text-gray-400">
-                  No images have been generated yet
+              <div className="text-center py-12">
+                <p className="text-gray-500 dark:text-gray-400">
+                  No images found. Try generating some first!
                 </p>
               </div>
             ) : (
@@ -199,11 +197,12 @@ export const GlobalGalleryPage: React.FC = () => {
                           className="relative group cursor-pointer overflow-hidden rounded-xl"
                           onClick={() => setSelectedImage(image)}
                         >
-                          <img
-                            src={image.image_data}
-                            alt={`Generated image ${index + 1}`}
+                          <OptimizedImage
+                            src={image.image_url || image.image_data}
+                            alt={image.image_prompt || 'Generated image'}
                             className="w-full h-auto object-cover rounded-xl transition-transform duration-300 group-hover:scale-105"
-                            loading="lazy"
+                            isThumbnail={true}
+                            fullResolutionSrc={image.image_url}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
                             <div className="w-full flex justify-between items-center">
@@ -220,7 +219,7 @@ export const GlobalGalleryPage: React.FC = () => {
                                 size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleDownload(image.image_data, index);
+                                  handleDownload((image.image_url || image.image_data), index);
                                 }}
                                 leftIcon={<Download className="h-4 w-4" />}
                                 className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
@@ -303,10 +302,11 @@ export const GlobalGalleryPage: React.FC = () => {
               <div className="flex flex-col md:flex-row h-full">
                 {/* Image Section */}
                 <div className="w-full md:w-2/3 bg-black p-4 flex items-center justify-center">
-                  <img
-                    src={selectedImage.image_data}
-                    alt="Selected image"
+                  <OptimizedImage
+                    src={selectedImage.image_url || selectedImage.image_data}
+                    alt={selectedImage.image_prompt || 'Generated image'}
                     className="max-w-full max-h-[50vh] md:max-h-[80vh] object-contain rounded-lg"
+                    isThumbnail={false}
                   />
                 </div>
 
@@ -380,7 +380,7 @@ export const GlobalGalleryPage: React.FC = () => {
                   <Button
                     className="w-full mt-6"
                     leftIcon={<Download className="h-4 w-4" />}
-                    onClick={() => handleDownload(selectedImage.image_data, images.indexOf(selectedImage))}
+                    onClick={() => handleDownload(selectedImage.image_url || selectedImage.image_data, images.indexOf(selectedImage))}
                   >
                     Download Image
                   </Button>
