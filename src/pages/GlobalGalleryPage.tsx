@@ -80,9 +80,8 @@ export const GlobalGalleryPage: React.FC = () => {
 
         setTotalItems(count || 0);
         
-        setImages((prev: any) => currentPage === 1 
-          ? data 
-          : [...prev, ...data]);
+        // Only show images from the current page
+        setImages(data || []);
         
       } catch (error) {
         console.error('Error fetching images:', error);
