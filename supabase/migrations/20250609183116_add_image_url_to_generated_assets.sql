@@ -6,7 +6,7 @@ ADD COLUMN IF NOT EXISTS image_url TEXT;
 COMMENT ON COLUMN public.generated_assets.image_url IS 'URL of the generated image';
 
 -- Grant necessary permissions
-GRANTE USAGE ON SCHEMA public TO authenticated, anon;
+GRANT USAGE ON SCHEMA public TO authenticated, anon;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated, anon;
 GRANT ALL ON ALL ROUTINES IN SCHEMA public TO authenticated, anon;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated, anon;
