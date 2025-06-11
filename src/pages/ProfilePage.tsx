@@ -14,8 +14,8 @@ import {
 } from '../components/ui';
 import { useUser } from '../context/UserContext';
 import { updateUserProfile, supabase, disableUserAccount } from '../lib/supabase';
-import { AlertTriangle, ArrowLeft, Save, Trash2, Twitter, Github, Linkedin, CreditCard, Award, Zap } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { AlertTriangle, ArrowLeft, Save, Trash2, Twitter, Github, Linkedin, CreditCard, Award, Zap, User2 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 // Types for subscription and credit data
@@ -98,6 +98,10 @@ export const ProfilePage: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  const handleAdditionalCredits = async () => {
+    navigate('/additional-credits');
+  };
   
   const handleUpgrade = async (planId: string) => {
     setIsUpgrading(true);
@@ -105,7 +109,7 @@ export const ProfilePage: React.FC = () => {
       // In a real app, this would redirect to Stripe checkout
       toast.success('Redirecting to payment gateway...');
       // For this example, we'll simulate a successful upgrade
-      navigate('/checkout?plan=' + planId);
+      navigate('/checkout?plan=pro');
     } catch (error) {
       console.error('Error initiating upgrade:', error);
       toast.error('Failed to initiate plan upgrade');
@@ -237,7 +241,7 @@ export const ProfilePage: React.FC = () => {
                     onClick={() => scrollToSection(userInfoSectionRef)}
                     className="flex items-center w-full px-3 py-2 text-sm rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-left text-gray-700 dark:text-gray-300"
                   >
-                    <CreditCard className="h-4 w-4 mr-2" />
+                    <User2 className="h-4 w-4 mr-2" />
                     User Information
                   </button>
                   
@@ -331,7 +335,7 @@ export const ProfilePage: React.FC = () => {
                       <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                         <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Purchased Credits</div>
                         <div className="text-xl font-semibold">{userCredits.purchased_credits}</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">Never expire</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Never expires*</div>
                       </div>
                     </div>
                     
@@ -416,6 +420,12 @@ export const ProfilePage: React.FC = () => {
                             {plan.name === 'Pro' && (
                               <li className="flex items-center gap-2 text-sm">
                                 <Zap className="h-4 w-4 text-brand-500" />
+                                Premium features unlocked
+                              </li>
+                            )}
+                            {plan.name === 'Pro' && (
+                              <li className="flex items-center gap-2 text-sm">
+                                <Zap className="h-4 w-4 text-brand-500" />
                                 Priority support
                               </li>
                             )}
@@ -432,8 +442,19 @@ export const ProfilePage: React.FC = () => {
                           </Button>
                         </CardContent>
                       </Card>
+
                     ))}
                   </div>
+                </CardContent>
+                <CardContent className="p-6 text-center">
+                  <Button 
+                    variant="outline"
+                    className="w-full md:w-auto text-center"
+                    onClick={handleAdditionalCredits}
+                  >
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    Purchase Additional Credits
+                  </Button>
                 </CardContent>
               </Card>
             )}
