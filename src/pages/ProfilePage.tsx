@@ -309,8 +309,8 @@ export const ProfilePage: React.FC = () => {
                     {/* Credits display */}
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
-                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Available Credits</h3>
-                        <span className="text-lg font-semibold">{userCredits.available_credits}</span>
+                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Credits Summary</h3>
+                        <span className="text-lg font-semibold">{userCredits.available_credits} <span className="text-sm font-normal text-gray-500">available</span></span>
                       </div>
                       <Progress
                         value={userCredits.credits_used}
@@ -326,15 +326,29 @@ export const ProfilePage: React.FC = () => {
                     {/* Credits breakdown */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                        <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Monthly Credits</div>
-                        <div className="text-xl font-semibold">{userCredits.monthly_credits}</div>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Monthly Credits</span>
+                          <span className="text-xs text-gray-500">
+                            {userCredits.credits_used > 0 ? `-${Math.min(userCredits.credits_used, userCredits.monthly_credits)}` : ''}
+                          </span>
+                        </div>
+                        <div className="text-xl font-semibold">
+                          {Math.max(0, userCredits.monthly_credits - Math.min(userCredits.credits_used, userCredits.monthly_credits))}
+                        </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
                           {userCredits.subscription_status === 'active' ? 'Renews monthly' : 'No active subscription'}
                         </div>
                       </div>
                       <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                        <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Purchased Credits</div>
-                        <div className="text-xl font-semibold">{userCredits.purchased_credits}</div>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Purchased Credits</span>
+                          <span className="text-xs text-gray-500">
+                            {userCredits.credits_used > userCredits.monthly_credits ? `-${Math.min(userCredits.credits_used - userCredits.monthly_credits, userCredits.purchased_credits)}` : ''}
+                          </span>
+                        </div>
+                        <div className="text-xl font-semibold">
+                          {Math.max(0, userCredits.purchased_credits - Math.max(0, userCredits.credits_used - userCredits.monthly_credits))}
+                        </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">Never expires*</div>
                       </div>
                     </div>
