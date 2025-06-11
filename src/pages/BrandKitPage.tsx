@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
+import { LogoGenerationModal } from '../components/LogoGenerationModal';
 import { useBrand } from '../context/BrandContext';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
@@ -52,6 +53,7 @@ export const BrandKitPage: React.FC = () => {
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isSelectingLogo, setIsSelectingLogo] = useState<string | null>(null);
   const [isGeneratingLogos, setIsGeneratingLogos] = useState(false);
+  const [showLogoModal, setShowLogoModal] = useState(false);
   const [conversionProgress, setConversionProgress] = useState<{[key: string]: 'pending' | 'converting' | 'done' | 'error'}>({});
   const [showDownloadOptions, setShowDownloadOptions] = useState(false);
   
@@ -577,14 +579,32 @@ export const BrandKitPage: React.FC = () => {
     navigate('/create/new');
   };
 
-  const handleGenerateMoreLogos = async () => {
+  interface LogoGenerationOptions {
+    style: string;
+    personality: string;
+    complexity: string;
+  }
+
+  const handleGenerateMoreLogos = () => {
+    setShowLogoModal(true);
+  };
+
+  interface LogoGenerationOptions {
+    style: string;
+    personality: string;
+    complexity: string;
+  }
+
+  const handleGenerateWithOptions = async (options: LogoGenerationOptions) => {
     if (!brandKit) return;
 
     try {
       setIsGeneratingLogos(true);
-      const logoUrls = await generateLogoImages({
+      setShowLogoModal(false);
+      
+      const logoOptions: any = {
         brandName: brandKit.name,
-        style: brandKit.logo.type || 'any',
+        style: options.style,
         colors: {
           primary: brandKit.colors.primary,
           secondary: brandKit.colors.secondary,
@@ -592,8 +612,11 @@ export const BrandKitPage: React.FC = () => {
         },
         description: brandKit.description,
         industry: brandKit.type,
-        personality: 'any' // Default to modern style
-      });
+        personality: options.personality,
+        complexity: options.complexity,
+      };
+
+      const logoUrls = await generateLogoImages(logoOptions);
 
       // Save the generated logos
       await saveGeneratedAssets(brandKit.id, logoUrls, 'logo');
@@ -1435,6 +1458,24 @@ export const BrandKitPage: React.FC = () => {
           </div>
         </div>
       </div>
+      <LogoGenerationModal
+        isOpen={showLogoModal}
+        onClose={() => setShowLogoModal(false)}
+        onSubmit={handleGenerateWithOptions}
+        defaultValues={{
+          style: brandKit?.logo?.type || 'any',
+        }}
+        isLoading={isGeneratingLogos}
+      />
+      <LogoGenerationModal
+        isOpen={showLogoModal}
+        onClose={() => setShowLogoModal(false)}
+        onSubmit={handleGenerateWithOptions}
+        defaultValues={{
+          style: brandKit?.logo?.type || 'any',
+        }}
+        isLoading={isGeneratingLogos}
+      />
     </Layout>
   );
 };
