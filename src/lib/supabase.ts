@@ -134,8 +134,39 @@ export async function uploadBase64Image(
   type: 'logo' | 'image' = 'image'
 ): Promise<string> {
   try {
+
+    //fetch base64 data from asset id filename
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.user) {
+      throw new Error('Authentication required');
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Authentication required');
+    }
+
+    //filter asset id from filename
+    const assetId = fileName.split('.')[0];
+    
+    const { data } = await supabase
+      .from('generated_assets')
+      .select('image_data')
+      .eq('id', assetId);
+      
+    if (!data || data.length === 0) {
+      throw new Error('Generated asset not found');
+    }
+    
+    const image_data = data[0].image_data;
+    
+    if (!image_data) {
+      throw new Error('Generated asset has no image data');
+    }
+    
     // Convert base64 to File
-    const file = dataURLtoFile(base64Data, fileName);
+    const file = dataURLtoFile(image_data, fileName);
     console.log('b64 to file:', file);
     // Determine the bucket based on asset type
     const bucket = type === 'logo' ? 'brand-logos' : 'brand-assets';
@@ -320,7 +351,7 @@ export async function fetchBrandKitById(id: string): Promise<BrandKit | null> {
     .from('brand_kits')
     .select(`
       *,
-      generated_assets!generated_assets_brand_kit_id_fkey (*)
+      generated_assets!generated_assets_brand_kit_id_fkey (id, brand_kit_id, image_url, type, image_prompt, created_at)
     `)
     .eq('id', id)
     .eq('user_id', session.user.id)

@@ -8,20 +8,18 @@ import { Card, CardContent, CardFooter } from '../components/ui/Card';
 import { 
   ArrowLeft, 
   ArrowRight, 
-  Check, 
   Copy, 
   Download, 
   FileImage, 
   FileText, 
   Image as ImageIcon, 
-  Loader2, 
   Palette, 
   Plus, 
   Share2, 
   Sparkles, 
-  Trash2, 
-  Upload, 
-  X 
+  Trash2,
+  Upload,
+  X
 } from 'lucide-react';
 
 // Add this interface for download options
@@ -35,7 +33,7 @@ interface DownloadOptions {
 interface SelectedImages {
   [key: string]: boolean;
 }
-import { BrandKit, fetchBrandKitById, deleteBrandKit, updateBrandKit, saveGeneratedAssets, deleteGeneratedAsset, uploadBase64Image, updateGeneratedAsset, GeneratedAsset } from '../lib/supabase';
+import { BrandKit, fetchBrandKitById, deleteBrandKit, updateBrandKit, saveGeneratedAssets, deleteGeneratedAsset } from '../lib/supabase';
 import { generateLogoImages } from '../lib/openai';
 import { generateBrandKitZip } from '../lib/download';
 import toast from 'react-hot-toast';
@@ -52,34 +50,36 @@ export const BrandKitPage: React.FC = () => {
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isSelectingLogo, setIsSelectingLogo] = useState<string | null>(null);
   const [isGeneratingLogos, setIsGeneratingLogos] = useState(false);
-  const [conversionProgress, setConversionProgress] = useState<{[key: string]: 'pending' | 'converting' | 'done' | 'error'}>({});
+  // const [conversionProgress, setConversionProgress] = useState<{
+  //   [key: string]: 'converting' | 'done' | 'error' | null;
+  // }>({});
   const [showDownloadOptions, setShowDownloadOptions] = useState(false);
   
   // Track if any conversion is in progress
-  const isConverting = Object.values(conversionProgress).some(
-    status => status === 'converting'
-  );
+  // const isConverting = Object.values(conversionProgress).some(
+  //   status => status === 'converting'
+  // );
   
   // Clean up conversion progress when no longer converting
-  useEffect(() => {
-    if (!isConverting && Object.keys(conversionProgress).length > 0) {
-      // Keep only the successful conversions for a short while
-      const timer = setTimeout(() => {
-        setConversionProgress(prev => {
-          // Only clear completed or error states, keep pending states
-          const newProgress = { ...prev };
-          Object.entries(prev).forEach(([id, status]) => {
-            if (status === 'done' || status === 'error') {
-              delete newProgress[id];
-            }
-          });
-          return newProgress;
-        });
-      }, 3000);
+  // useEffect(() => {
+  //   if (!isConverting && Object.keys(conversionProgress).length > 0) {
+  //     // Keep only the successful conversions for a short while
+  //     const timer = setTimeout(() => {
+  //       setConversionProgress(prev => {
+  //         // Only clear completed or error states, keep pending states
+  //         const newProgress = { ...prev };
+  //         Object.entries(prev).forEach(([id, status]) => {
+  //           if (status === 'done' || status === 'error') {
+  //             delete newProgress[id];
+  //           }
+  //         });
+  //         return newProgress;
+  //       });
+  //     }, 3000);
       
-      return () => clearTimeout(timer);
-    }
-  }, [isConverting, conversionProgress]);
+  //     return () => clearTimeout(timer);
+  //   }
+  // }, [isConverting, conversionProgress]);
   const [downloadOptions, setDownloadOptions] = useState<DownloadOptions>({
     brandKit: true,
     allImages: false,
@@ -96,7 +96,7 @@ export const BrandKitPage: React.FC = () => {
     if (!brandKit?.generated_assets) return;
     
     const hasUnconvertedAssets = brandKit.generated_assets.some(
-      asset => !asset.image_url
+      asset => asset.image_data && !asset.image_url
     );
     
     if (hasUnconvertedAssets) {
@@ -129,74 +129,8 @@ export const BrandKitPage: React.FC = () => {
     }));
   };
 
-  // Convert a single asset to uploaded file
-  const convertAsset = async (asset: GeneratedAsset) => {
-    if (!brandKit?.generated_assets) return;
-
-    try {
-      // Set initial progress
-      setConversionProgress(prev => ({
-        ...prev,
-        [asset.id]: 'converting'
-      }));
-
-      // Upload the base64 image to the appropriate bucket based on asset type
-      const imageUrl = await uploadBase64Image(
-        '', 
-        brandKit.id,
-        `${asset.id}.png`,
-        asset.type as 'logo' | 'image'
-      );
-      console.log('Image URL:', imageUrl);
-      
-      // Create updates object with correct types
-      const updates: Partial<GeneratedAsset> = {
-        image_url: imageUrl,
-      };
-      
-      console.log('Updating asset with:', updates);
-      
-      // Update the database
-      const updatedAsset = await updateGeneratedAsset(asset.id, updates);
-      console.log('Updated Asset in DB:', updatedAsset);
-      
-      // Update local state
-      setBrandKit(prev => {
-        if (!prev || !prev.generated_assets) return prev;
-        
-        return {
-          ...prev,
-          generated_assets: prev.generated_assets.map(a => 
-            a.id === asset.id ? { ...a, ...updates } : a
-          )
-        };
-      });
-      
-      setConversionProgress(prev => ({
-        ...prev,
-        [asset.id]: 'done'
-      }));
-      
-      toast.success(`Converted ${asset.type} ${asset.id.substring(0, 6)}...`);
-    } catch (error) {
-      console.error(`Error converting ${asset.type} ${asset.id}:`, error);
-      setConversionProgress(prev => ({
-        ...prev,
-        [asset.id]: 'error'
-      }));
-      toast.error(`Failed to convert ${asset.type} ${asset.id.substring(0, 6)}...`);
-    }
-  };
-
-  // Get all assets that need conversion
-  const getUnconvertedAssets = () => {
-    if (!brandKit?.generated_assets) return [];
-    
-    return brandKit.generated_assets.filter(
-      (asset): asset is GeneratedAsset => 
-        !asset.image_url
-    );
-  };
+  // These functions are no longer needed with optimized data fetching
+  // that only loads assets with image_url
 
   // Toggle select all images
   const toggleSelectAllImages = () => {
@@ -707,7 +641,7 @@ export const BrandKitPage: React.FC = () => {
       // Upload the file to storage
       const fileExt = file.name.split('.').pop();
       const fileName = `${brandKit.id}-logo-${Date.now()}.${fileExt}`;
-      const filePath = `${brandKit.id}/uploads/${fileName}`;
+      const filePath = `${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('brand-logos')
@@ -724,9 +658,7 @@ export const BrandKitPage: React.FC = () => {
       const updatedBrandKit = await updateBrandKit(brandKit.id, {
         logo: {
           ...brandKit.logo,
-          image: publicUrl,
-          type: 'custom',
-          text: brandKit.name
+          image: publicUrl
         }
       });
 
@@ -749,13 +681,9 @@ export const BrandKitPage: React.FC = () => {
 
     try {
       // Extract the file path from the URL
-      // Format: /storage/v1/object/public/brand-logos/{brandkit-id}/uploads/{filename}
       const url = new URL(brandKit.logo.image);
       const pathParts = url.pathname.split('/');
-      // console.log('pathParts:', pathParts);
-      const filePath = pathParts.slice(pathParts.indexOf('brand-logos') + 1).join('/');
-      // console.log('filePath:', filePath);
-
+      const filePath = pathParts[pathParts.length - 1];
 
       // Delete the file from storage
       const { error: deleteError } = await supabase.storage
@@ -764,17 +692,13 @@ export const BrandKitPage: React.FC = () => {
 
       if (deleteError) throw deleteError;
 
-      //set existing image from concept selected or undefined
-      const existingImage = brandKit.logo_selected_asset_id ? brandKit.generated_assets?.find(asset => asset.id === brandKit.logo_selected_asset_id)?.image_data : undefined;
       // Update the brand kit to remove the logo
       const updatedBrandKit = await updateBrandKit(brandKit.id, {
         logo: {
           ...brandKit.logo,
-          image: existingImage
+          image: undefined
         }
       });
-
-
 
       setBrandKit(updatedBrandKit);
       toast.success('Logo removed successfully');
@@ -798,16 +722,16 @@ export const BrandKitPage: React.FC = () => {
         const selectedAsset = brandKit.generated_assets.find(
           asset => asset.id === brandKit.logo_selected_asset_id && asset.type === 'logo'
         );
-        if (selectedAsset?.image_data) {
-          return selectedAsset.image_data;
+        if (selectedAsset?.image_url) {
+          return selectedAsset.image_url;
         }
       }
 
       const firstLogoAsset = brandKit.generated_assets.find(
         asset => asset.type === 'logo'
       );
-      if (firstLogoAsset?.image_data) {
-        return firstLogoAsset.image_data;
+      if (firstLogoAsset?.image_url) {
+        return firstLogoAsset.image_url;
       }
     }
 
@@ -831,67 +755,7 @@ export const BrandKitPage: React.FC = () => {
     </div>
   );
 
-  const renderUnconvertedAssets = () => {
-    const unconvertedAssets = getUnconvertedAssets();
-    
-    if (unconvertedAssets.length === 0) return null;
-
-    return (
-      <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="font-medium text-gray-900 dark:text-white">Assets Needing Conversion</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              These assets need to be converted for better performance
-            </p>
-          </div>
-          <span className="text-sm text-gray-500">
-            {unconvertedAssets.length} asset{unconvertedAssets.length > 1 ? 's' : ''} found
-          </span>
-        </div>
-        
-        <div className="space-y-2 max-h-60 overflow-y-auto">
-          {unconvertedAssets.map(asset => (
-            <div key={asset.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-700 rounded-md">
-              <div className="flex items-center">
-                <span className="w-6 text-lg">
-                  {asset.type === 'logo' ? '🎨' : '🖼️'}
-                </span>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {asset.type === 'logo' ? 'Logo' : 'Image'} {asset.id.substring(0, 6)}...
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-300">
-                    {asset.type === 'logo' ? 'Logo' : 'Image'}
-                  </p>
-                </div>
-              </div>
-              <Button
-                onClick={() => convertAsset(asset)}
-                size="sm"
-                variant="outline"
-                disabled={conversionProgress[asset.id] === 'converting'}
-                className="ml-4"
-              >
-                {conversionProgress[asset.id] === 'converting' ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : conversionProgress[asset.id] === 'done' ? (
-                  <Check className="mr-2 h-4 w-4" />
-                ) : conversionProgress[asset.id] === 'error' ? (
-                  <X className="mr-2 h-4 w-4" />
-                ) : (
-                  <Upload className="mr-2 h-4 w-4" />
-                )}
-                {conversionProgress[asset.id] === 'converting' ? 'Converting...' :
-                 conversionProgress[asset.id] === 'done' ? 'Converted' :
-                 conversionProgress[asset.id] === 'error' ? 'Retry' : 'Convert'}
-              </Button>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
+  // Since we're now only loading assets with image_url, we don't need to render unconverted assets
 
   if (isLoading) {
     return (
@@ -993,43 +857,41 @@ export const BrandKitPage: React.FC = () => {
                 </div>
               </div>
               
-              {renderUnconvertedAssets()}
+              {/* Unconverted assets section removed - now using optimized data loading */}
               <Card className="mt-4">
                 <CardContent className="p-6">
                   <div className="flex flex-col md:flex-row items-start gap-6">
                     <div className="flex-1">
-                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                        Description
-                      </h3>
                       <p 
-                        className="text-gray-900 dark:text-white capitalize"
+                        className="text-gray-600 dark:text-gray-400 mb-4"
+                        style={{ fontFamily: brandKit.typography.bodyFont }}
                       >
                         {brandKit.description}
                       </p>
                       
-                      <div className="grid grid-cols-2 gap-4 my-6">
+                      <div className="grid grid-cols-2 gap-4 mb-6">
                         <div>
                           <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
                             Type
                           </h3>
                           <p 
                             className="text-gray-900 dark:text-white capitalize"
+                            style={{ fontFamily: brandKit.typography.bodyFont }}
                           >
                             {brandKit.type || 'Not specified'}
                           </p>
                         </div>
-                        {brandKit.logo.type && (
-                          <div>
-                            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                              Logo Style
-                            </h3>
-                            <p 
+                        <div>
+                          <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                            Logo Style
+                          </h3>
+                          <p 
                             className="text-gray-900 dark:text-white capitalize"
+                            style={{ fontFamily: brandKit.typography.bodyFont }}
                           >
                             {brandKit.logo.type}
                           </p>
                         </div>
-                      )}
                       </div>
                     </div>
                     
@@ -1079,8 +941,140 @@ export const BrandKitPage: React.FC = () => {
                   </div>
                 </CardFooter>
               </Card>
-
-              <Card className="mt-4">
+              
+              <Card className="mt-6">
+                <CardContent className="p-6">
+                  <h3 
+                    className="text-xl font-semibold text-gray-900 dark:text-white mb-6"
+                    style={{ fontFamily: brandKit.typography.headingFont }}
+                  >
+                    Brand Logo
+                  </h3>
+                  
+                  <div className="flex flex-col md:flex-row items-start gap-8">
+                    <div className="w-full md:w-1/3">
+                      <div 
+                        className="w-full aspect-square flex items-center justify-center rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 overflow-hidden"
+                        style={{ backgroundColor: brandKit.colors.background }}
+                      >
+                        {brandKit.logo.image ? (
+                          <img 
+                            src={brandKit.logo.image} 
+                            alt="Brand Logo" 
+                            className="w-full h-full object-contain p-4"
+                          />
+                        ) : (
+                          <div className="text-center p-4">
+                            <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              {brandKit.logo.text || 'No logo uploaded'}
+                            </p>
+                          </div>
+                      )}
+                      
+                      <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Your logo will be used across your brand assets. For best results, use a high-resolution image with a transparent background.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 my-8">
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 
+                      className="text-xl font-semibold mb-4 text-gray-900 dark:text-white"
+                      style={{ fontFamily: brandKit.typography.headingFont }}
+                    >
+                      Color Palette
+                    </h3>
+                    
+                    <div className="space-y-4">
+                      {Object.entries(brandKit.colors).map(([key, color]) => (
+                        <div key={key} className="flex items-center">
+                          <div 
+                            className="w-12 h-12 rounded-md mr-4"
+                            style={{ backgroundColor: color }}
+                          ></div>
+                          <div>
+                            <h4 
+                              className="text-sm font-medium text-gray-900 dark:text-white capitalize"
+                              style={{ fontFamily: brandKit.typography.headingFont }}
+                            >
+                              {key}
+                            </h4>
+                            <p 
+                              className="text-sm text-gray-500 dark:text-gray-400"
+                              style={{ fontFamily: brandKit.typography.bodyFont }}
+                            >
+                              {color}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 
+                      className="text-xl font-semibold mb-4 text-gray-900 dark:text-white"
+                      style={{ fontFamily: brandKit.typography.headingFont }}
+                    >
+                      Typography
+                    </h3>
+                    
+                    <div className="space-y-6">
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                          Heading Font
+                        </h4>
+                        <p 
+                          className="text-2xl font-semibold text-gray-900 dark:text-white"
+                          style={{ fontFamily: brandKit.typography.headingFont }}
+                        >
+                          {brandKit.typography.headingFont}
+                        </p>
+                        <div 
+                          className="mt-1 text-sm text-gray-500 dark:text-gray-400"
+                          style={{ fontFamily: brandKit.typography.headingFont }}
+                        >
+                          ABCDEFGHIJKLMNOPQRSTUVWXYZ<br />
+                          abcdefghijklmnopqrstuvwxyz<br />
+                          1234567890
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                          Body Font
+                        </h4>
+                        <p 
+                          className="text-base text-gray-900 dark:text-white"
+                          style={{ fontFamily: brandKit.typography.bodyFont }}
+                        >
+                          {brandKit.typography.bodyFont}
+                        </p>
+                        <div 
+                          className="mt-1 text-sm text-gray-500 dark:text-gray-400"
+                          style={{ fontFamily: brandKit.typography.bodyFont }}
+                        >
+                          ABCDEFGHIJKLMNOPQRSTUVWXYZ<br />
+                          abcdefghijklmnopqrstuvwxyz<br />
+                          1234567890
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-6">
                     <h3 
@@ -1214,188 +1208,6 @@ export const BrandKitPage: React.FC = () => {
                   </div>
                 </CardContent>
               </Card>
-              
-              <Card className="mt-4">
-                <CardContent className="p-6">
-                  <h3 
-                    className="text-xl font-semibold text-gray-900 dark:text-white mb-6"
-                    style={{ fontFamily: brandKit.typography.headingFont }}
-                  >
-                    Brand Logo
-                  </h3>
-                  
-                  <div className="flex flex-col md:flex-row items-start gap-8">
-                    <div className="w-full md:w-1/3">
-                      <div 
-                        className="w-full aspect-square flex items-center justify-center rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 overflow-hidden"
-                        style={{ backgroundColor: brandKit.colors.background }}
-                      >
-                        {brandKit.logo.image ? (
-                          <img 
-                            src={brandKit.logo.image} 
-                            alt="Brand Logo" 
-                            className="w-full h-full object-contain p-4"
-                          />
-                        ) : (
-                          <div className="text-center p-4">
-                            <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                              {brandKit.logo.text || 'No logo uploaded'}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex-1 space-y-4">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Upload Your Own Logo
-                        </h4>
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleLogoUpload}
-                            accept="image/*"
-                            className="hidden"
-                            id="logo-upload"
-                            disabled={isUploadingLogo}
-                          />
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={isUploadingLogo}
-                            leftIcon={isUploadingLogo ? undefined : <Upload className="h-4 w-4" />}
-                            isLoading={isUploadingLogo}
-                          >
-                            {isUploadingLogo ? 'Uploading...' : 'Choose File'}
-                          </Button>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            PNG, JPG, or SVG (max 5MB)
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {brandKit.logo.image && (
-                        <div>
-                          {brandKit.logo.image.includes('uploads') && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={handleRemoveLogo}
-                              className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                              leftIcon={<Trash2 className="h-4 w-4" />}
-                            >
-                              Remove Logo
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                      
-                      <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Your logo will be used across your brand assets. For best results, use a high-resolution image with a transparent background.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 my-8">
-                <Card>
-                  <CardContent className="p-6">
-                    <h3 
-                      className="text-xl font-semibold mb-4 text-gray-900 dark:text-white"
-                      style={{ fontFamily: brandKit.typography.headingFont }}
-                    >
-                      Color Palette
-                    </h3>
-                    
-                    <div className="space-y-4">
-                      {Object.entries(brandKit.colors).map(([key, color]) => (
-                        <div key={key} className="flex items-center">
-                          <div 
-                            className="w-12 h-12 rounded-md mr-4"
-                            style={{ backgroundColor: color }}
-                          ></div>
-                          <div>
-                            <h4 
-                              className="text-sm font-medium text-gray-900 dark:text-white capitalize"
-                              style={{ fontFamily: brandKit.typography.headingFont }}
-                            >
-                              {key}
-                            </h4>
-                            <p 
-                              className="text-sm text-gray-500 dark:text-gray-400"
-                              style={{ fontFamily: brandKit.typography.bodyFont }}
-                            >
-                              {color}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardContent className="p-6">
-                    <h3 
-                      className="text-xl font-semibold mb-4 text-gray-900 dark:text-white"
-                      style={{ fontFamily: brandKit.typography.headingFont }}
-                    >
-                      Typography
-                    </h3>
-                    
-                    <div className="space-y-6">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                          Heading Font
-                        </h4>
-                        <p 
-                          className="text-2xl font-semibold text-gray-900 dark:text-white"
-                          style={{ fontFamily: brandKit.typography.headingFont }}
-                        >
-                          {brandKit.typography.headingFont}
-                        </p>
-                        <div 
-                          className="mt-1 text-sm text-gray-500 dark:text-gray-400"
-                          style={{ fontFamily: brandKit.typography.headingFont }}
-                        >
-                          ABCDEFGHIJKLMNOPQRSTUVWXYZ<br />
-                          abcdefghijklmnopqrstuvwxyz<br />
-                          1234567890
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                          Body Font
-                        </h4>
-                        <p 
-                          className="text-base text-gray-900 dark:text-white"
-                          style={{ fontFamily: brandKit.typography.bodyFont }}
-                        >
-                          {brandKit.typography.bodyFont}
-                        </p>
-                        <div 
-                          className="mt-1 text-sm text-gray-500 dark:text-gray-400"
-                          style={{ fontFamily: brandKit.typography.bodyFont }}
-                        >
-                          ABCDEFGHIJKLMNOPQRSTUVWXYZ<br />
-                          abcdefghijklmnopqrstuvwxyz<br />
-                          1234567890
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-              
-             
 
               {imageAssets.length > 0 && (
                 <div className="mt-8">
