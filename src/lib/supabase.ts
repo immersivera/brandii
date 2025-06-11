@@ -23,6 +23,7 @@ export type UserProfile = {
   avatar_url: string | null;
   bio: string | null;
   website: string | null;
+  user_type: 'free' | 'pro' | 'enterprise' | null;
   social_links: {
     twitter: string;
     github: string;
