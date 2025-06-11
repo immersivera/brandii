@@ -584,7 +584,7 @@ export const BrandKitPage: React.FC = () => {
       setIsGeneratingLogos(true);
       const logoUrls = await generateLogoImages({
         brandName: brandKit.name,
-        style: brandKit.logo.type,
+        style: brandKit.logo.type || 'any',
         colors: {
           primary: brandKit.colors.primary,
           secondary: brandKit.colors.secondary,
@@ -592,7 +592,7 @@ export const BrandKitPage: React.FC = () => {
         },
         description: brandKit.description,
         industry: brandKit.type,
-        personality: 'modern' // Default to modern style
+        personality: 'any' // Default to modern style
       });
 
       // Save the generated logos
