@@ -183,12 +183,69 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
+  // Section references for navigation
+  const creditsSectionRef = React.useRef<HTMLDivElement>(null);
+  const userInfoSectionRef = React.useRef<HTMLDivElement>(null);
+  const accountSettingsSectionRef = React.useRef<HTMLDivElement>(null);
+  const subscriptionSectionRef = React.useRef<HTMLDivElement>(null);
+
+  // Function to scroll to a section
+  const scrollToSection = (ref: React.RefObject<HTMLDivElement>) => {
+    if (ref.current) {
+      ref.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <Layout>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mx-auto">
-            <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col md:flex-row gap-8">
+            {/* Sidebar Navigation */}
+            <div className="md:w-64 flex-shrink-0">
+              <div className="sticky top-24 bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                <h3 className="text-lg font-medium mb-4 text-gray-900 dark:text-white">Profile Navigation</h3>
+                <nav className="space-y-2">
+                  <button 
+                    onClick={() => scrollToSection(creditsSectionRef)}
+                    className="flex items-center w-full px-3 py-2 text-sm rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-left text-gray-700 dark:text-gray-300"
+                  >
+                    <Zap className="h-4 w-4 mr-2" />
+                    Credits & Subscription
+                  </button>
+                  
+                  {profile?.user_type !== 'pro' && (
+                    <button 
+                      onClick={() => scrollToSection(subscriptionSectionRef)}
+                      className="flex items-center w-full px-3 py-2 text-sm rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-left text-gray-700 dark:text-gray-300"
+                    >
+                      <Award className="h-4 w-4 mr-2" />
+                      Upgrade Plan
+                    </button>
+                  )}
+                  
+                  <button 
+                    onClick={() => scrollToSection(userInfoSectionRef)}
+                    className="flex items-center w-full px-3 py-2 text-sm rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-left text-gray-700 dark:text-gray-300"
+                  >
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    User Information
+                  </button>
+                  
+                  <button 
+                    onClick={() => scrollToSection(accountSettingsSectionRef)}
+                    className="flex items-center w-full px-3 py-2 text-sm rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-left text-gray-700 dark:text-gray-300"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Account Settings
+                  </button>
+                </nav>
+              </div>
+            </div>
+            
+            {/* Main Content */}
+            <div className="flex-1 max-w-2xl">
+              <div className="flex items-center justify-between mb-8">
               <div>
                 <Button
                   variant="ghost"
@@ -223,7 +280,7 @@ export const ProfilePage: React.FC = () => {
             </div>
 
             {/* Credits & Subscription Status Card */}
-            <Card className="mb-8">
+            <Card className="mb-8" ref={creditsSectionRef}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CreditCard className="h-5 w-5" />
@@ -319,7 +376,7 @@ export const ProfilePage: React.FC = () => {
             
             {/* Subscription Plans */}
             {profile?.user_type !== 'pro' && (
-              <Card className="mb-8 border-2 border-dashed border-brand-300 bg-brand-50 dark:bg-transparent dark:border-brand-800">
+              <Card className="mb-8 border-2 border-dashed border-brand-300 bg-brand-50 dark:bg-transparent dark:border-brand-800" ref={subscriptionSectionRef}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Award className="h-5 w-5" />
@@ -373,7 +430,7 @@ export const ProfilePage: React.FC = () => {
             )}
             
             <form onSubmit={handleSubmit}>
-              <Card className="mb-8">
+              <Card className="mb-8" ref={userInfoSectionRef}>
                 <CardContent className="p-6">
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -451,7 +508,7 @@ export const ProfilePage: React.FC = () => {
                       />
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-4" ref={accountSettingsSectionRef}>
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                         Preferences
                       </h3>
@@ -492,6 +549,7 @@ export const ProfilePage: React.FC = () => {
                 </Button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       </div>
