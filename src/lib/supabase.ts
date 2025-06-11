@@ -115,6 +115,62 @@ export async function disableUserAccount(): Promise<boolean> {
   }
 }
 
+export function dataURLtoFile(dataurl: string, filename: string): File {
+  const arr = dataurl.split(',');
+  const mime = arr[0].match(/:(.*?);/)?.[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new File([u8arr], filename, { type: mime || 'image/png' });
+}
+
+export async function uploadBase64Image(
+  base64Data: string, 
+  brandKitId: string, 
+  fileName: string = 'converted-asset.png',
+  type: 'logo' | 'image' = 'image'
+): Promise<string> {
+  try {
+    // Convert base64 to File
+    const file = dataURLtoFile(base64Data, fileName);
+    console.log('b64 to file:', file);
+    // Determine the bucket based on asset type
+    const bucket = type === 'logo' ? 'brand-logos' : 'brand-assets';
+    
+    // Upload the file
+    let filePath = `${brandKitId}/${uuidv4()}-${fileName}`;
+    //if bucket is brand-assets
+    if (bucket === 'brand-assets') {
+      filePath = `generated-images/${brandKitId}/${fileName}`;
+    }
+
+    
+    const { error } = await supabase.storage
+      .from(bucket)
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (error) {
+      console.error(`Error uploading ${type} to ${bucket}:`, error);
+      throw new Error(`Failed to upload ${type}`);
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(filePath);
+
+    return publicUrl;
+  } catch (error) {
+    console.error(`Error in uploadBase64Image (${type}):`, error);
+    throw error;
+  }
+}
+
 export async function uploadImageToStorage(file: File, userId: string): Promise<string> {
   try {
     const fileExt = file.name.split('.').pop();
@@ -422,6 +478,27 @@ export async function saveGeneratedAssets(
   }
 
   return savedAssets;
+}
+
+export async function updateGeneratedAsset(id: string, updates: Partial<GeneratedAsset>): Promise<GeneratedAsset> {
+  try {
+    const { data, error } = await supabase
+      .from('generated_assets')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating generated asset:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in updateGeneratedAsset:', error);
+    throw error;
+  }
 }
 
 export async function deleteGeneratedAsset(id: string): Promise<void> {

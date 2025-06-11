@@ -5,7 +5,24 @@ import { useBrand } from '../context/BrandContext';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardFooter } from '../components/ui/Card';
-import { ArrowLeft, ArrowRight, Download, Copy, Share2, Trash2, Image as ImageIcon, Plus, Sparkles, Upload, Palette, X, FileText, FileImage } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  ArrowRight, 
+  Check, 
+  Copy, 
+  Download, 
+  FileImage, 
+  FileText, 
+  Image as ImageIcon, 
+  Loader2, 
+  Palette, 
+  Plus, 
+  Share2, 
+  Sparkles, 
+  Trash2, 
+  Upload, 
+  X 
+} from 'lucide-react';
 
 // Add this interface for download options
 interface DownloadOptions {
@@ -18,7 +35,7 @@ interface DownloadOptions {
 interface SelectedImages {
   [key: string]: boolean;
 }
-import { BrandKit, fetchBrandKitById, deleteBrandKit, updateBrandKit, saveGeneratedAssets, deleteGeneratedAsset } from '../lib/supabase';
+import { BrandKit, fetchBrandKitById, deleteBrandKit, updateBrandKit, saveGeneratedAssets, deleteGeneratedAsset, uploadBase64Image, updateGeneratedAsset, GeneratedAsset } from '../lib/supabase';
 import { generateLogoImages } from '../lib/openai';
 import { generateBrandKitZip } from '../lib/download';
 import toast from 'react-hot-toast';
@@ -30,12 +47,39 @@ export const BrandKitPage: React.FC = () => {
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [isGeneratingLogos, setIsGeneratingLogos] = useState(false);
   const [isDeletingLogo, setIsDeletingLogo] = useState<string | null>(null);
   const [isDeletingAllLogos, setIsDeletingAllLogos] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isSelectingLogo, setIsSelectingLogo] = useState<string | null>(null);
+  const [isGeneratingLogos, setIsGeneratingLogos] = useState(false);
+  const [conversionProgress, setConversionProgress] = useState<{[key: string]: 'pending' | 'converting' | 'done' | 'error'}>({});
   const [showDownloadOptions, setShowDownloadOptions] = useState(false);
+  
+  // Track if any conversion is in progress
+  const isConverting = Object.values(conversionProgress).some(
+    status => status === 'converting'
+  );
+  
+  // Clean up conversion progress when no longer converting
+  useEffect(() => {
+    if (!isConverting && Object.keys(conversionProgress).length > 0) {
+      // Keep only the successful conversions for a short while
+      const timer = setTimeout(() => {
+        setConversionProgress(prev => {
+          // Only clear completed or error states, keep pending states
+          const newProgress = { ...prev };
+          Object.entries(prev).forEach(([id, status]) => {
+            if (status === 'done' || status === 'error') {
+              delete newProgress[id];
+            }
+          });
+          return newProgress;
+        });
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isConverting, conversionProgress]);
   const [downloadOptions, setDownloadOptions] = useState<DownloadOptions>({
     brandKit: true,
     allImages: false,
@@ -47,16 +91,16 @@ export const BrandKitPage: React.FC = () => {
   const { updateBrandDetails } = useBrand();
   const popupRef = React.useRef<HTMLDivElement>(null);
 
-  // Initialize selected images when brand kit loads
+  // Check for unconverted assets when brand kit loads
   useEffect(() => {
-    if (brandKit?.generated_assets) {
-      const initialSelected: SelectedImages = {};
-      brandKit.generated_assets
-        .filter(asset => asset.type === 'image')
-        .forEach(asset => {
-          initialSelected[asset.id] = true;
-        });
-      setSelectedImages(initialSelected);
+    if (!brandKit?.generated_assets) return;
+    
+    const hasUnconvertedAssets = brandKit.generated_assets.some(
+      asset => asset.image_data && !asset.image_url
+    );
+    
+    if (hasUnconvertedAssets) {
+      toast('Found assets that need conversion. Please convert them below.');
     }
   }, [brandKit]);
 
@@ -83,6 +127,76 @@ export const BrandKitPage: React.FC = () => {
       ...prev,
       [id]: !prev[id]
     }));
+  };
+
+  // Convert a single asset to uploaded file
+  const convertAsset = async (asset: GeneratedAsset & { image_data: string }) => {
+    if (!brandKit?.generated_assets) return;
+
+    try {
+      // Set initial progress
+      setConversionProgress(prev => ({
+        ...prev,
+        [asset.id]: 'converting'
+      }));
+
+      // Upload the base64 image to the appropriate bucket based on asset type
+      const imageUrl = await uploadBase64Image(
+        asset.image_data, 
+        brandKit.id,
+        `${asset.id}.png`,
+        asset.type as 'logo' | 'image'
+      );
+      console.log('Image URL:', imageUrl);
+      
+      // Create updates object with correct types
+      const updates: Partial<GeneratedAsset> = {
+        image_url: imageUrl,
+      };
+      
+      console.log('Updating asset with:', updates);
+      
+      // Update the database
+      const updatedAsset = await updateGeneratedAsset(asset.id, updates);
+      console.log('Updated Asset in DB:', updatedAsset);
+      
+      // Update local state
+      setBrandKit(prev => {
+        if (!prev || !prev.generated_assets) return prev;
+        
+        return {
+          ...prev,
+          generated_assets: prev.generated_assets.map(a => 
+            a.id === asset.id ? { ...a, ...updates } : a
+          )
+        };
+      });
+      
+      setConversionProgress(prev => ({
+        ...prev,
+        [asset.id]: 'done'
+      }));
+      
+      toast.success(`Converted ${asset.type} ${asset.id.substring(0, 6)}...`);
+    } catch (error) {
+      console.error(`Error converting ${asset.type} ${asset.id}:`, error);
+      setConversionProgress(prev => ({
+        ...prev,
+        [asset.id]: 'error'
+      }));
+      toast.error(`Failed to convert ${asset.type} ${asset.id.substring(0, 6)}...`);
+    }
+  };
+
+  // Get all assets that need conversion
+  const getUnconvertedAssets = () => {
+    if (!brandKit?.generated_assets) return [];
+    
+    return brandKit.generated_assets.filter(
+      (asset): asset is GeneratedAsset & { image_data: string } => 
+        !!asset.image_data && 
+        !asset.image_url
+    );
   };
 
   // Toggle select all images
@@ -483,7 +597,7 @@ export const BrandKitPage: React.FC = () => {
       });
 
       // Save the generated logos
-      const newAssets = await saveGeneratedAssets(brandKit.id, logoUrls, 'logo');
+      await saveGeneratedAssets(brandKit.id, logoUrls, 'logo');
       
       // Update the brand kit with new assets
       const updatedBrandKit = await fetchBrandKitById(brandKit.id);
@@ -708,6 +822,68 @@ export const BrandKitPage: React.FC = () => {
     </div>
   );
 
+  const renderUnconvertedAssets = () => {
+    const unconvertedAssets = getUnconvertedAssets();
+    
+    if (unconvertedAssets.length === 0) return null;
+
+    return (
+      <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-medium text-gray-900 dark:text-white">Assets Needing Conversion</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              These assets need to be converted for better performance
+            </p>
+          </div>
+          <span className="text-sm text-gray-500">
+            {unconvertedAssets.length} asset{unconvertedAssets.length > 1 ? 's' : ''} found
+          </span>
+        </div>
+        
+        <div className="space-y-2 max-h-60 overflow-y-auto">
+          {unconvertedAssets.map(asset => (
+            <div key={asset.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-700 rounded-md">
+              <div className="flex items-center">
+                <span className="w-6 text-lg">
+                  {asset.type === 'logo' ? '🎨' : '🖼️'}
+                </span>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {asset.type === 'logo' ? 'Logo' : 'Image'} {asset.id.substring(0, 6)}...
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-300">
+                    {asset.type === 'logo' ? 'Logo' : 'Image'} • {Math.round(asset.image_data.length / 1024)} KB
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={() => convertAsset(asset)}
+                size="sm"
+                variant="outline"
+                disabled={conversionProgress[asset.id] === 'converting'}
+                className="ml-4"
+              >
+                {conversionProgress[asset.id] === 'converting' ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : conversionProgress[asset.id] === 'done' ? (
+                  <Check className="mr-2 h-4 w-4" />
+                ) : conversionProgress[asset.id] === 'error' ? (
+                  <X className="mr-2 h-4 w-4" />
+                ) : (
+                  <Upload className="mr-2 h-4 w-4" />
+                )}
+                {conversionProgress[asset.id] === 'converting' ? 'Converting...' :
+                 conversionProgress[asset.id] === 'done' ? 'Converted' :
+                 conversionProgress[asset.id] === 'error' ? 'Retry' : 'Convert'}
+              </Button>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   if (isLoading) {
     return (
       <Layout>
@@ -808,7 +984,8 @@ export const BrandKitPage: React.FC = () => {
                 </div>
               </div>
               
-              <Card className="mb-8">
+              {renderUnconvertedAssets()}
+              <Card className="mt-4">
                 <CardContent className="p-6">
                   <div className="flex flex-col md:flex-row items-start gap-6">
                     <div className="flex-1">
@@ -892,7 +1069,7 @@ export const BrandKitPage: React.FC = () => {
                 </CardFooter>
               </Card>
               
-              <Card className="mb-8">
+              <Card>
                 <CardContent className="p-6">
                   <h3 
                     className="text-xl font-semibold text-gray-900 dark:text-white mb-6"
