@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Textarea } from '../components/ui/Textarea';
 import { Select } from '../components/ui/Select';
+import { useUser } from '../context/UserContext';
 import { ArrowLeft, Sparkles, Download, X, Calendar, Clock, Upload, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { BrandKit, fetchBrandKitById, saveGeneratedAssets } from '../lib/supabase';
 import { generateImageAssets, type ImageSize } from '../lib/openai';
@@ -26,6 +27,7 @@ const IMAGE_COUNTS = [
 export const ImageGeneratorPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { profile } = useUser();
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -36,6 +38,9 @@ export const ImageGeneratorPage: React.FC = () => {
   const [imageCount, setImageCount] = useState<number>(1);
   const [promptImages, setPromptImages] = useState<Array<{ url: string; file: File }>>([]);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  
+  // Check if user is on free plan (no active subscription)
+  const isFreePlan = !profile?.subscription_status || profile.subscription_status !== 'active';
   
   // Brand asset controls
   const [includeBrandAssets, setIncludeBrandAssets] = useState(true);
@@ -377,13 +382,28 @@ return (
                     helperText="Choose the dimensions for your generated image"
                   />
 
-                  <Select
-                    label="Number of Images"
-                    options={IMAGE_COUNTS}
-                    value={String(imageCount)}
-                    onChange={(value) => setImageCount(Number(value))}
-                    helperText="Choose how many images to generate"
-                  />
+                  <div className="relative">
+                    <Select
+                      label="Number of Images"
+                      options={isFreePlan ? [IMAGE_COUNTS[0]] : IMAGE_COUNTS}
+                      value={String(imageCount)}
+                      onChange={(value) => setImageCount(Number(value))}
+                      helperText={isFreePlan ? 'Upgrade to Pro to generate multiple images at once' : 'Choose how many images to generate'}
+                      disabled={isFreePlan}
+                    />
+                    {isFreePlan && (
+                      <div className="absolute -bottom-6 right-0">
+                        <Button 
+                          variant="link" 
+                          size="sm" 
+                          className="text-xs p-0 h-auto"
+                          onClick={() => navigate('/profile')}
+                        >
+                          Upgrade to Pro
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Image Upload Section */}

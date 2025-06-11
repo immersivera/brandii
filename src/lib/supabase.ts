@@ -24,6 +24,8 @@ export type UserProfile = {
   bio: string | null;
   website: string | null;
   user_type: 'free' | 'pro' | 'enterprise' | null;
+  subscription_status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'unpaid' | null;
+  subscription_plan_id: string | null;
   social_links: {
     twitter: string;
     github: string;
