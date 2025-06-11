@@ -274,6 +274,27 @@ export async function updateUserProfile(updates: Partial<UserProfile>): Promise<
   return data;
 }
 
+//new function to check if the user has anybrandkit
+export async function checkUserHasBrandKit(): Promise<boolean> {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session?.user) {
+    return false;
+  }
+
+  const { data, error } = await supabase
+    .from('brand_kits')
+    .select('id')
+    .eq('user_id', session.user.id)
+
+  if (error) {
+    console.error('Error checking user brand kit:', error);
+    return false;
+  }
+
+  return true;
+}
+
 export async function fetchBrandKits(
   page: number = 1,
   limit: number = 6,
