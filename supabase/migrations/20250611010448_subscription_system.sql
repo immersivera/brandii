@@ -40,12 +40,12 @@ CREATE TYPE public.subscription_status AS ENUM (
     'expired'
 );
 
--- Create user_subscriptions table
+-- Create user_subscriptions table with a simplified unique constraint
 CREATE TABLE IF NOT EXISTS public.user_subscriptions (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) NOT NULL,
     plan_id UUID REFERENCES public.subscription_plans(id) NOT NULL,
-    status subscription_status NOT NULL,
+    status public.subscription_status NOT NULL,
     current_period_start TIMESTAMP WITH TIME ZONE NOT NULL,
     current_period_end TIMESTAMP WITH TIME ZONE NOT NULL,
     cancel_at_period_end BOOLEAN DEFAULT false,
@@ -56,9 +56,40 @@ CREATE TABLE IF NOT EXISTS public.user_subscriptions (
     ends_at TIMESTAMP WITH TIME ZONE,
     trial_ends_at TIMESTAMP WITH TIME ZONE,
     payment_method_id UUID REFERENCES public.payments(id),
-    metadata JSONB,
-    UNIQUE(user_id, status) WHERE status = 'active' -- Only one active subscription per user
+    metadata JSONB
 );
+
+-- Create a function to check for existing active subscriptions
+CREATE OR REPLACE FUNCTION public.check_active_subscription()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.status = 'active' THEN
+        IF EXISTS (
+            SELECT 1 FROM public.user_subscriptions 
+            WHERE user_id = NEW.user_id 
+            AND status = 'active' 
+            AND id != NEW.id
+        ) THEN
+            RAISE EXCEPTION 'User already has an active subscription';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create trigger to enforce one active subscription per user
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger 
+        WHERE tgname = 'check_active_subscription_trigger'
+    ) THEN
+        CREATE TRIGGER check_active_subscription_trigger
+        BEFORE INSERT OR UPDATE OF status ON public.user_subscriptions
+        FOR EACH ROW
+        EXECUTE FUNCTION public.check_active_subscription();
+    END IF;
+END $$;
 
 -- Create user credits table
 CREATE TABLE IF NOT EXISTS public.user_credits (
