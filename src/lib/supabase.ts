@@ -121,7 +121,7 @@ export async function uploadImageToStorage(file: File, userId: string): Promise<
     const fileName = `${uuidv4()}.${fileExt}`;
     const filePath = `${userId}/${fileName}`;
 
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('brand-logos')
       .upload(filePath, file, {
         cacheControl: '3600',
@@ -231,6 +231,7 @@ export async function fetchBrandKits(
       )
     `)
     .eq('user_id', session.user.id)
+    .eq('generated_assets.type', 'logo')
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
@@ -285,12 +286,32 @@ export async function updateBrandKit(id: string, updates: Partial<BrandKit>): Pr
   }
 
   // Exclude the generated_assets field from updates as it's a relationship, not a column
-  const { generated_assets, ...updateData } = updates;
+  const { generated_assets: _, ...updateData } = updates;
 
-  const { data, error } = await supabase
+  // If logo_selected_asset_id is being updated, fetch the asset to get its URL
+  let finalUpdates = { ...updateData };
+  if (updateData.logo_selected_asset_id) {
+    const { data: selectedAsset } = await supabase
+      .from('generated_assets')
+      .select('image_url')
+      .eq('id', updateData.logo_selected_asset_id)
+      .single();
+
+    if (selectedAsset?.image_url) {
+      finalUpdates = {
+        ...finalUpdates,
+        logo: {
+          ...((updateData.logo || {}) as BrandKit['logo']),
+          image: selectedAsset.image_url
+        }
+      };
+    }
+  }
+
+  const { data: updatedBrandKit, error } = await supabase
     .from('brand_kits')
     .update({
-      ...updateData,
+      ...finalUpdates,
       updated_at: new Date().toISOString()
     })
     .eq('id', id)
@@ -306,10 +327,10 @@ export async function updateBrandKit(id: string, updates: Partial<BrandKit>): Pr
     throw error;
   }
 
-  return data;
+  return updatedBrandKit;
 }
 
-export async function uploadGeneratedImage(imageData: string, brandKitId: string): Promise<string> {
+export async function uploadGeneratedImage(imageData: string, brandKitId: string, type: 'logo' | 'image' = 'image'): Promise<string> {
   try {
     // Extract the base64 data
     const base64Data = imageData.split(';base64,').pop();
@@ -326,13 +347,14 @@ export async function uploadGeneratedImage(imageData: string, brandKitId: string
     const byteArray = new Uint8Array(byteNumbers);
     const blob = new Blob([byteArray], { type: 'image/png' });
 
-    // Generate a unique filename
-    const fileName = `${brandKitId}/${uuidv4()}.png`;
-    const filePath = `generated-images/${fileName}`;
+    const fileName = `${uuidv4()}.png`;
+    const filePath = `${brandKitId}/${fileName}`;
 
-    // Upload to storage
+    // Use brand-logos bucket for logos, brand-assets for other images
+    const bucket = type === 'logo' ? 'brand-logos' : 'brand-assets';
+
     const { error: uploadError } = await supabase.storage
-      .from('brand-assets')
+      .from(bucket)
       .upload(filePath, blob, {
         cacheControl: '3600',
         upsert: false,
@@ -344,9 +366,9 @@ export async function uploadGeneratedImage(imageData: string, brandKitId: string
       throw new Error('Failed to upload image to storage');
     }
 
-    // Get public URL
+    // Get public URL from the correct bucket
     const { data: { publicUrl } } = supabase.storage
-      .from('brand-assets')
+      .from(bucket)
       .getPublicUrl(filePath);
 
     return publicUrl;
@@ -368,18 +390,14 @@ export async function saveGeneratedAssets(
     throw new Error('Authentication required');
   }
 
-  // No need to explicitly create directories in Supabase Storage
-  // The path will be created automatically when uploading the file
-
-  // Upload each image and get URLs
+  // Upload each image to the appropriate bucket and get URLs
   const imageUrls: (string | null)[] = [];
   for (const imageData of imageDataArray) {
     try {
-      const url = await uploadGeneratedImage(imageData, brandKitId);
+      const url = await uploadGeneratedImage(imageData, brandKitId, type);
       imageUrls.push(url);
     } catch (error) {
       console.error('Error uploading image:', error);
-      // Push null for failed uploads to maintain array length
       imageUrls.push(null);
     }
   }
@@ -387,13 +405,13 @@ export async function saveGeneratedAssets(
   // Prepare assets with both image_data (base64) and image_url
   const assets = imageDataArray.map((imageData, index) => ({
     brand_kit_id: brandKitId,
-    image_data: imageData, // Keep base64 for backward compatibility
+    image_data: imageData,
     image_url: imageUrls[index],
     type,
     image_prompt: imagePrompt
   }));
 
-  const { data, error } = await supabase
+  const { data: savedAssets, error } = await supabase
     .from('generated_assets')
     .insert(assets)
     .select();
@@ -403,7 +421,7 @@ export async function saveGeneratedAssets(
     throw error;
   }
 
-  return data;
+  return savedAssets;
 }
 
 export async function deleteGeneratedAsset(id: string): Promise<void> {
@@ -449,21 +467,36 @@ export async function saveBrandKit(brandKit: Omit<BrandKit, 'id' | 'created_at' 
     throw brandKitError;
   }
 
-  if (generatedLogoImages && generatedLogoImages.length > 0) {
+  // If there are generated logo images, save them
+  if (generatedLogoImages?.length) {
     try {
       const assets = await saveGeneratedAssets(savedBrandKit.id, generatedLogoImages, 'logo');
       
-      // Set the first generated asset as the selected logo
+      // Set the first generated asset as the selected logo and update the logo.image
       if (assets.length > 0) {
+        const selectedAsset = assets[0];
         await updateBrandKit(savedBrandKit.id, {
-          logo_selected_asset_id: assets[0].id
+          logo_selected_asset_id: selectedAsset.id,
+          logo: {
+            ...savedBrandKit.logo,
+            image: selectedAsset.image_url
+          }
         });
+
+        return {
+          ...savedBrandKit,
+          generated_assets: assets,
+          logo_selected_asset_id: selectedAsset.id,
+          logo: {
+            ...savedBrandKit.logo,
+            image: selectedAsset.image_url
+          }
+        };
       }
       
       return {
         ...savedBrandKit,
-        generated_assets: assets,
-        logo_selected_asset_id: assets[0].id
+        generated_assets: assets
       };
     } catch (error) {
       console.error('Error saving generated assets:', error);

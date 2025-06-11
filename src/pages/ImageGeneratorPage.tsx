@@ -8,7 +8,7 @@ import { Textarea } from '../components/ui/Textarea';
 import { Select } from '../components/ui/Select';
 import { useUser } from '../context/UserContext';
 import { ArrowLeft, Sparkles, Download, X, Calendar, Clock, Upload, Image as ImageIcon, Trash2 } from 'lucide-react';
-import { BrandKitForGeneration, fetchBrandKitForGeneration, saveGeneratedAssets, fetchBrandKitById, BrandKit } from '../lib/supabase';
+import { BrandKitForGeneration, fetchBrandKitForGeneration, saveGeneratedAssets } from '../lib/supabase';
 import { generateImageAssets, type ImageSize } from '../lib/openai';
 import toast from 'react-hot-toast';
 
@@ -285,9 +285,6 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
       // Get the brand assets prompt and combine with the user's prompt
       const brandAssetsPrompt = getBrandAssetsPrompt();
       const fullPrompt = `${prompt.trim()}\n\n${brandAssetsPrompt}`.trim();
-
-      // console.log('Sending to API with prompt:', fullPrompt);
-      // console.log('Images being sent to API:', imagesForApi);
 
       const images = await generateImageAssets(
         fullPrompt,
