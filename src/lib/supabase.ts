@@ -82,6 +82,16 @@ export type PaginatedResponse<T> = {
   totalCount: number;
 };
 
+export type BrandKitForGeneration = Pick<BrandKit, 
+  'id' | 
+  'name' | 
+  'type' | 
+  'description' | 
+  'colors' | 
+  'typography' | 
+  'logo'
+>;
+
 export async function disableUserAccount(): Promise<boolean> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -483,4 +493,34 @@ export async function deleteBrandKit(id: string): Promise<boolean> {
   }
 
   return true;
+}
+
+export async function fetchBrandKitForGeneration(id: string): Promise<BrandKitForGeneration | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session?.user) {
+    throw new Error('Authentication required');
+  }
+
+  const { data: brandKit, error: brandKitError } = await supabase
+    .from('brand_kits')
+    .select(`
+      id,
+      name,
+      type,
+      description,
+      colors,
+      typography,
+      logo
+    `)
+    .eq('id', id)
+    .eq('user_id', session.user.id)
+    .single();
+
+  if (brandKitError) {
+    console.error('Error fetching brand kit:', brandKitError);
+    throw brandKitError;
+  }
+
+  return brandKit;
 }

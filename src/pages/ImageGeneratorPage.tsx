@@ -8,7 +8,7 @@ import { Textarea } from '../components/ui/Textarea';
 import { Select } from '../components/ui/Select';
 import { useUser } from '../context/UserContext';
 import { ArrowLeft, Sparkles, Download, X, Calendar, Clock, Upload, Image as ImageIcon, Trash2 } from 'lucide-react';
-import { BrandKit, fetchBrandKitById, saveGeneratedAssets } from '../lib/supabase';
+import { BrandKitForGeneration, fetchBrandKitForGeneration, saveGeneratedAssets, fetchBrandKitById, BrandKit } from '../lib/supabase';
 import { generateImageAssets, type ImageSize } from '../lib/openai';
 import toast from 'react-hot-toast';
 
@@ -28,7 +28,8 @@ export const ImageGeneratorPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { profile } = useUser();
-  const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
+  const [brandKit, setBrandKit] = useState<BrandKitForGeneration | null>(null);
+  // const [brandKitAssets, setBrandKitAssets] = useState<any>(null);
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -54,7 +55,7 @@ export const ImageGeneratorPage: React.FC = () => {
       if (!id) return;
       
       try {
-        const kit = await fetchBrandKitById(id);
+        const kit = await fetchBrandKitForGeneration(id);
         if (kit) {
           setBrandKit(kit);
           setPrompt(`Create an image for ${kit.name}, a ${kit.type} brand. ${kit.description}`);
@@ -72,6 +73,26 @@ export const ImageGeneratorPage: React.FC = () => {
 
     loadBrandKit();
   }, [id, navigate]);
+
+  // useEffect(() => {
+  //   const loadBrandKitAssets = async () => {
+  //     if (!id) return;
+      
+  //     try {
+  //       const assets = await fetchBrandKitById(id);
+  //       if (assets) {
+  //         setBrandKitAssets([assets]);
+  //       } else {
+  //         toast.error('Brand kit assets not found');
+  //       }
+  //     } catch (error) {
+  //       console.error('Error loading brand kit assets:', error);
+  //       toast.error('Failed to load brand kit assets');
+  //     }
+  //   };
+
+  //   loadBrandKitAssets();
+  // }, []);
 
   const getBrandAssetsPrompt = () => {
     if (!brandKit || !includeBrandAssets) return '';
@@ -105,15 +126,16 @@ export const ImageGeneratorPage: React.FC = () => {
       return brandKit.logo.image;
     }
 
+    
     // Then check for AI-generated logo
-    if (brandKit.generated_assets?.length && brandKit.logo_selected_asset_id) {
-      const selectedAsset = brandKit.generated_assets.find(
-        asset => asset.id === brandKit.logo_selected_asset_id && asset.type === 'logo'
-      );
-      if (selectedAsset?.image_data) {
-        return selectedAsset.image_data;
-      }
-    }
+    // if (brandKitAssets?.length && brandKitAssets.logo_selected_asset_id) {
+    //   const selectedAsset = brandKitAssets.find(
+    //     (asset: any) => asset.id === brandKitAssets.logo_selected_asset_id && asset.type === 'logo'
+    //   );
+    //   if (selectedAsset?.image_data) {
+    //     return selectedAsset.image_data;
+    //   }
+    // }
 
     return null;
   };
@@ -264,8 +286,8 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
       const brandAssetsPrompt = getBrandAssetsPrompt();
       const fullPrompt = `${prompt.trim()}\n\n${brandAssetsPrompt}`.trim();
 
-      console.log('Sending to API with prompt:', fullPrompt);
-      console.log('Images being sent to API:', imagesForApi);
+      // console.log('Sending to API with prompt:', fullPrompt);
+      // console.log('Images being sent to API:', imagesForApi);
 
       const images = await generateImageAssets(
         fullPrompt,
@@ -331,11 +353,11 @@ if (isLoading) {
   );
 }
 
-if (!brandKit) return null;
-
-const hasLogo = (brandKit.logo_selected_asset_id && brandKit.generated_assets?.some(
-  asset => asset.id === brandKit.logo_selected_asset_id
-)) || !!brandKit.logo?.image;
+// if (!brandKitAssets) return null;
+const hasLogo = brandKit?.logo?.image;
+// const hasLogo = (brandKitAssets.logo_selected_asset_id && brandKitAssets.generated_assets?.some(
+//   (asset: any) => asset.id === brandKitAssets.logo_selected_asset_id
+// )) || !!brandKitAssets.logo?.image;
 
 return (
   <Layout>
@@ -354,7 +376,7 @@ return (
                 Back to Brand Kit
               </Button>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                Generate Images for {brandKit.name}
+                Generate Images for {brandKit?.name || 'Brand Kit'}
               </h1>
               <p className="text-gray-600 dark:text-gray-400">
                 Create custom images that match your brand identity
