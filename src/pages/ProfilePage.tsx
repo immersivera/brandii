@@ -13,8 +13,8 @@ import {
   Progress 
 } from '../components/ui';
 import { useUser } from '../context/UserContext';
-import { updateUserProfile, supabase } from '../lib/supabase';
-import { ArrowLeft, Save, Twitter, Github, Linkedin, CreditCard, Award, Zap } from 'lucide-react';
+import { updateUserProfile, supabase, disableUserAccount } from '../lib/supabase';
+import { AlertTriangle, ArrowLeft, Save, Trash2, Twitter, Github, Linkedin, CreditCard, Award, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
@@ -51,6 +51,8 @@ export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([]);
   const [userCredits, setUserCredits] = useState<UserCredits | null>(null);
   const [userSubscription, setUserSubscription] = useState<UserSubscription | null>(null);
@@ -72,44 +74,6 @@ export const ProfilePage: React.FC = () => {
 
   // Fetch subscription plans and user credits
   useEffect(() => {
-    const fetchSubscriptionData = async () => {
-      try {
-        // Fetch subscription plans
-        const { data: plans, error: plansError } = await supabase
-          .from('subscription_plans')
-          .select('*')
-          .order('price', { ascending: true });
-        
-        if (plansError) throw plansError;
-        setSubscriptionPlans(plans || []);
-        
-        // Fetch user credits
-        const { data: credits, error: creditsError } = await supabase
-          .from('user_available_credits')
-          .select('*')
-          .eq('user_id', profile?.id)
-          .single();
-        
-        if (creditsError && creditsError.code !== 'PGRST116') throw creditsError;
-        setUserCredits(credits);
-        
-        // Fetch user subscription
-        const { data: subscription, error: subError } = await supabase
-          .from('user_subscriptions')
-          .select('*')
-          .eq('user_id', profile?.id)
-          .eq('status', 'active')
-          .maybeSingle();
-        
-        if (subError && subError.code !== 'PGRST116') throw subError;
-        setUserSubscription(subscription);
-        
-      } catch (error) {
-        console.error('Error fetching subscription data:', error);
-        toast.error('Failed to load subscription data');
-      }
-    };
-    
     if (profile?.id) {
       fetchSubscriptionData();
     }
@@ -157,29 +121,74 @@ export const ProfilePage: React.FC = () => {
     
     setIsLoading(true);
     try {
-      await supabase
-        .from('user_subscriptions')
-        .update({
-          cancel_at_period_end: true,
-          status: 'canceled'
-        })
-        .eq('id', userSubscription.id);
+      const { error } = await supabase.rpc('cancel_subscription');
+      if (error) throw error;
       
+      await fetchSubscriptionData();
       toast.success('Subscription canceled successfully');
-      
-      // Refresh subscription data
-      const { data } = await supabase
-        .from('user_subscriptions')
-        .select('*')
-        .eq('id', userSubscription.id)
-        .single();
-      
-      setUserSubscription(data);
     } catch (error) {
       console.error('Error canceling subscription:', error);
       toast.error('Failed to cancel subscription');
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  // Function to fetch subscription data - moved outside useEffect for reuse
+  const fetchSubscriptionData = async () => {
+    try {
+      // Fetch subscription plans
+      const { data: plans, error: plansError } = await supabase
+        .from('subscription_plans')
+        .select('*')
+        .order('price', { ascending: true });
+      
+      if (plansError) throw plansError;
+      setSubscriptionPlans(plans || []);
+      
+      // Fetch user credits
+      const { data: credits, error: creditsError } = await supabase
+        .from('user_available_credits')
+        .select('*')
+        .eq('user_id', profile?.id)
+        .single();
+      
+      if (creditsError && creditsError.code !== 'PGRST116') throw creditsError;
+      setUserCredits(credits);
+      
+      // Fetch user subscription
+      const { data: subscription, error: subError } = await supabase
+        .from('user_subscriptions')
+        .select('*')
+        .eq('user_id', profile?.id)
+        .eq('status', 'active')
+        .maybeSingle();
+      
+      if (subError && subError.code !== 'PGRST116') throw subError;
+      setUserSubscription(subscription);
+      
+    } catch (error) {
+      console.error('Error fetching subscription data:', error);
+      toast.error('Failed to load subscription data');
+    }
+  };
+  
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETE') {
+      toast.error('Please type DELETE to confirm account deletion');
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      await disableUserAccount();
+      toast.success('Your account has been deleted');
+      navigate('/');
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      toast.error('Failed to delete account');
+      setIsLoading(false);
+      setShowDeleteConfirmation(false);
     }
   };
 
@@ -534,6 +543,23 @@ export const ProfilePage: React.FC = () => {
                           Receive email notifications
                         </label>
                       </div>
+                      
+                      <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                        <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-2">
+                          Danger Zone
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                          Once you delete your account, there is no going back. This action cannot be undone.
+                        </p>
+                        <Button
+                          variant="outline"
+                          className="border-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 flex items-center gap-2"
+                          onClick={() => setShowDeleteConfirmation(true)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete Account
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -553,6 +579,55 @@ export const ProfilePage: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 text-red-600 dark:text-red-400 mb-4">
+              <AlertTriangle className="h-6 w-6" />
+              <h3 className="text-xl font-bold">Delete Account</h3>
+            </div>
+            
+            <p className="text-gray-700 dark:text-gray-300 mb-6">
+              This action cannot be undone. This will permanently delete your account, remove your data from our servers, and cancel any active subscriptions.
+            </p>
+            
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                To confirm, type "DELETE" in the field below:
+              </label>
+              <Input
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="DELETE"
+                className="border-red-300 focus:border-red-500 focus:ring-red-500"
+              />
+            </div>
+            
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowDeleteConfirmation(false);
+                  setDeleteConfirmText('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="outline"
+                className="border-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-950"
+                onClick={handleDeleteAccount}
+                isLoading={isLoading}
+                disabled={deleteConfirmText !== 'DELETE'}
+              >
+                Delete Account
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };

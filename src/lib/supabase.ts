@@ -80,6 +80,29 @@ export type PaginatedResponse<T> = {
   totalCount: number;
 };
 
+export async function disableUserAccount(): Promise<boolean> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('No authenticated user found');
+    
+    const { error } = await supabase.rpc('disable_user_account', {
+      user_id: user.id
+    });
+    
+    if (error) {
+      console.error('Error disabling account:', error);
+      throw new Error('Failed to disable account. Please try again.');
+    }
+    
+    // Sign out the user after disabling the account
+    await supabase.auth.signOut();
+    return true;
+  } catch (error) {
+    console.error('Error in disableUserAccount:', error);
+    throw error;
+  }
+}
+
 export async function uploadImageToStorage(file: File, userId: string): Promise<string> {
   try {
     const fileExt = file.name.split('.').pop();
