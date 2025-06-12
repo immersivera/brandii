@@ -1,4 +1,5 @@
 export const BRAND_TYPES = [
+  { id: 'null', name: '', description: '' },
   { id: 'technology', name: 'Technology', description: 'Tech companies, startups, SaaS products' },
   { id: 'creative', name: 'Creative', description: 'Design agencies, artists, musicians' },
   { id: 'business', name: 'Business', description: 'Corporate, finance, consulting' },
@@ -10,6 +11,7 @@ export const BRAND_TYPES = [
 ];
 
 export const BRAND_ADJECTIVES = [
+  { id: 'null', name: '', description: '' },
   { id: 'modern', name: 'Modern', description: 'Contemporary, innovative, cutting-edge' },
   { id: 'minimal', name: 'Minimal', description: 'Clean, simple, uncluttered' },
   { id: 'bold', name: 'Bold', description: 'Strong, confident, impactful' },

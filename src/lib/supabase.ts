@@ -68,6 +68,7 @@ export type BrandKit = {
     type: string;
     text: string;
     image?: string;
+    personality: string;
   };
   typography: {
     headingFont: string;
