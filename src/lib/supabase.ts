@@ -335,7 +335,7 @@ export async function fetchBrandKits(
       generated_assets!generated_assets_brand_kit_id_fkey (
         id,
         type,
-        image_data,
+        image_url,
         created_at
       )
     `)
