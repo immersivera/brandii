@@ -22,7 +22,7 @@ export const ResultPage: React.FC = () => {
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
   const [generatedAssets, setGeneratedAssets] = useState<any[]>([]);
   const [selectedLogo, setSelectedLogo] = useState<string | null>(
-    brandDetails.logoChoice === 'upload' 
+    brandDetails.logoChoice.includes('upload') 
       ? brandDetails.uploadedLogoUrl || null
       : null
   );

@@ -571,7 +571,7 @@ export const BrandKitPage: React.FC = () => {
       colors: brandKit.colors,
       typography: brandKit.typography,
       logoStyle: brandKit.logo.type,
-      logoChoice: brandKit.logo.image ? 'upload' : 'ai',
+      logoChoice: 'ai',
       step: 1 // Start at the design step
     });
     
@@ -642,7 +642,11 @@ export const BrandKitPage: React.FC = () => {
     try {
       setIsSelectingLogo(assetId);
       const updatedBrandKit = await updateBrandKit(brandKit.id, {
-        logo_selected_asset_id: assetId
+        logo_selected_asset_id: assetId,
+        logo: {
+          ...brandKit.logo,
+          image: logoAssets.find(asset => asset.id === assetId)?.image_url || undefined
+        }
       });
       setBrandKit(updatedBrandKit);
       toast.success('Logo updated successfully');
@@ -748,7 +752,7 @@ export const BrandKitPage: React.FC = () => {
         logo: {
           ...brandKit.logo,
           image: publicUrl,
-          type: 'custom',
+          type: 'user-uploaded',
           text: brandKit.name
         }
       });
