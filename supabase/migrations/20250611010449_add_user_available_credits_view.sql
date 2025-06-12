@@ -29,7 +29,7 @@ COMMENT ON VIEW public.user_available_credits IS 'Provides a consolidated view o
 GRANT SELECT ON public.user_available_credits TO authenticated;
 
 -- Add RLS policy to ensure users can only see their own credits
-ALTER VIEW public.user_available_credits OWNER TO supabase_auth_admin;
+ALTER VIEW public.user_available_credits OWNER TO postgres;
 
 -- Create a policy to restrict access to the view
 DO $$
