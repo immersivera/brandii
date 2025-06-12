@@ -2,14 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
-import { Download, X, Calendar, Clock, ExternalLink, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
+import { Download, X, Calendar, Clock, ExternalLink, ChevronLeft, ChevronRight, MessageSquare, Search } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useUser } from '../context/UserContext';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Masonry from 'react-masonry-css';
 import OptimizedImage from '../components/ui/OptimizedImage';
 import { Skeleton } from '../components/ui/Skeleton';
+import { useDebounce } from '../lib/utils';
 
 interface ImageDetails {
   id: string;
@@ -35,7 +36,11 @@ export const GlobalGalleryPage: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<ImageDetails | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
   const { userId } = useUser();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
   const breakpointColumns = {
     default: 4,
@@ -44,6 +49,25 @@ export const GlobalGalleryPage: React.FC = () => {
     1024: 2,
     640: 1
   };
+
+  // Initialize state from URL params on component mount
+  useEffect(() => {
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const search = searchParams.get('search') || '';
+    
+    setCurrentPage(isNaN(page) ? 1 : page);
+    setSearchQuery(search);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
+
+  // Update URL when search or page changes
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (currentPage > 1) params.set('page', currentPage.toString());
+    if (debouncedSearchQuery) params.set('search', debouncedSearchQuery);
+    
+    navigate(`?${params.toString()}`, { replace: true });
+  }, [currentPage, debouncedSearchQuery, navigate]);
 
   useEffect(() => {
     const fetchImages = async () => {
@@ -54,8 +78,7 @@ export const GlobalGalleryPage: React.FC = () => {
           setIsPageLoading(true);
         }
 
-        // Use a single query with count and data
-        const { data, error, count } = await supabase
+        let queryBuilder = supabase
           .from('generated_assets')
           .select(
             `
@@ -76,6 +99,12 @@ export const GlobalGalleryPage: React.FC = () => {
             currentPage * ITEMS_PER_PAGE - 1
           );
 
+        if (debouncedSearchQuery) {
+          queryBuilder = queryBuilder.ilike('image_prompt', `%${debouncedSearchQuery}%`);
+        }
+
+        const { data, error, count } = await queryBuilder;
+
         if (error) throw error;
 
         setTotalItems(count || 0);
@@ -93,7 +122,7 @@ export const GlobalGalleryPage: React.FC = () => {
     };
 
     fetchImages();
-  }, [currentPage]);
+  }, [currentPage, debouncedSearchQuery]);
 
   // const handleDownload = (imageUrl: string, index: number) => {
   //   const link = document.createElement('a');
@@ -103,6 +132,11 @@ export const GlobalGalleryPage: React.FC = () => {
   //   link.click();
   //   document.body.removeChild(link);
   // };
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1); // Reset to first page when searching
+  };
   const handleDownload = async (imageUrl: string, index: number) => {
     try {
       // If it's a base64 data URL, handle it directly
@@ -164,43 +198,59 @@ export const GlobalGalleryPage: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  if (isLoading) {
-    return (
-      <Layout>
-        <div className="min-h-screen bg-white dark:bg-gray-900 py-12">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {[...Array(8)].map((_, i) => (
-                <Skeleton key={i} className="aspect-square rounded-xl" />
-              ))}
-            </div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
 
   return (
     <Layout>
       <div className="min-h-screen bg-white dark:bg-gray-900 py-12">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-[1920px] mx-auto">
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                  Community Gallery
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Explore AI-generated images from our community
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Community Gallery</h1>
+                Explore AI-generated images from our community.
+                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                  {totalItems > 0 ? `${totalItems} ${totalItems === 1 ? 'image' : 'images'} found` : 'No images yet'}
+                  {debouncedSearchQuery && ` for "${debouncedSearchQuery}"`}
                 </p>
+              </div>
+              <div className="relative w-full md:w-80">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by prompt..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors"
+                  value={searchQuery}
+                  onChange={handleSearch}
+                />
               </div>
             </div>
 
-            {images.length === 0 ? (
+            {/* Conditional rendering for image grid area */}
+            {isLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-8">
+                {[...Array(ITEMS_PER_PAGE)].map((_, i) => (
+                  <Skeleton key={`skel-${i}`} className="aspect-square rounded-xl" />
+                ))}
+              </div>
+            ) : images.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-gray-500 dark:text-gray-400">
-                  No images found. Try generating some first!
+                <p className="text-gray-500 dark:text-gray-400 text-lg">
+                  {debouncedSearchQuery 
+                    ? `No images found for "${debouncedSearchQuery}".`
+                    : 'No images in the gallery yet.'}
                 </p>
+                {debouncedSearchQuery && (
+                  <Button
+                    variant="outline"
+                    className="mt-6"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setCurrentPage(1);
+                    }}
+                  >
+                    Clear Search
+                  </Button>
+                )}
               </div>
             ) : (
               <>
@@ -277,7 +327,20 @@ export const GlobalGalleryPage: React.FC = () => {
                     </Button>
                     
                     <div className="flex items-center space-x-1">
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      {/* Smart Pagination: Show up to 5 page numbers, centered around current page */}
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      return pageNum;
+                    }).map((page) => page && ( // Render button only if pageNum is valid
                         <Button
                           key={page}
                           variant={currentPage === page ? 'primary' : 'outline'}
@@ -286,9 +349,9 @@ export const GlobalGalleryPage: React.FC = () => {
                           disabled={isPageLoading}
                           className={`w-8 ${
                             currentPage === page
-                              ? 'bg-brand-600 text-white'
-                              : 'text-gray-600 dark:text-gray-400'
-                          }`}
+                              ? 'bg-brand-600 text-white hover:bg-brand-700'
+                              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          } transition-colors w-9 h-9 p-0`}
                         >
                           {page}
                         </Button>
