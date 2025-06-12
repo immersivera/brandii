@@ -308,263 +308,293 @@ export const BrandKitPage: React.FC = () => {
     setShowDownloadOptions(true);
   };
 
-  const DownloadOptionsPopup = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <motion.div 
-        ref={popupRef}
-        className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto"
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        transition={{ duration: 0.2 }}
-      >
-        <div className="flex justify-between items-center mb-4 sticky top-0 bg-white dark:bg-gray-800 pb-4 z-10">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Download Options</h3>
-          <button 
-            onClick={() => setShowDownloadOptions(false)}
-            className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        
-        <div className="space-y-4">
-          {/* Brand Kit Option */}
-          <div 
-            className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-              downloadOptions.brandKit 
-                ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' 
-                : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-            }`}
-            onClick={() => setDownloadOptions({
-              brandKit: true,
-              allImages: false,
-              allLogos: false,
-              selectedImages: false
-            })}
-          >
-            <div className="flex items-start">
-              <div className={`flex-shrink-0 h-5 w-5 rounded-full border flex items-center justify-center mr-3 mt-0.5 ${
-                downloadOptions.brandKit 
-                  ? 'border-brand-500 bg-brand-500 text-white' 
-                  : 'border-gray-300 dark:border-gray-600'
-              }`}>
-                {downloadOptions.brandKit && (
-                  <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                )}
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900 dark:text-white flex items-center">
-                  <FileText className="h-4 w-4 mr-2 text-brand-500" />
-                  Brand Kit (Style Guide)
-                </h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Includes logo, color palette, typography, and brand guidelines
-                </p>
-              </div>
-            </div>
-          </div>
+  const DownloadOptionsPopup = React.memo(({ 
+    onClose, 
+    onDownload, 
+    downloadOptions, 
+    setDownloadOptions,
+    selectedImageCount,
+    isDownloading,
+    selectedImages,
+    toggleImageSelection,
+    generatedAssets
+  }: {
+    onClose: () => void;
+    onDownload: (options: DownloadOptions) => void;
+    downloadOptions: DownloadOptions;
+    setDownloadOptions: React.Dispatch<React.SetStateAction<DownloadOptions>>;
+    selectedImageCount: number;
+    isDownloading: boolean;
+    selectedImages: Record<string, boolean>;
+    toggleImageSelection: (id: string) => void;
+    generatedAssets: any[];
+  }) => {
+    // Memoize the options toggles to prevent recreating functions on each render
+    const toggleBrandKit = () => {
+      setDownloadOptions(prev => ({
+        ...prev,
+        brandKit: !prev.brandKit,
+        allImages: false,
+        allLogos: false,
+        selectedImages: false
+      }));
+    };
 
-          {/* All Images Option */}
-          <div 
-            className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-              downloadOptions.allImages 
-                ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' 
-                : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-            }`}
-            onClick={() => setDownloadOptions({
-              brandKit: false,
-              allImages: true,
-              allLogos: false,
-              selectedImages: false
-            })}
-          >
-            <div className="flex items-start">
-              <div className={`flex-shrink-0 h-5 w-5 rounded-full border flex items-center justify-center mr-3 mt-0.5 ${
-                downloadOptions.allImages 
-                  ? 'border-brand-500 bg-brand-500 text-white' 
-                  : 'border-gray-300 dark:border-gray-600'
-              }`}>
-                {downloadOptions.allImages && (
-                  <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                )}
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900 dark:text-white flex items-center">
-                  <FileImage className="h-4 w-4 mr-2 text-brand-500" />
-                  All Generated Images
-                </h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Download all generated gallery images
-                </p>
-              </div>
-            </div>
-          </div>
+    const toggleAllImages = () => {
+      setDownloadOptions(prev => ({
+        ...prev,
+        brandKit: false,
+        allImages: !prev.allImages,
+        allLogos: false,
+        selectedImages: false
+      }));
+    };
 
-          {/* All Logos Option */}
-          <div 
-            className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-              downloadOptions.allLogos 
-                ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' 
-                : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-            }`}
-            onClick={() => setDownloadOptions({
-              brandKit: false,
-              allImages: false,
-              allLogos: true,
-              selectedImages: false
-            })}
-          >
-            <div className="flex items-start">
-              <div className={`flex-shrink-0 h-5 w-5 rounded-full border flex items-center justify-center mr-3 mt-0.5 ${
-                downloadOptions.allLogos 
-                  ? 'border-brand-500 bg-brand-500 text-white' 
-                  : 'border-gray-300 dark:border-gray-600'
-              }`}>
-                {downloadOptions.allLogos && (
-                  <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                )}
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900 dark:text-white flex items-center">
-                  <ImageIcon className="h-4 w-4 mr-2 text-brand-500" />
-                  All Logos
-                </h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Download all generated logos
-                </p>
-              </div>
-            </div>
-          </div>
+    const toggleAllLogos = () => {
+      setDownloadOptions(prev => ({
+        ...prev,
+        brandKit: false,
+        allImages: false,
+        allLogos: !prev.allLogos,
+        selectedImages: false
+      }));
+    };
 
-          {/* Selected Images Option */}
-          <div className="border rounded-lg overflow-hidden">
-            <div 
-              className={`p-4 cursor-pointer transition-colors ${
-                downloadOptions.selectedImages 
-                  ? 'border-b border-brand-500 bg-brand-50 dark:bg-brand-900/20' 
-                  : 'border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-              }`}
-              onClick={() => setDownloadOptions({
-                brandKit: false,
-                allImages: false,
-                allLogos: false,
-                selectedImages: true
-              })}
-            >
-              <div className="flex items-start">
-                <div className={`flex-shrink-0 h-5 w-5 rounded-full border flex items-center justify-center mr-3 mt-0.5 ${
-                  downloadOptions.selectedImages 
-                    ? 'border-brand-500 bg-brand-500 text-white' 
-                    : 'border-gray-300 dark:border-gray-600'
-                }`}>
-                  {downloadOptions.selectedImages && (
-                    <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between items-start">
-                    <h4 className="font-medium text-gray-900 dark:text-white flex items-center">
-                      <FileImage className="h-4 w-4 mr-2 text-brand-500" />
-                      Selected Images
-                    </h4>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {selectedImageCount} of {totalImageCount} selected
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    Choose specific images to download
-                  </p>
-                </div>
-              </div>
-            </div>
+    const toggleSelectedImages = () => {
+      setDownloadOptions(prev => ({
+        ...prev,
+        brandKit: false,
+        allImages: false,
+        allLogos: false,
+        selectedImages: !prev.selectedImages
+      }));
+    };
 
-            {/* Image Selection Grid */}
-            {downloadOptions.selectedImages && brandKit?.generated_assets && (
-              <div className="p-4 bg-gray-50 dark:bg-gray-700/30">
-                <div className="mb-3 flex justify-between items-center">
+    return (
+      <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={onClose}></div>
+          
+          <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+          
+          <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full sm:p-6">
+            <div className="sm:flex sm:items-start">
+              <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
+                    Download Options
+                  </h3>
                   <button
                     type="button"
-                    onClick={toggleSelectAllImages}
-                    className="text-sm text-brand-600 dark:text-brand-400 hover:underline"
+                    className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+                    onClick={onClose}
                   >
-                    {selectedImageCount === totalImageCount ? 'Deselect All' : 'Select All'}
+                    <span className="sr-only">Close</span>
+                    <X className="h-6 w-6" aria-hidden="true" />
                   </button>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {selectedImageCount} selected
-                  </span>
                 </div>
-                <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto p-1">
-                  {brandKit.generated_assets
-                    .filter(asset => asset.type === 'image')
-                    .map(asset => (
-                      <div 
-                        key={asset.id}
-                        className={`relative aspect-square rounded-md overflow-hidden border-2 ${
-                          selectedImages[asset.id] 
-                            ? 'border-brand-500 ring-2 ring-brand-500' 
-                            : 'border-transparent'
-                        }`}
-                        onClick={() => toggleImageSelection(asset.id)}
-                      >
-                        <img 
-                          src={asset.image_url} 
-                          alt={`Generated image ${asset.id}`}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className={`absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 transition-opacity ${
-                          selectedImages[asset.id] ? 'opacity-100' : 'opacity-0 hover:opacity-100'
+
+                <div className="space-y-4">
+                  {/* Brand Kit Option */}
+                  <div 
+                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                      downloadOptions.brandKit 
+                        ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' 
+                        : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                    }`}
+                    onClick={toggleBrandKit}
+                  >
+                    <div className="flex items-start">
+                      <div className={`flex-shrink-0 h-5 w-5 rounded-full border flex items-center justify-center mr-3 mt-0.5 ${
+                        downloadOptions.brandKit 
+                          ? 'border-brand-500 bg-brand-500 text-white' 
+                          : 'border-gray-300 dark:border-gray-600'
+                      }`}>
+                        {downloadOptions.brandKit && (
+                          <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-900 dark:text-white flex items-center">
+                          <FileText className="h-4 w-4 mr-2 text-brand-500" />
+                          Brand Kit (Style Guide)
+                        </h4>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                          Includes logo, color palette, typography, and brand guidelines
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* All Images Option */}
+                  <div 
+                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                      downloadOptions.allImages 
+                        ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' 
+                        : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                    }`}
+                    onClick={toggleAllImages}
+                  >
+                    <div className="flex items-start">
+                      <div className={`flex-shrink-0 h-5 w-5 rounded-full border flex items-center justify-center mr-3 mt-0.5 ${
+                        downloadOptions.allImages 
+                          ? 'border-brand-500 bg-brand-500 text-white' 
+                          : 'border-gray-300 dark:border-gray-600'
+                      }`}>
+                        {downloadOptions.allImages && (
+                          <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-900 dark:text-white flex items-center">
+                          <FileImage className="h-4 w-4 mr-2 text-brand-500" />
+                          All Generated Images
+                        </h4>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                          Download all generated gallery images
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* All Logos Option */}
+                  <div 
+                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                      downloadOptions.allLogos 
+                        ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' 
+                        : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                    }`}
+                    onClick={toggleAllLogos}
+                  >
+                    <div className="flex items-start">
+                      <div className={`flex-shrink-0 h-5 w-5 rounded-full border flex items-center justify-center mr-3 mt-0.5 ${
+                        downloadOptions.allLogos 
+                          ? 'border-brand-500 bg-brand-500 text-white' 
+                          : 'border-gray-300 dark:border-gray-600'
+                      }`}>
+                        {downloadOptions.allLogos && (
+                          <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-900 dark:text-white flex items-center">
+                          <ImageIcon className="h-4 w-4 mr-2 text-brand-500" />
+                          All Logos
+                        </h4>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                          Download all generated logos
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Selected Images Option */}
+                  <div className="border rounded-lg overflow-hidden">
+                    <div 
+                      className={`p-4 cursor-pointer transition-colors ${
+                        downloadOptions.selectedImages 
+                          ? 'bg-brand-50 dark:bg-brand-900/20' 
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                      }`}
+                      onClick={toggleSelectedImages}
+                    >
+                      <div className="flex items-start">
+                        <div className={`flex-shrink-0 h-5 w-5 rounded-full border flex items-center justify-center mr-3 mt-0.5 ${
+                          downloadOptions.selectedImages 
+                            ? 'border-brand-500 bg-brand-500 text-white' 
+                            : 'border-gray-300 dark:border-gray-600'
                         }`}>
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                            selectedImages[asset.id] 
-                              ? 'bg-brand-500 text-white' 
-                              : 'bg-white/80 text-transparent'
-                          }`}>
-                            <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                          {downloadOptions.selectedImages && (
+                            <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                             </svg>
-                          </div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-900 dark:text-white">
+                            Selected Images ({selectedImageCount})
+                          </h4>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            Download only selected gallery images
+                          </p>
                         </div>
                       </div>
-                    ))}
-                </div>
-                {totalImageCount === 0 && (
-                  <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
-                    No gallery images available
+                    </div>
+
+                    {downloadOptions.selectedImages && (
+                      <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-1">
+                          {generatedAssets
+                            .filter(asset => asset.type === 'image')
+                            .map(asset => (
+                              <div 
+                                key={asset.id} 
+                                className="relative aspect-square rounded-md overflow-hidden border-2 border-transparent hover:border-brand-500 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleImageSelection(asset.id);
+                                }}
+                              >
+                                <img
+                                  src={asset.image_url || asset.image_data || ''}
+                                  alt="Generated content"
+                                  className="w-full h-full object-cover"
+                                />
+                                <div className={`absolute inset-0 flex items-center justify-center transition-opacity ${
+                                  selectedImages[asset.id] ? 'bg-black/50' : 'bg-black/0 group-hover:bg-black/20'
+                                }`}>
+                                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                    selectedImages[asset.id] 
+                                      ? 'bg-brand-500 border-brand-500' 
+                                      : 'bg-white/80 border-white/50'
+                                  }`}>
+                                    {selectedImages[asset.id] && (
+                                      <Check className="h-3 w-3 text-white" />
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
+
+                <div className="mt-6 flex flex-col sm:flex-row-reverse sm:justify-between sm:items-center gap-3">
+                  <Button 
+                    onClick={() => onDownload(downloadOptions)}
+                    disabled={isDownloading || (!downloadOptions.brandKit && !downloadOptions.allImages && !downloadOptions.allLogos && !downloadOptions.selectedImages)}
+                    isLoading={isDownloading}
+                    className="w-full sm:w-auto"
+                  >
+                    {isDownloading ? 'Preparing Download...' : 'Download'}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={onClose}
+                    disabled={isDownloading}
+                    className="w-full sm:w-auto"
+                  >
+                    Cancel
+                  </Button>
+                </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
+      </div>
+    );
+  });
 
-        <div className="mt-6 flex justify-end space-x-3">
-          <Button 
-            variant="outline" 
-            onClick={() => setShowDownloadOptions(false)}
-            disabled={isDownloading}
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={() => handleDownload(downloadOptions)}
-            disabled={isDownloading || (!downloadOptions.brandKit && !downloadOptions.allImages && !downloadOptions.allLogos && !downloadOptions.selectedImages)}
-            isLoading={isDownloading}
-          >
-            {isDownloading ? 'Preparing Download...' : 'Download'}
-          </Button>
-        </div>
-      </motion.div>
-    </div>
-  );
+  // Add display name for better dev tools experience
+  DownloadOptionsPopup.displayName = 'DownloadOptionsPopup';
 
   const handleDeleteBrandKit = async () => {
     if (!brandKit || !confirm('Are you sure you want to delete this brand kit?')) return;
@@ -1061,7 +1091,17 @@ export const BrandKitPage: React.FC = () => {
                   </Button>
                   
                   <AnimatePresence>
-                    {showDownloadOptions && <DownloadOptionsPopup />}
+                    {showDownloadOptions && <DownloadOptionsPopup 
+                      onClose={() => setShowDownloadOptions(false)}
+                      onDownload={handleDownload}
+                      downloadOptions={downloadOptions}
+                      setDownloadOptions={setDownloadOptions}
+                      selectedImageCount={selectedImageCount}
+                      isDownloading={isDownloading}
+                      selectedImages={selectedImages}
+                      toggleImageSelection={toggleImageSelection}
+                      generatedAssets={brandKit.generated_assets || []}
+                    />}
                   </AnimatePresence>
                 </div>
               </div>
