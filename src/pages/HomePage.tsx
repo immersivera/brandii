@@ -10,7 +10,11 @@ import {
   Layers, 
   Download, 
   ArrowRight, 
-  Sparkles 
+  Sparkles,
+  Image as ImageIcon,
+  LayoutGrid,
+  Wand2,
+  Palette as PaletteIcon
 } from 'lucide-react';
 
 const featuresList = [
@@ -25,6 +29,12 @@ const featuresList = [
     description: 'Create professional logo concepts based on your brand name and industry in seconds.',
   },
   {
+    icon: <ImageIcon className="h-6 w-6 text-brand-600" />,
+    title: 'AI Image Generation',
+    description: 'Create custom/product images that match your brand style with AI-powered image generation.',
+  },
+
+  {
     icon: <Layers className="h-6 w-6 text-brand-600" />,
     title: 'Complete Brand Guidelines',
     description: 'Compile comprehensive brand guidelines including typography, spacing, and usage examples.',
@@ -34,6 +44,11 @@ const featuresList = [
     title: 'Export & Share',
     description: 'Download your brand assets in multiple formats or share them directly with your team.',
   },
+  {
+    icon: <Wand2 className="h-6 w-6 text-brand-600" />,
+    title: 'Smart Variations',
+    description: 'Generate multiple design variations with different styles and layouts in seconds.',
+  }
 ];
 
 const testimonials = [
@@ -75,6 +90,14 @@ export const HomePage: React.FC = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-gray-50 dark:to-gray-900"></div>
         
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-32 sm:pt-32 sm:pb-40 relative z-10">
+          {/* Badge */}
+          <div className="flex justify-center mb-12">
+            <div className="dark:bg-black/20 bg-white backdrop-blur-md border border-black/20 dark:border-white/20 rounded-full py-2 px-4 flex items-center gap-2">
+              <span className="text-brand-500 text-lg">🚀</span>
+              <span className="dark:text-white/90 text-black/90 text-sm font-medium">AI-Powered Brand Kit & Image Generator</span>
+              <div className="w-2 h-2 rounded-full bg-green-500 ml-1"></div>
+            </div>
+          </div>
           <div className="max-w-4xl mx-auto text-center">
             <motion.h1 
               className="text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6 drop-shadow-lg"
@@ -82,7 +105,7 @@ export const HomePage: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              Create Beautiful Brand Identities with AI
+              Think it. Brand it. Launch it.
             </motion.h1>
             
             <motion.p 
@@ -91,8 +114,9 @@ export const HomePage: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
-              Generate professional color palettes, logo concepts, and brand guidelines 
-              in minutes with our AI-powered brand kit generator.
+              Generate professional logos, images, and color schemes that work seamlessly together. 
+              Build your complete brand kit in seconds and <span className="text-brand-400">create consistent brand assets</span>. 
+              Ready to dominate your market?
             </motion.p>
             
             <motion.div 
@@ -118,12 +142,31 @@ export const HomePage: React.FC = () => {
                 View Examples
               </Button>
             </motion.div>
+            <motion.div 
+              className="grid grid-cols-3 gap-8 max-w-4xl mx-auto border-t border-white/10 mt-20 pt-10"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <div className="text-center">
+                <div className="text-4xl font-bold dark:text-white text-black mb-1">500+</div>
+                <div className="text-gray-400 text-sm">Brand Kits Created</div>
+              </div>
+              <div className="text-center">
+                <div className="text-4xl font-bold dark:text-white text-black mb-1">98%</div>
+                <div className="text-gray-400 text-sm">Client Satisfaction</div>
+              </div>
+              <div className="text-center">
+                <div className="text-4xl font-bold dark:text-white text-black mb-1">10M+</div>
+                <div className="text-gray-400 text-sm">Assets Generated</div>
+              </div>
+            </motion.div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-gray-50 dark:bg-gray-900">
+      <section className="pb-20 pt-5 bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900 dark:text-white">
@@ -184,15 +227,15 @@ export const HomePage: React.FC = () => {
               },
               {
                 number: '02',
-                title: 'Review AI Suggestions',
+                title: 'Choose Your Perfect Match',
                 description: 'Get AI-generated color palettes, logo concepts, and typography pairings.',
                 icon: <Palette className="h-6 w-6 text-brand-600" />
               },
               {
                 number: '03',
-                title: 'Export Your Brand Kit',
-                description: 'Download your complete brand guidelines and assets for immediate use.',
-                icon: <Download className="h-6 w-6 text-brand-600" />
+                title: 'Generate & Download Assets',
+                description: 'Generate custom images that perfectly match your brand style and promote your brand identity.',
+                icon: <ImageIcon className="h-6 w-6 text-brand-600" />
               }
             ].map((step, index) => (
               <motion.div
@@ -302,9 +345,16 @@ export const HomePage: React.FC = () => {
                 <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-white">
                   Ready to transform your brand?
                 </h2>
-                <p className="text-xl text-white/90 mb-8 sm:mb-0">
-                  Create your professional brand kit in minutes with our AI-powered tools.
+                <p className="text-xl text-white/90 mb-4">
+                  Create your professional brand kit in seconds and generate consistent assets for your brand.
                 </p>
+                <div className="text-white/80 text-sm mb-8 sm:mb-0 flex flex-wrap gap-3 sm:gap-6">
+                  <span>✓ No design skills needed</span>
+                  <span>✓ Professional results</span>
+                  <span>✓ New or existing brand</span>
+                  <span>✓ Manage multiple brand kits</span>
+                  <span>✓ Downloadable assets</span>
+                </div>
               </div>
               <Button 
                 size="lg" 

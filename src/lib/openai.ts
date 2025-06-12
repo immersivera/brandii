@@ -64,9 +64,14 @@ export async function generateLogoImages(options: LogoGenerationOptions): Promis
   }
 }
 
+export interface ImageForGeneration {
+  base64: string;
+  type: string;
+}
+
 export async function generateImageAssets(
   prompt: string,
-  logoImage?: string,
+  images?: ImageForGeneration[],
   size: ImageSize = '1024x1024',
   count: number = 1
 ): Promise<string[]> {
@@ -74,7 +79,12 @@ export async function generateImageAssets(
     const { data, error } = await supabase.functions.invoke('openai', {
       body: {
         action: 'generateImageAssets',
-        data: { prompt:prompt.trim(), logoImage, size, count }
+        data: { 
+          prompt,
+          images,
+          size,
+          count 
+        }
       }
     });
 

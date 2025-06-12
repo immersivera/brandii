@@ -2,16 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
-import { Download, X, Calendar, Clock, ExternalLink, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
+import { Download, X, Calendar, Clock, ExternalLink, ChevronLeft, ChevronRight, MessageSquare, Search } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useUser } from '../context/UserContext';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Masonry from 'react-masonry-css';
+import OptimizedImage from '../components/ui/OptimizedImage';
+import { Skeleton } from '../components/ui/Skeleton';
+import { useDebounce } from '../lib/utils';
 
 interface ImageDetails {
   id: string;
   image_data: string;
+  image_url: string;
   image_prompt?: string;
   created_at: string;
   brand_kit: {
@@ -32,7 +36,11 @@ export const GlobalGalleryPage: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<ImageDetails | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
   const { userId } = useUser();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
   const breakpointColumns = {
     default: 4,
@@ -41,6 +49,25 @@ export const GlobalGalleryPage: React.FC = () => {
     1024: 2,
     640: 1
   };
+
+  // Initialize state from URL params on component mount
+  useEffect(() => {
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const search = searchParams.get('search') || '';
+    
+    setCurrentPage(isNaN(page) ? 1 : page);
+    setSearchQuery(search);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
+
+  // Update URL when search or page changes
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (currentPage > 1) params.set('page', currentPage.toString());
+    if (debouncedSearchQuery) params.set('search', debouncedSearchQuery);
+    
+    navigate(`?${params.toString()}`, { replace: true });
+  }, [currentPage, debouncedSearchQuery, navigate]);
 
   useEffect(() => {
     const fetchImages = async () => {
@@ -51,46 +78,43 @@ export const GlobalGalleryPage: React.FC = () => {
           setIsPageLoading(true);
         }
 
-        // First get the total count
-        const { count, error: countError } = await supabase
+        let queryBuilder = supabase
           .from('generated_assets')
-          .select('id', { count: 'exact' })
-          .eq('type', 'image');
-
-        if (countError) throw countError;
-        setTotalItems(count || 0);
-
-        // Calculate pagination range
-        const from = (currentPage - 1) * ITEMS_PER_PAGE;
-        const to = from + ITEMS_PER_PAGE - 1;
-
-        const { data, error } = await supabase
-          .from('generated_assets')
-          .select(`
-            id, 
-            image_data, 
+          .select(
+            `
+            id,
+            image_url,
+            image_data,
             image_prompt,
             created_at,
-            brand_kit:brand_kit_id (
-              id,
-              name,
-              description,
-              type,
-              user_id
-            )
-          `)
+            brand_kit:brand_kit_id (id, name, type, user_id)
+            `,
+            { count: 'exact' }
+          )
           .eq('type', 'image')
+          // .not('image_url', 'is', null)
           .order('created_at', { ascending: false })
-          .range(from, to);
+          .range(
+            (currentPage - 1) * ITEMS_PER_PAGE,
+            currentPage * ITEMS_PER_PAGE - 1
+          );
+
+        if (debouncedSearchQuery) {
+          queryBuilder = queryBuilder.ilike('image_prompt', `%${debouncedSearchQuery}%`);
+        }
+
+        const { data, error, count } = await queryBuilder;
 
         if (error) throw error;
 
-        // Ensure all required data is present
-        const validImages = data?.filter(img => img && img.image_data) || [];
-        setImages(validImages);
+        setTotalItems(count || 0);
+        
+        // Only show images from the current page
+        setImages(data || []);
+        
       } catch (error) {
         console.error('Error fetching images:', error);
-        toast.error('Failed to load images');
+        toast.error('Failed to load images. Please try again.');
       } finally {
         setIsLoading(false);
         setIsPageLoading(false);
@@ -98,17 +122,53 @@ export const GlobalGalleryPage: React.FC = () => {
     };
 
     fetchImages();
-  }, [currentPage]);
+  }, [currentPage, debouncedSearchQuery]);
 
-  const handleDownload = (imageUrl: string, index: number) => {
-    const link = document.createElement('a');
-    link.href = imageUrl;
-    link.download = `generated-image-${index + 1}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  // const handleDownload = (imageUrl: string, index: number) => {
+  //   const link = document.createElement('a');
+  //   link.href = imageUrl;
+  //   link.download = `generated-image-${index + 1}.png`;
+  //   document.body.appendChild(link);
+  //   link.click();
+  //   document.body.removeChild(link);
+  // };
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1); // Reset to first page when searching
   };
-
+  const handleDownload = async (imageUrl: string, index: number) => {
+    try {
+      // If it's a base64 data URL, handle it directly
+      if (imageUrl.startsWith('data:')) {
+        const link = document.createElement('a');
+        link.href = imageUrl;
+        link.download = `generated-image-${index + 1}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        return;
+      }
+  
+      // For regular URLs, fetch the image and create a download
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `generated-image-${index + 1}.png`;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Error downloading image:', error);
+      toast.error('Failed to download image');
+    }
+  };
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('en-US', {
@@ -138,41 +198,59 @@ export const GlobalGalleryPage: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  if (isLoading) {
-    return (
-      <Layout>
-        <div className="min-h-screen bg-white dark:bg-gray-900 py-12">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-center items-center py-20">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-600"></div>
-            </div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
 
   return (
     <Layout>
       <div className="min-h-screen bg-white dark:bg-gray-900 py-12">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-[1920px] mx-auto">
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                  Community Gallery
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Explore AI-generated images from our community
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Community Gallery</h1>
+                Explore AI-generated images from our community.
+                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                  {totalItems > 0 ? `${totalItems} ${totalItems === 1 ? 'image' : 'images'} found` : 'No images yet'}
+                  {debouncedSearchQuery && ` for "${debouncedSearchQuery}"`}
                 </p>
+              </div>
+              <div className="relative w-full md:w-80">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by prompt..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors"
+                  value={searchQuery}
+                  onChange={handleSearch}
+                />
               </div>
             </div>
 
-            {images.length === 0 ? (
-              <div className="text-center py-20">
-                <p className="text-gray-600 dark:text-gray-400">
-                  No images have been generated yet
+            {/* Conditional rendering for image grid area */}
+            {isLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-8">
+                {[...Array(ITEMS_PER_PAGE)].map((_, i) => (
+                  <Skeleton key={`skel-${i}`} className="aspect-square rounded-xl" />
+                ))}
+              </div>
+            ) : images.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500 dark:text-gray-400 text-lg">
+                  {debouncedSearchQuery 
+                    ? `No images found for "${debouncedSearchQuery}".`
+                    : 'No images in the gallery yet.'}
                 </p>
+                {debouncedSearchQuery && (
+                  <Button
+                    variant="outline"
+                    className="mt-6"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setCurrentPage(1);
+                    }}
+                  >
+                    Clear Search
+                  </Button>
+                )}
               </div>
             ) : (
               <>
@@ -199,11 +277,12 @@ export const GlobalGalleryPage: React.FC = () => {
                           className="relative group cursor-pointer overflow-hidden rounded-xl"
                           onClick={() => setSelectedImage(image)}
                         >
-                          <img
-                            src={image.image_data}
-                            alt={`Generated image ${index + 1}`}
+                          <OptimizedImage
+                            src={image.image_url || image.image_data}
+                            alt={image.image_prompt || 'Generated image'}
                             className="w-full h-auto object-cover rounded-xl transition-transform duration-300 group-hover:scale-105"
-                            loading="lazy"
+                            isThumbnail={true}
+                            fullResolutionSrc={image.image_url}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
                             <div className="w-full flex justify-between items-center">
@@ -220,7 +299,7 @@ export const GlobalGalleryPage: React.FC = () => {
                                 size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleDownload(image.image_data, index);
+                                  handleDownload((image.image_url || image.image_data), index);
                                 }}
                                 leftIcon={<Download className="h-4 w-4" />}
                                 className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
@@ -248,7 +327,20 @@ export const GlobalGalleryPage: React.FC = () => {
                     </Button>
                     
                     <div className="flex items-center space-x-1">
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      {/* Smart Pagination: Show up to 5 page numbers, centered around current page */}
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      return pageNum;
+                    }).map((page) => page && ( // Render button only if pageNum is valid
                         <Button
                           key={page}
                           variant={currentPage === page ? 'primary' : 'outline'}
@@ -257,9 +349,9 @@ export const GlobalGalleryPage: React.FC = () => {
                           disabled={isPageLoading}
                           className={`w-8 ${
                             currentPage === page
-                              ? 'bg-brand-600 text-white'
-                              : 'text-gray-600 dark:text-gray-400'
-                          }`}
+                              ? 'bg-brand-600 text-white hover:bg-brand-700'
+                              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          } transition-colors w-9 h-9 p-0`}
                         >
                           {page}
                         </Button>
@@ -303,10 +395,11 @@ export const GlobalGalleryPage: React.FC = () => {
               <div className="flex flex-col md:flex-row h-full">
                 {/* Image Section */}
                 <div className="w-full md:w-2/3 bg-black p-4 flex items-center justify-center">
-                  <img
-                    src={selectedImage.image_data}
-                    alt="Selected image"
+                  <OptimizedImage
+                    src={selectedImage.image_url || selectedImage.image_data}
+                    alt={selectedImage.image_prompt || 'Generated image'}
                     className="max-w-full max-h-[50vh] md:max-h-[80vh] object-contain rounded-lg"
+                    isThumbnail={false}
                   />
                 </div>
 
@@ -380,7 +473,7 @@ export const GlobalGalleryPage: React.FC = () => {
                   <Button
                     className="w-full mt-6"
                     leftIcon={<Download className="h-4 w-4" />}
-                    onClick={() => handleDownload(selectedImage.image_data, images.indexOf(selectedImage))}
+                    onClick={() => handleDownload(selectedImage.image_url || selectedImage.image_data, images.indexOf(selectedImage))}
                   >
                     Download Image
                   </Button>

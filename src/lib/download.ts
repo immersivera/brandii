@@ -1,9 +1,13 @@
 import JSZip from 'jszip';
 import { BrandKit } from './supabase';
 
-export async function generateBrandKitZip(brandKit: BrandKit, options: { includeLogos: boolean; includeGallery: boolean } = { includeLogos: true, includeGallery: true }): Promise<Blob> {
+export async function generateBrandKitZip(brandKit: BrandKit, options: { 
+  includeLogos: boolean; 
+  includeGallery: boolean;
+  includeAllLogos?: boolean; 
+} = { includeLogos: true, includeGallery: true }): Promise<Blob> {
   const zip = new JSZip();
-  const { includeLogos, includeGallery } = options;
+  const { includeLogos, includeGallery, includeAllLogos } = options;
 
   // Add README.md
   zip.file('README.md', generateReadme(brandKit));
@@ -19,67 +23,102 @@ export async function generateBrandKitZip(brandKit: BrandKit, options: { include
   zip.file('guidelines.md', generateGuidelines(brandKit));
 
   // Add logos if requested and available
-  if (includeLogos) {
+  if ((includeLogos || includeAllLogos) && brandKit.generated_assets?.length) {
     const logosFolder = zip.folder('logos');
     if (logosFolder) {
       try {
-        // Check if there's an uploaded logo
-        const hasUploadedLogo = brandKit.logo.image && brandKit.logo.image.startsWith('http');
-        
-        // Get all logo assets (both selected and concepts)
+        // Get all logo assets
         const logoAssets = (brandKit.generated_assets || []).filter(asset => asset.type === 'logo');
         const selectedLogoAsset = brandKit.logo_selected_asset_id 
           ? logoAssets.find(asset => asset.id === brandKit.logo_selected_asset_id)
           : null;
 
-        // Add the main logo (prefer selected logo, then uploaded logo, then first available logo)
-        if (selectedLogoAsset?.image_data) {
-          // Add selected logo from generated assets
-          const base64Data = selectedLogoAsset.image_data.split(',')[1];
-          if (base64Data) {
-            logosFolder.file('main-logo.png', base64Data, { base64: true });
-          }
-        } else if (hasUploadedLogo) {
-          // Add uploaded logo
-          const logoUrl = brandKit.logo.image as string;
-          if (logoUrl.startsWith('data:')) {
-            // Handle base64 encoded image
-            const base64Data = logoUrl.split(',')[1];
+        // If includeAllLogos is true, include all logos in the logos folder
+        if (includeAllLogos) {
+          await Promise.all(logoAssets.map(async (asset, index) => {
+            try {
+              // Try to use image_url first
+              if (asset.image_url) {
+                const response = await fetch(asset.image_url);
+                if (response.ok) {
+                  const blob = await response.blob();
+                  logosFolder.file(`logo-${index + 1}.png`, blob);
+                  return;
+                }
+              }
+              
+              // Fallback to image_data
+              if (asset.image_data) {
+                const base64Data = asset.image_data.split(',')[1];
+                if (base64Data) {
+                  logosFolder.file(`logo-${index + 1}.png`, base64Data, { base64: true });
+                }
+              }
+            } catch (error) {
+              console.warn(`Could not process logo ${index + 1}:`, error);
+            }
+          }));
+        } 
+        // Original logo handling for includeLogos
+        else if (includeLogos) {
+          // Check if there's an uploaded logo
+          const hasUploadedLogo = brandKit.logo.image && brandKit.logo.image.startsWith('http');
+          
+          // Get all logo assets (both selected and concepts)
+          const logoAssets = (brandKit.generated_assets || []).filter(asset => asset.type === 'logo');
+          const selectedLogoAsset = brandKit.logo_selected_asset_id 
+            ? logoAssets.find(asset => asset.id === brandKit.logo_selected_asset_id)
+            : null;
+
+          // Add the main logo (prefer selected logo, then uploaded logo, then first available logo)
+          if (selectedLogoAsset?.image_data) {
+            // Add selected logo from generated assets
+            const base64Data = selectedLogoAsset.image_data.split(',')[1];
             if (base64Data) {
               logosFolder.file('main-logo.png', base64Data, { base64: true });
             }
-          } else {
-            // Handle URL to image (fetch and add to zip)
-            try {
-              const response = await fetch(logoUrl);
-              const blob = await response.blob();
-              logosFolder.file('main-logo.png', blob);
-            } catch (error) {
-              console.warn('Could not fetch uploaded logo:', error);
-            }
-          }
-        } else if (logoAssets.length > 0 && logoAssets[0].image_data) {
-          // Fallback to first available logo
-          const base64Data = logoAssets[0].image_data.split(',')[1];
-          if (base64Data) {
-            logosFolder.file('main-logo.png', base64Data, { base64: true });
-          }
-        }
-
-        // Add other logo concepts (excluding the main/selected logo)
-        logoAssets
-          .filter(asset => asset !== selectedLogoAsset)
-          .forEach((asset, index) => {
-            try {
-              const base64Data = asset.image_data?.split(',')[1];
+          } else if (hasUploadedLogo) {
+            // Add uploaded logo
+            const logoUrl = brandKit.logo.image as string;
+            if (logoUrl.startsWith('data:')) {
+              // Handle base64 encoded image
+              const base64Data = logoUrl.split(',')[1];
               if (base64Data) {
-                logosFolder.file(`concept-${index + 1}.png`, base64Data, { base64: true });
+                logosFolder.file('main-logo.png', base64Data, { base64: true });
               }
-            } catch (error) {
-              console.warn(`Could not process logo concept ${index + 1}:`, error);
+            } else {
+              // Handle URL to image (fetch and add to zip)
+              try {
+                const response = await fetch(logoUrl);
+                const blob = await response.blob();
+                logosFolder.file('main-logo.png', blob);
+              } catch (error) {
+                console.warn('Could not fetch uploaded logo:', error);
+              }
             }
-          });
+          } else if (logoAssets.length > 0 && logoAssets[0].image_data) {
+            // Fallback to first available logo
+            const base64Data = logoAssets[0].image_data.split(',')[1];
+            if (base64Data) {
+              logosFolder.file('main-logo.png', base64Data, { base64: true });
+            }
+          }
 
+          // Add other logo concepts (excluding the main/selected logo)
+          logoAssets
+            .filter(asset => asset !== selectedLogoAsset)
+            .forEach((asset, index) => {
+              try {
+                const base64Data = asset.image_data?.split(',')[1];
+                if (base64Data) {
+                  logosFolder.file(`concept-${index + 1}.png`, base64Data, { base64: true });
+                }
+              } catch (error) {
+                console.warn(`Could not process logo concept ${index + 1}:`, error);
+              }
+            });
+
+        }
       } catch (error) {
         console.error('Error processing logos:', error);
       }
@@ -91,16 +130,36 @@ export async function generateBrandKitZip(brandKit: BrandKit, options: { include
     const galleryFolder = zip.folder('gallery');
     if (galleryFolder) {
       const galleryAssets = brandKit.generated_assets.filter(asset => asset.type === 'image');
-      galleryAssets.forEach((asset, index) => {
+      
+      // Process each gallery asset
+      await Promise.all(galleryAssets.map(async (asset, index) => {
         try {
-          const base64Data = asset.image_data?.split(',')[1];
-          if (base64Data) {
-            galleryFolder.file(`image-${index + 1}.png`, base64Data, { base64: true });
+          // First try to use image_url if available
+          if (asset.image_url) {
+            try {
+              // Fetch the image from the URL
+              const response = await fetch(asset.image_url);
+              if (response.ok) {
+                const blob = await response.blob();
+                galleryFolder.file(`image-${index + 1}.png`, blob);
+                return;
+              }
+            } catch (error) {
+              console.warn(`Could not fetch image from URL ${asset.image_url}:`, error);
+            }
+          }
+          
+          // Fallback to image_data if URL fetch fails or not available
+          if (asset.image_data) {
+            const base64Data = asset.image_data.split(',')[1];
+            if (base64Data) {
+              galleryFolder.file(`image-${index + 1}.png`, base64Data, { base64: true });
+            }
           }
         } catch (error) {
           console.warn(`Could not process gallery image ${index + 1}:`, error);
         }
-      });
+      }));
     }
   }
 

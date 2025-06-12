@@ -53,7 +53,7 @@ export const BrandCreationPage: React.FC = () => {
       });
       
       toast.success('Brand identity generated successfully!');
-      setStep(2);
+      // setStep(2);
     } catch (error) {
       console.error('Error generating brand identity:', error);
       toast.error('Failed to generate brand identity');
@@ -146,7 +146,8 @@ export const BrandCreationPage: React.FC = () => {
         logo: {
           type: brandDetails.logoStyle || 'wordmark',
           text: brandDetails.name,
-          image: uploadedLogoUrl
+          image: uploadedLogoUrl,
+          personality: brandDetails.adjective,
         },
         typography: brandDetails.typography,
       };
@@ -190,9 +191,20 @@ export const BrandCreationPage: React.FC = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
-              Tell us about your brand
-            </h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
+                Tell us about your brand
+              </h2>
+              <Button
+                  variant="outline"
+                  size='sm'
+                  onClick={handleGenerateWithAI}
+                  leftIcon={<Sparkles className="h-4 w-4" />}
+                  isLoading={isGenerating}
+                >
+                  Generate Suggestions
+                </Button>
+            </div>
             
             <div className="space-y-6">
               <Input
@@ -237,11 +249,10 @@ export const BrandCreationPage: React.FC = () => {
               <div className="pt-4 flex justify-between">
                 <Button
                   variant="outline"
-                  onClick={handleGenerateWithAI}
-                  leftIcon={<Sparkles className="h-4 w-4" />}
-                  isLoading={isGenerating}
+                  onClick={handleStartOver}
+                  leftIcon={<RefreshCw className="h-4 w-4" />}
                 >
-                  Generate with AI
+                  Reset
                 </Button>
                 
                 <Button
@@ -274,7 +285,7 @@ export const BrandCreationPage: React.FC = () => {
                 leftIcon={<RefreshCw className="h-4 w-4" />}
                 isLoading={isGeneratingColors}
               >
-                Generate Colors
+                Generate New Colors
               </Button>
             </div>
             
@@ -368,16 +379,18 @@ export const BrandCreationPage: React.FC = () => {
                 </div>
 
                 {brandDetails.logoChoice === 'ai' && (
+                  <div>
                   <Select
                     label="Logo Style"
                     options={[
                       { value: '', label: 'Select a logo style', disabled: true },
-                      ...LOGO_STYLES.map(style => ({ value: style.id, label: style.name }))
+                      ...LOGO_STYLES.map(style => ({ value: style.id, label: `${style.name}` }))
                     ]}
                     value={brandDetails.logoStyle}
                     onChange={(value) => updateBrandDetails({ logoStyle: value })}
                     helperText="Choose the type of logo that best represents your brand"
                   />
+                  </div>
                 )}
 
                 {brandDetails.logoChoice === 'upload' && (
@@ -528,6 +541,26 @@ export const BrandCreationPage: React.FC = () => {
                         </p>
                       </div>
                     </div>
+
+                      {/*Typography*/}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                            Typography Heading Font
+                          </h4>
+                            <p className="text-gray-700 dark:text-gray-300" style={{ fontFamily: brandDetails.typography.headingFont }}>
+                              {brandDetails.typography.headingFont}
+                            </p>
+                        </div>
+                        <div>
+                            <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                            Typography Body Font
+                            </h4>
+                            <p className="text-gray-700 dark:text-gray-300" style={{ fontFamily: brandDetails.typography.bodyFont }}>
+                              {brandDetails.typography.bodyFont}
+                            </p>
+                        </div>
+                      </div>
                   </div>
                 </CardContent>
               </Card>
@@ -567,7 +600,7 @@ export const BrandCreationPage: React.FC = () => {
                     {isGeneratingLogos ? (
                       <div className="flex flex-col items-center gap-4">
                         <Loader className="h-8 w-8 animate-spin text-brand-600" />
-                        <p className="text-sm text-gray-500">Generating logo options...</p>
+                        <p className="text-sm text-gray-500">Generating logo options...this may take a few seconds.</p>
                       </div>
                     ) : brandDetails.logoChoice === 'upload' && brandDetails.uploadedLogoUrl ? (
                       <img
@@ -575,11 +608,6 @@ export const BrandCreationPage: React.FC = () => {
                         alt="Uploaded logo"
                         className="max-h-32 w-auto"
                       />
-                    ) : brandDetails.logoChoice === 'none' ? (
-                      <div className="text-center text-gray-500">
-                        <p>No logo selected</p>
-                        <p className="text-sm mt-2">Using text-based fallback</p>
-                      </div>
                     ) : (
                       <div 
                         className="text-3xl font-bold"
@@ -592,7 +620,12 @@ export const BrandCreationPage: React.FC = () => {
                   
                   {brandDetails.logoChoice === 'ai' && (
                     <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-                      Click "Complete" to generate AI-powered logo concepts based on your brand details.
+                      Click "Complete" to generate logo concepts based on your brand details.
+                    </p>
+                  )}
+                  {brandDetails.logoChoice === 'none' && (
+                    <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                      This is a text-based substitute for the logo.
                     </p>
                   )}
                 </CardContent>
@@ -600,14 +633,6 @@ export const BrandCreationPage: React.FC = () => {
               
               <div className="pt-4 flex justify-between">
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleStartOver}
-                    leftIcon={<RefreshCw className="h-4 w-4" />}
-                  >
-                    Start Over
-                  </Button>
-
                   <Button
                     variant="outline"
                     onClick={() => setStep(2)}
