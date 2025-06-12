@@ -6,8 +6,9 @@ import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Textarea } from '../components/ui/Textarea';
 import { Select } from '../components/ui/Select';
+import { useUser } from '../context/UserContext';
 import { ArrowLeft, Sparkles, Download, X, Calendar, Clock, Upload, Image as ImageIcon, Trash2 } from 'lucide-react';
-import { BrandKit, fetchBrandKitById, saveGeneratedAssets } from '../lib/supabase';
+import { BrandKitForGeneration, fetchBrandKitForGeneration, saveGeneratedAssets } from '../lib/supabase';
 import { generateImageAssets, type ImageSize } from '../lib/openai';
 import toast from 'react-hot-toast';
 
@@ -26,7 +27,9 @@ const IMAGE_COUNTS = [
 export const ImageGeneratorPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
+  const { profile } = useUser();
+  const [brandKit, setBrandKit] = useState<BrandKitForGeneration | null>(null);
+  // const [brandKitAssets, setBrandKitAssets] = useState<any>(null);
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -36,6 +39,9 @@ export const ImageGeneratorPage: React.FC = () => {
   const [imageCount, setImageCount] = useState<number>(1);
   const [promptImages, setPromptImages] = useState<Array<{ url: string; file: File }>>([]);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  
+  // Check if user is on free plan (no active subscription)
+  const isFreePlan = !profile?.subscription_status || profile.subscription_status !== 'active';
   
   // Brand asset controls
   const [includeBrandAssets, setIncludeBrandAssets] = useState(true);
@@ -49,7 +55,7 @@ export const ImageGeneratorPage: React.FC = () => {
       if (!id) return;
       
       try {
-        const kit = await fetchBrandKitById(id);
+        const kit = await fetchBrandKitForGeneration(id);
         if (kit) {
           setBrandKit(kit);
           setPrompt(`Create an image for ${kit.name}, a ${kit.type} brand. ${kit.description}`);
@@ -67,6 +73,26 @@ export const ImageGeneratorPage: React.FC = () => {
 
     loadBrandKit();
   }, [id, navigate]);
+
+  // useEffect(() => {
+  //   const loadBrandKitAssets = async () => {
+  //     if (!id) return;
+      
+  //     try {
+  //       const assets = await fetchBrandKitById(id);
+  //       if (assets) {
+  //         setBrandKitAssets([assets]);
+  //       } else {
+  //         toast.error('Brand kit assets not found');
+  //       }
+  //     } catch (error) {
+  //       console.error('Error loading brand kit assets:', error);
+  //       toast.error('Failed to load brand kit assets');
+  //     }
+  //   };
+
+  //   loadBrandKitAssets();
+  // }, []);
 
   const getBrandAssetsPrompt = () => {
     if (!brandKit || !includeBrandAssets) return '';
@@ -100,15 +126,16 @@ export const ImageGeneratorPage: React.FC = () => {
       return brandKit.logo.image;
     }
 
+    
     // Then check for AI-generated logo
-    if (brandKit.generated_assets?.length && brandKit.logo_selected_asset_id) {
-      const selectedAsset = brandKit.generated_assets.find(
-        asset => asset.id === brandKit.logo_selected_asset_id && asset.type === 'logo'
-      );
-      if (selectedAsset?.image_data) {
-        return selectedAsset.image_data;
-      }
-    }
+    // if (brandKitAssets?.length && brandKitAssets.logo_selected_asset_id) {
+    //   const selectedAsset = brandKitAssets.find(
+    //     (asset: any) => asset.id === brandKitAssets.logo_selected_asset_id && asset.type === 'logo'
+    //   );
+    //   if (selectedAsset?.image_data) {
+    //     return selectedAsset.image_data;
+    //   }
+    // }
 
     return null;
   };
@@ -259,9 +286,6 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
       const brandAssetsPrompt = getBrandAssetsPrompt();
       const fullPrompt = `${prompt.trim()}\n\n${brandAssetsPrompt}`.trim();
 
-      console.log('Sending to API with prompt:', fullPrompt);
-      console.log('Images being sent to API:', imagesForApi);
-
       const images = await generateImageAssets(
         fullPrompt,
         imagesForApi.length > 0 ? imagesForApi : undefined,
@@ -326,11 +350,11 @@ if (isLoading) {
   );
 }
 
-if (!brandKit) return null;
-
-const hasLogo = (brandKit.logo_selected_asset_id && brandKit.generated_assets?.some(
-  asset => asset.id === brandKit.logo_selected_asset_id
-)) || !!brandKit.logo?.image;
+// if (!brandKitAssets) return null;
+const hasLogo = brandKit?.logo?.image;
+// const hasLogo = (brandKitAssets.logo_selected_asset_id && brandKitAssets.generated_assets?.some(
+//   (asset: any) => asset.id === brandKitAssets.logo_selected_asset_id
+// )) || !!brandKitAssets.logo?.image;
 
 return (
   <Layout>
@@ -349,7 +373,7 @@ return (
                 Back to Brand Kit
               </Button>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                Generate Images for {brandKit.name}
+                Generate Images for {brandKit?.name || 'Brand Kit'}
               </h1>
               <p className="text-gray-600 dark:text-gray-400">
                 Create custom images that match your brand identity
@@ -377,13 +401,28 @@ return (
                     helperText="Choose the dimensions for your generated image"
                   />
 
-                  <Select
-                    label="Number of Images"
-                    options={IMAGE_COUNTS}
-                    value={String(imageCount)}
-                    onChange={(value) => setImageCount(Number(value))}
-                    helperText="Choose how many images to generate"
-                  />
+                  <div className="relative">
+                    <Select
+                      label="Number of Images"
+                      options={isFreePlan ? [IMAGE_COUNTS[0]] : IMAGE_COUNTS}
+                      value={String(imageCount)}
+                      onChange={(value) => setImageCount(Number(value))}
+                      helperText={isFreePlan ? 'Upgrade to Pro to generate multiple images at once' : 'Choose how many images to generate'}
+                      disabled={isFreePlan}
+                    />
+                    {isFreePlan && (
+                      <div className="absolute -bottom-6 right-0">
+                        <Button 
+                          variant="link" 
+                          size="sm" 
+                          className="text-xs p-0 h-auto"
+                          onClick={() => navigate('/profile')}
+                        >
+                          Upgrade to Pro
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Image Upload Section */}

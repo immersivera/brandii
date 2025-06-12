@@ -6,7 +6,7 @@ import { Card, CardContent } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Search, Plus, Trash2, Palette, ChevronLeft, ChevronRight, Image } from 'lucide-react';
 import { fetchBrandKits, BrandKit, deleteBrandKit } from '../lib/supabase';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useBrand } from '../context/BrandContext';
 import toast from 'react-hot-toast';
 import { useDebounce } from '../lib/utils';
@@ -20,10 +20,31 @@ export const LibraryPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { updateBrandDetails } = useBrand();
   
+  // Initialize state from URL params on component mount
+  useEffect(() => {
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const search = searchParams.get('search') || '';
+    
+    setCurrentPage(isNaN(page) ? 1 : page);
+    setSearchQuery(search);
+  }, []);
+
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
+  // Update URL when search or page changes
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (currentPage > 1) params.set('page', currentPage.toString());
+    if (debouncedSearchQuery) params.set('search', debouncedSearchQuery);
+    
+    // Replace the current entry in the history stack instead of pushing a new one
+    navigate(`?${params.toString()}`, { replace: true });
+  }, [currentPage, debouncedSearchQuery, navigate]);
+
+  // Fetch brand kits when page or search changes
   useEffect(() => {
     const loadBrandKits = async () => {
       try {
@@ -46,6 +67,18 @@ export const LibraryPage: React.FC = () => {
     loadBrandKits();
   }, [currentPage, debouncedSearchQuery]);
 
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    // Reset to first page when searching
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    // Scroll to top of the page
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleDeleteBrandKit = async (id: string) => {
     try {
       await deleteBrandKit(id);
@@ -59,7 +92,7 @@ export const LibraryPage: React.FC = () => {
       
       // If the current page is empty and it's not the first page, go to the previous page
       if (kits.length === 0 && currentPage > 1) {
-        setCurrentPage(currentPage - 1);
+        handlePageChange(currentPage - 1);
       } else {
         setBrandKits(kits);
         setTotalItems(totalCount);
@@ -134,16 +167,6 @@ export const LibraryPage: React.FC = () => {
 
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleSearch = (value: string) => {
-    setSearchQuery(value);
-    setCurrentPage(1); // Reset to first page when searching
-  };
-
   if (isLoading) {
     return (
       <Layout>
@@ -177,7 +200,7 @@ export const LibraryPage: React.FC = () => {
                 <Input
                   placeholder="Search brand kits..."
                   value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
+                  onChange={handleSearchChange}
                   leftIcon={<Search className="h-4 w-4 text-gray-500" />}
                   className="w-full md:w-auto h-8"
                 />
@@ -205,7 +228,7 @@ export const LibraryPage: React.FC = () => {
                     <Button
                       variant="outline"
                       className="mt-4"
-                      onClick={() => handleSearch('')}
+                      onClick={() => handleSearchChange({ target: { value: '' } } as any)}
                     >
                       Clear Search
                     </Button>
