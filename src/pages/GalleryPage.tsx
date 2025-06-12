@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { ArrowLeft, Download, Plus, X, Calendar, Clock, Trash2, MessageSquare, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -22,6 +22,7 @@ export const GalleryPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [brandKit, setBrandKit] = useState<any>(null);
+  const [searchParams] = useSearchParams();
 
   const breakpointColumns = {
     default: 4,
@@ -31,6 +32,27 @@ export const GalleryPage: React.FC = () => {
     768: 2,
     640: 1
   };
+
+  // Initialize currentPage from URL params
+  useEffect(() => {
+    const pageFromUrl = parseInt(searchParams.get('page') || '1', 10);
+    if (!isNaN(pageFromUrl) && pageFromUrl > 0) {
+      setCurrentPage(pageFromUrl);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only on mount, searchParams should be stable
+
+  // Update URL when currentPage changes
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams);
+    if (currentPage > 1) {
+      params.set('page', currentPage.toString());
+    } else {
+      params.delete('page');
+    }
+    navigate(`?${params.toString()}`, { replace: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, navigate]); // searchParams removed to avoid loop with its own update
 
   useEffect(() => {
     const fetchBrandKitDetails = async () => {
