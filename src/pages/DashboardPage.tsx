@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
@@ -19,10 +19,30 @@ export const DashboardPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   
-  const handleSearch = (value: string) => {
-    setSearchQuery(value);
+  // Initialize state from URL params on component mount
+  useEffect(() => {
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const search = searchParams.get('search') || '';
+    
+    setCurrentPage(isNaN(page) ? 1 : page);
+    setSearchQuery(search);
+  }, []);
+
+  // Update URL when search or page changes
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (currentPage > 1) params.set('page', currentPage.toString());
+    if (debouncedSearchQuery) params.set('search', debouncedSearchQuery);
+    
+    // Replace the current entry in the history stack instead of pushing a new one
+    navigate(`?${params.toString()}`, { replace: true });
+  }, [currentPage, debouncedSearchQuery, navigate]);
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
     setCurrentPage(1); // Reset to first page when searching
   };
 
@@ -98,32 +118,23 @@ export const DashboardPage: React.FC = () => {
       <div className="min-h-screen bg-white dark:bg-gray-900 py-12">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-6xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                  Create Brand Images
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Select a brand kit to generate new images
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">My Brand Kits</h1>
+                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                  {totalItems} {totalItems === 1 ? 'kit' : 'kits'} found
                 </p>
               </div>
               
-              <div className="flex space-x-4">
+              <div className="relative w-full md:w-80">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
+                  type="text"
                   placeholder="Search brand kits..."
+                  className="pl-10 w-full"
                   value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  leftIcon={<Search className="h-4 w-4 text-gray-500" />}
-                  className="w-full md:w-auto h-8"
+                  onChange={handleSearch}
                 />
-                <Button
-                  size="sm"
-                  onClick={() => navigate('/create/new')}
-                  leftIcon={<Plus className="h-4 w-4" />}
-                  className="min-w-40"
-                >
-                  New Kit
-                </Button>
               </div>
             </div>
 
@@ -227,7 +238,7 @@ export const DashboardPage: React.FC = () => {
                 </div>
 
                 {totalPages > 1 && (
-                  <div className="mt-8 flex justify-center items-center space-x-2">
+                  <div className="mt-8 flex justify-center space-x-2">
                     <Button
                       variant="outline"
                       size="sm"
@@ -238,23 +249,31 @@ export const DashboardPage: React.FC = () => {
                       Previous
                     </Button>
                     
-                    <div className="flex items-center space-x-1">
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      // Show pages around current page
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      return (
                         <Button
-                          key={page}
-                          variant={currentPage === page ? 'primary' : 'outline'}
+                          key={pageNum}
+                          variant={currentPage === pageNum ? 'primary' : 'outline'}
                           size="sm"
-                          onClick={() => handlePageChange(page)}
-                          className={`w-8 ${
-                            currentPage === page
-                              ? 'bg-brand-600 text-white'
-                              : 'text-gray-600 dark:text-gray-400'
-                          }`}
+                          className="h-9 w-9 p-0"
+                          onClick={() => handlePageChange(pageNum)}
                         >
-                          {page}
+                          {pageNum}
                         </Button>
-                      ))}
-                    </div>
+                      );
+                    })}
                     
                     <Button
                       variant="outline"
