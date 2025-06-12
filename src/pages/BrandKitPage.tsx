@@ -29,6 +29,7 @@ import {
 interface DownloadOptions {
   brandKit: boolean;
   allImages: boolean;
+  allLogos: boolean;
   selectedImages: boolean;
 }
 
@@ -85,6 +86,7 @@ export const BrandKitPage: React.FC = () => {
   const [downloadOptions, setDownloadOptions] = useState<DownloadOptions>({
     brandKit: true,
     allImages: false,
+    allLogos: false,
     selectedImages: false
   });
   // Add state for selected images
@@ -264,7 +266,8 @@ export const BrandKitPage: React.FC = () => {
       // Generate the zip with selected options
       const zipBlob = await generateBrandKitZip(filteredBrandKit, {
         includeLogos: options.brandKit || options.allImages,
-        includeGallery: options.allImages || options.selectedImages
+        includeGallery: options.allImages || options.selectedImages,
+        includeAllLogos: options.allLogos
       });
       
       const url = URL.createObjectURL(zipBlob);
@@ -273,14 +276,14 @@ export const BrandKitPage: React.FC = () => {
       
       // Set filename based on selected options
       let filename = brandKit.name.toLowerCase().replace(/\s+/g, '-');
-      if (options.brandKit && !options.allImages && !options.selectedImages) {
-        filename += '-brand-kit';
+      if (options.allLogos) {
+        filename += '-all-logos';
       } else if (options.allImages) {
         filename += '-all-assets';
       } else if (options.selectedImages) {
         filename += `-${selectedImageCount}-selected-images`;
       } else {
-        filename += '-download';
+        filename += '-brand-kit';
       }
       
       link.download = `${filename}.zip`;
@@ -336,6 +339,7 @@ export const BrandKitPage: React.FC = () => {
             onClick={() => setDownloadOptions({
               brandKit: true,
               allImages: false,
+              allLogos: false,
               selectedImages: false
             })}
           >
@@ -373,6 +377,7 @@ export const BrandKitPage: React.FC = () => {
             onClick={() => setDownloadOptions({
               brandKit: false,
               allImages: true,
+              allLogos: false,
               selectedImages: false
             })}
           >
@@ -400,6 +405,44 @@ export const BrandKitPage: React.FC = () => {
             </div>
           </div>
 
+          {/* All Logos Option */}
+          <div 
+            className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+              downloadOptions.allLogos 
+                ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' 
+                : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+            }`}
+            onClick={() => setDownloadOptions({
+              brandKit: false,
+              allImages: false,
+              allLogos: true,
+              selectedImages: false
+            })}
+          >
+            <div className="flex items-start">
+              <div className={`flex-shrink-0 h-5 w-5 rounded-full border flex items-center justify-center mr-3 mt-0.5 ${
+                downloadOptions.allLogos 
+                  ? 'border-brand-500 bg-brand-500 text-white' 
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}>
+                {downloadOptions.allLogos && (
+                  <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-900 dark:text-white flex items-center">
+                  <ImageIcon className="h-4 w-4 mr-2 text-brand-500" />
+                  All Logos
+                </h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Download all generated logos
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Selected Images Option */}
           <div className="border rounded-lg overflow-hidden">
             <div 
@@ -411,6 +454,7 @@ export const BrandKitPage: React.FC = () => {
               onClick={() => setDownloadOptions({
                 brandKit: false,
                 allImages: false,
+                allLogos: false,
                 selectedImages: true
               })}
             >
@@ -512,7 +556,7 @@ export const BrandKitPage: React.FC = () => {
           </Button>
           <Button 
             onClick={() => handleDownload(downloadOptions)}
-            disabled={isDownloading || (!downloadOptions.brandKit && !downloadOptions.allImages && !downloadOptions.selectedImages)}
+            disabled={isDownloading || (!downloadOptions.brandKit && !downloadOptions.allImages && !downloadOptions.allLogos && !downloadOptions.selectedImages)}
             isLoading={isDownloading}
           >
             {isDownloading ? 'Preparing Download...' : 'Download'}
@@ -867,7 +911,9 @@ export const BrandKitPage: React.FC = () => {
       <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="font-medium text-gray-900 dark:text-white">Assets Needing Conversion</h3>
+            <h3 className="font-medium text-gray-500 dark:text-gray-400 mb-1">
+              Assets Needing Conversion
+            </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               These assets need to be converted for better performance
             </p>
