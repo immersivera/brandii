@@ -91,16 +91,36 @@ export async function generateBrandKitZip(brandKit: BrandKit, options: { include
     const galleryFolder = zip.folder('gallery');
     if (galleryFolder) {
       const galleryAssets = brandKit.generated_assets.filter(asset => asset.type === 'image');
-      galleryAssets.forEach((asset, index) => {
+      
+      // Process each gallery asset
+      await Promise.all(galleryAssets.map(async (asset, index) => {
         try {
-          const base64Data = asset.image_data?.split(',')[1];
-          if (base64Data) {
-            galleryFolder.file(`image-${index + 1}.png`, base64Data, { base64: true });
+          // First try to use image_url if available
+          if (asset.image_url) {
+            try {
+              // Fetch the image from the URL
+              const response = await fetch(asset.image_url);
+              if (response.ok) {
+                const blob = await response.blob();
+                galleryFolder.file(`image-${index + 1}.png`, blob);
+                return;
+              }
+            } catch (error) {
+              console.warn(`Could not fetch image from URL ${asset.image_url}:`, error);
+            }
+          }
+          
+          // Fallback to image_data if URL fetch fails or not available
+          if (asset.image_data) {
+            const base64Data = asset.image_data.split(',')[1];
+            if (base64Data) {
+              galleryFolder.file(`image-${index + 1}.png`, base64Data, { base64: true });
+            }
           }
         } catch (error) {
           console.warn(`Could not process gallery image ${index + 1}:`, error);
         }
-      });
+      }));
     }
   }
 
