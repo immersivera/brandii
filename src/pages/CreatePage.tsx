@@ -5,7 +5,7 @@ import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Plus, Image, ArrowRight } from 'lucide-react';
-import { fetchBrandKits } from '../lib/supabase';
+import { checkUserHasBrandKit } from '../lib/supabase';
 import { useUser } from '../context/UserContext';
 import toast from 'react-hot-toast';
 import { useBrand } from '../context/BrandContext';
@@ -21,8 +21,9 @@ export const CreatePage: React.FC = () => {
       if (!userId) return;
 
       try {
-        const { data } = await fetchBrandKits();
-        setHasExistingBrandKits(data.length > 0);
+        const hasBrandKit = await checkUserHasBrandKit();
+        console.log('hasBrandKit:', hasBrandKit);
+        setHasExistingBrandKits(hasBrandKit);
       } catch (error) {
         console.error('Error checking brand kits:', error);
         toast.error('Failed to check existing brand kits');

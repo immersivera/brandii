@@ -1,16 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
+import { LogoGenerationModal } from '../components/LogoGenerationModal';
 import { useBrand } from '../context/BrandContext';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardFooter } from '../components/ui/Card';
-import { ArrowLeft, ArrowRight, Download, Copy, Share2, Trash2, Image as ImageIcon, Plus, Sparkles, Upload, Palette, X, FileText, FileImage } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  ArrowRight, 
+  Check, 
+  Copy, 
+  Download, 
+  FileImage, 
+  FileText, 
+  Image as ImageIcon, 
+  Loader2, 
+  Palette, 
+  Plus, 
+  Share2, 
+  Sparkles, 
+  Trash2, 
+  Upload, 
+  X 
+} from 'lucide-react';
 
 // Add this interface for download options
 interface DownloadOptions {
   brandKit: boolean;
   allImages: boolean;
+  allLogos: boolean;
   selectedImages: boolean;
 }
 
@@ -18,7 +37,7 @@ interface DownloadOptions {
 interface SelectedImages {
   [key: string]: boolean;
 }
-import { BrandKit, fetchBrandKitById, deleteBrandKit, updateBrandKit, saveGeneratedAssets, deleteGeneratedAsset } from '../lib/supabase';
+import { BrandKit, fetchBrandKitById, deleteBrandKit, updateBrandKit, saveGeneratedAssets, deleteGeneratedAsset, uploadBase64Image, updateGeneratedAsset, GeneratedAsset } from '../lib/supabase';
 import { generateLogoImages } from '../lib/openai';
 import { generateBrandKitZip } from '../lib/download';
 import toast from 'react-hot-toast';
@@ -30,15 +49,44 @@ export const BrandKitPage: React.FC = () => {
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [isGeneratingLogos, setIsGeneratingLogos] = useState(false);
   const [isDeletingLogo, setIsDeletingLogo] = useState<string | null>(null);
   const [isDeletingAllLogos, setIsDeletingAllLogos] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isSelectingLogo, setIsSelectingLogo] = useState<string | null>(null);
+  const [isGeneratingLogos, setIsGeneratingLogos] = useState(false);
+  const [showLogoModal, setShowLogoModal] = useState(false);
+  const [conversionProgress, setConversionProgress] = useState<{[key: string]: 'pending' | 'converting' | 'done' | 'error'}>({});
   const [showDownloadOptions, setShowDownloadOptions] = useState(false);
+  
+  // Track if any conversion is in progress
+  const isConverting = Object.values(conversionProgress).some(
+    status => status === 'converting'
+  );
+  
+  // Clean up conversion progress when no longer converting
+  useEffect(() => {
+    if (!isConverting && Object.keys(conversionProgress).length > 0) {
+      // Keep only the successful conversions for a short while
+      const timer = setTimeout(() => {
+        setConversionProgress(prev => {
+          // Only clear completed or error states, keep pending states
+          const newProgress = { ...prev };
+          Object.entries(prev).forEach(([id, status]) => {
+            if (status === 'done' || status === 'error') {
+              delete newProgress[id];
+            }
+          });
+          return newProgress;
+        });
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isConverting, conversionProgress]);
   const [downloadOptions, setDownloadOptions] = useState<DownloadOptions>({
     brandKit: true,
     allImages: false,
+    allLogos: false,
     selectedImages: false
   });
   // Add state for selected images
@@ -47,16 +95,16 @@ export const BrandKitPage: React.FC = () => {
   const { updateBrandDetails } = useBrand();
   const popupRef = React.useRef<HTMLDivElement>(null);
 
-  // Initialize selected images when brand kit loads
+  // Check for unconverted assets when brand kit loads
   useEffect(() => {
-    if (brandKit?.generated_assets) {
-      const initialSelected: SelectedImages = {};
-      brandKit.generated_assets
-        .filter(asset => asset.type === 'image')
-        .forEach(asset => {
-          initialSelected[asset.id] = true;
-        });
-      setSelectedImages(initialSelected);
+    if (!brandKit?.generated_assets) return;
+    
+    const hasUnconvertedAssets = brandKit.generated_assets.some(
+      asset => !asset.image_url
+    );
+    
+    if (hasUnconvertedAssets) {
+      toast('Found assets that need conversion. Please convert them below.');
     }
   }, [brandKit]);
 
@@ -83,6 +131,75 @@ export const BrandKitPage: React.FC = () => {
       ...prev,
       [id]: !prev[id]
     }));
+  };
+
+  // Convert a single asset to uploaded file
+  const convertAsset = async (asset: GeneratedAsset) => {
+    if (!brandKit?.generated_assets) return;
+
+    try {
+      // Set initial progress
+      setConversionProgress(prev => ({
+        ...prev,
+        [asset.id]: 'converting'
+      }));
+
+      // Upload the base64 image to the appropriate bucket based on asset type
+      const imageUrl = await uploadBase64Image(
+        '', 
+        brandKit.id,
+        `${asset.id}.png`,
+        asset.type as 'logo' | 'image'
+      );
+      console.log('Image URL:', imageUrl);
+      
+      // Create updates object with correct types
+      const updates: Partial<GeneratedAsset> = {
+        image_url: imageUrl,
+      };
+      
+      console.log('Updating asset with:', updates);
+      
+      // Update the database
+      const updatedAsset = await updateGeneratedAsset(asset.id, updates);
+      console.log('Updated Asset in DB:', updatedAsset);
+      
+      // Update local state
+      setBrandKit(prev => {
+        if (!prev || !prev.generated_assets) return prev;
+        
+        return {
+          ...prev,
+          generated_assets: prev.generated_assets.map(a => 
+            a.id === asset.id ? { ...a, ...updates } : a
+          )
+        };
+      });
+      
+      setConversionProgress(prev => ({
+        ...prev,
+        [asset.id]: 'done'
+      }));
+      
+      toast.success(`Converted ${asset.type} ${asset.id.substring(0, 6)}...`);
+    } catch (error) {
+      console.error(`Error converting ${asset.type} ${asset.id}:`, error);
+      setConversionProgress(prev => ({
+        ...prev,
+        [asset.id]: 'error'
+      }));
+      toast.error(`Failed to convert ${asset.type} ${asset.id.substring(0, 6)}...`);
+    }
+  };
+
+  // Get all assets that need conversion
+  const getUnconvertedAssets = () => {
+    if (!brandKit?.generated_assets) return [];
+    
+    return brandKit.generated_assets.filter(
+      (asset): asset is GeneratedAsset => 
+        !asset.image_url
+    );
   };
 
   // Toggle select all images
@@ -149,7 +266,8 @@ export const BrandKitPage: React.FC = () => {
       // Generate the zip with selected options
       const zipBlob = await generateBrandKitZip(filteredBrandKit, {
         includeLogos: options.brandKit || options.allImages,
-        includeGallery: options.allImages || options.selectedImages
+        includeGallery: options.allImages || options.selectedImages,
+        includeAllLogos: options.allLogos
       });
       
       const url = URL.createObjectURL(zipBlob);
@@ -158,14 +276,14 @@ export const BrandKitPage: React.FC = () => {
       
       // Set filename based on selected options
       let filename = brandKit.name.toLowerCase().replace(/\s+/g, '-');
-      if (options.brandKit && !options.allImages && !options.selectedImages) {
-        filename += '-brand-kit';
+      if (options.allLogos) {
+        filename += '-all-logos';
       } else if (options.allImages) {
         filename += '-all-assets';
       } else if (options.selectedImages) {
         filename += `-${selectedImageCount}-selected-images`;
       } else {
-        filename += '-download';
+        filename += '-brand-kit';
       }
       
       link.download = `${filename}.zip`;
@@ -190,222 +308,293 @@ export const BrandKitPage: React.FC = () => {
     setShowDownloadOptions(true);
   };
 
-  const DownloadOptionsPopup = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <motion.div 
-        ref={popupRef}
-        className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto"
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        transition={{ duration: 0.2 }}
-      >
-        <div className="flex justify-between items-center mb-4 sticky top-0 bg-white dark:bg-gray-800 pb-4 z-10">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Download Options</h3>
-          <button 
-            onClick={() => setShowDownloadOptions(false)}
-            className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        
-        <div className="space-y-4">
-          {/* Brand Kit Option */}
-          <div 
-            className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-              downloadOptions.brandKit 
-                ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' 
-                : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-            }`}
-            onClick={() => setDownloadOptions({
-              brandKit: true,
-              allImages: false,
-              selectedImages: false
-            })}
-          >
-            <div className="flex items-start">
-              <div className={`flex-shrink-0 h-5 w-5 rounded-full border flex items-center justify-center mr-3 mt-0.5 ${
-                downloadOptions.brandKit 
-                  ? 'border-brand-500 bg-brand-500 text-white' 
-                  : 'border-gray-300 dark:border-gray-600'
-              }`}>
-                {downloadOptions.brandKit && (
-                  <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                )}
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900 dark:text-white flex items-center">
-                  <FileText className="h-4 w-4 mr-2 text-brand-500" />
-                  Brand Kit (Style Guide)
-                </h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Includes logo, color palette, typography, and brand guidelines
-                </p>
-              </div>
-            </div>
-          </div>
+  const DownloadOptionsPopup = React.memo(({ 
+    onClose, 
+    onDownload, 
+    downloadOptions, 
+    setDownloadOptions,
+    selectedImageCount,
+    isDownloading,
+    selectedImages,
+    toggleImageSelection,
+    generatedAssets
+  }: {
+    onClose: () => void;
+    onDownload: (options: DownloadOptions) => void;
+    downloadOptions: DownloadOptions;
+    setDownloadOptions: React.Dispatch<React.SetStateAction<DownloadOptions>>;
+    selectedImageCount: number;
+    isDownloading: boolean;
+    selectedImages: Record<string, boolean>;
+    toggleImageSelection: (id: string) => void;
+    generatedAssets: any[];
+  }) => {
+    // Memoize the options toggles to prevent recreating functions on each render
+    const toggleBrandKit = () => {
+      setDownloadOptions(prev => ({
+        ...prev,
+        brandKit: !prev.brandKit,
+        allImages: false,
+        allLogos: false,
+        selectedImages: false
+      }));
+    };
 
-          {/* All Images Option */}
-          <div 
-            className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-              downloadOptions.allImages 
-                ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' 
-                : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-            }`}
-            onClick={() => setDownloadOptions({
-              brandKit: false,
-              allImages: true,
-              selectedImages: false
-            })}
-          >
-            <div className="flex items-start">
-              <div className={`flex-shrink-0 h-5 w-5 rounded-full border flex items-center justify-center mr-3 mt-0.5 ${
-                downloadOptions.allImages 
-                  ? 'border-brand-500 bg-brand-500 text-white' 
-                  : 'border-gray-300 dark:border-gray-600'
-              }`}>
-                {downloadOptions.allImages && (
-                  <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                )}
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900 dark:text-white flex items-center">
-                  <FileImage className="h-4 w-4 mr-2 text-brand-500" />
-                  All Generated Images
-                </h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Download all generated gallery images
-                </p>
-              </div>
-            </div>
-          </div>
+    const toggleAllImages = () => {
+      setDownloadOptions(prev => ({
+        ...prev,
+        brandKit: false,
+        allImages: !prev.allImages,
+        allLogos: false,
+        selectedImages: false
+      }));
+    };
 
-          {/* Selected Images Option */}
-          <div className="border rounded-lg overflow-hidden">
-            <div 
-              className={`p-4 cursor-pointer transition-colors ${
-                downloadOptions.selectedImages 
-                  ? 'border-b border-brand-500 bg-brand-50 dark:bg-brand-900/20' 
-                  : 'border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-              }`}
-              onClick={() => setDownloadOptions({
-                brandKit: false,
-                allImages: false,
-                selectedImages: true
-              })}
-            >
-              <div className="flex items-start">
-                <div className={`flex-shrink-0 h-5 w-5 rounded-full border flex items-center justify-center mr-3 mt-0.5 ${
-                  downloadOptions.selectedImages 
-                    ? 'border-brand-500 bg-brand-500 text-white' 
-                    : 'border-gray-300 dark:border-gray-600'
-                }`}>
-                  {downloadOptions.selectedImages && (
-                    <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between items-start">
-                    <h4 className="font-medium text-gray-900 dark:text-white flex items-center">
-                      <FileImage className="h-4 w-4 mr-2 text-brand-500" />
-                      Selected Images
-                    </h4>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {selectedImageCount} of {totalImageCount} selected
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    Choose specific images to download
-                  </p>
-                </div>
-              </div>
-            </div>
+    const toggleAllLogos = () => {
+      setDownloadOptions(prev => ({
+        ...prev,
+        brandKit: false,
+        allImages: false,
+        allLogos: !prev.allLogos,
+        selectedImages: false
+      }));
+    };
 
-            {/* Image Selection Grid */}
-            {downloadOptions.selectedImages && brandKit?.generated_assets && (
-              <div className="p-4 bg-gray-50 dark:bg-gray-700/30">
-                <div className="mb-3 flex justify-between items-center">
+    const toggleSelectedImages = () => {
+      setDownloadOptions(prev => ({
+        ...prev,
+        brandKit: false,
+        allImages: false,
+        allLogos: false,
+        selectedImages: !prev.selectedImages
+      }));
+    };
+
+    return (
+      <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={onClose}></div>
+          
+          <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+          
+          <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full sm:p-6">
+            <div className="sm:flex sm:items-start">
+              <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
+                    Download Options
+                  </h3>
                   <button
                     type="button"
-                    onClick={toggleSelectAllImages}
-                    className="text-sm text-brand-600 dark:text-brand-400 hover:underline"
+                    className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+                    onClick={onClose}
                   >
-                    {selectedImageCount === totalImageCount ? 'Deselect All' : 'Select All'}
+                    <span className="sr-only">Close</span>
+                    <X className="h-6 w-6" aria-hidden="true" />
                   </button>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {selectedImageCount} selected
-                  </span>
                 </div>
-                <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto p-1">
-                  {brandKit.generated_assets
-                    .filter(asset => asset.type === 'image')
-                    .map(asset => (
-                      <div 
-                        key={asset.id}
-                        className={`relative aspect-square rounded-md overflow-hidden border-2 ${
-                          selectedImages[asset.id] 
-                            ? 'border-brand-500 ring-2 ring-brand-500' 
-                            : 'border-transparent'
-                        }`}
-                        onClick={() => toggleImageSelection(asset.id)}
-                      >
-                        <img 
-                          src={asset.image_data} 
-                          alt={`Generated image ${asset.id}`}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className={`absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 transition-opacity ${
-                          selectedImages[asset.id] ? 'opacity-100' : 'opacity-0 hover:opacity-100'
+
+                <div className="space-y-4">
+                  {/* Brand Kit Option */}
+                  <div 
+                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                      downloadOptions.brandKit 
+                        ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' 
+                        : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                    }`}
+                    onClick={toggleBrandKit}
+                  >
+                    <div className="flex items-start">
+                      <div className={`flex-shrink-0 h-5 w-5 rounded-full border flex items-center justify-center mr-3 mt-0.5 ${
+                        downloadOptions.brandKit 
+                          ? 'border-brand-500 bg-brand-500 text-white' 
+                          : 'border-gray-300 dark:border-gray-600'
+                      }`}>
+                        {downloadOptions.brandKit && (
+                          <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-900 dark:text-white flex items-center">
+                          <FileText className="h-4 w-4 mr-2 text-brand-500" />
+                          Brand Kit (Style Guide)
+                        </h4>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                          Includes logo, color palette, typography, and brand guidelines
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* All Images Option */}
+                  <div 
+                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                      downloadOptions.allImages 
+                        ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' 
+                        : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                    }`}
+                    onClick={toggleAllImages}
+                  >
+                    <div className="flex items-start">
+                      <div className={`flex-shrink-0 h-5 w-5 rounded-full border flex items-center justify-center mr-3 mt-0.5 ${
+                        downloadOptions.allImages 
+                          ? 'border-brand-500 bg-brand-500 text-white' 
+                          : 'border-gray-300 dark:border-gray-600'
+                      }`}>
+                        {downloadOptions.allImages && (
+                          <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-900 dark:text-white flex items-center">
+                          <FileImage className="h-4 w-4 mr-2 text-brand-500" />
+                          All Generated Images
+                        </h4>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                          Download all generated gallery images
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* All Logos Option */}
+                  <div 
+                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                      downloadOptions.allLogos 
+                        ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' 
+                        : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                    }`}
+                    onClick={toggleAllLogos}
+                  >
+                    <div className="flex items-start">
+                      <div className={`flex-shrink-0 h-5 w-5 rounded-full border flex items-center justify-center mr-3 mt-0.5 ${
+                        downloadOptions.allLogos 
+                          ? 'border-brand-500 bg-brand-500 text-white' 
+                          : 'border-gray-300 dark:border-gray-600'
+                      }`}>
+                        {downloadOptions.allLogos && (
+                          <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-900 dark:text-white flex items-center">
+                          <ImageIcon className="h-4 w-4 mr-2 text-brand-500" />
+                          All Logos
+                        </h4>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                          Download all generated logos
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Selected Images Option */}
+                  <div className="border rounded-lg overflow-hidden">
+                    <div 
+                      className={`p-4 cursor-pointer transition-colors ${
+                        downloadOptions.selectedImages 
+                          ? 'bg-brand-50 dark:bg-brand-900/20' 
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                      }`}
+                      onClick={toggleSelectedImages}
+                    >
+                      <div className="flex items-start">
+                        <div className={`flex-shrink-0 h-5 w-5 rounded-full border flex items-center justify-center mr-3 mt-0.5 ${
+                          downloadOptions.selectedImages 
+                            ? 'border-brand-500 bg-brand-500 text-white' 
+                            : 'border-gray-300 dark:border-gray-600'
                         }`}>
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                            selectedImages[asset.id] 
-                              ? 'bg-brand-500 text-white' 
-                              : 'bg-white/80 text-transparent'
-                          }`}>
-                            <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                          {downloadOptions.selectedImages && (
+                            <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                             </svg>
-                          </div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-900 dark:text-white">
+                            Selected Images ({selectedImageCount})
+                          </h4>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            Download only selected gallery images
+                          </p>
                         </div>
                       </div>
-                    ))}
-                </div>
-                {totalImageCount === 0 && (
-                  <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
-                    No gallery images available
+                    </div>
+
+                    {downloadOptions.selectedImages && (
+                      <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-1">
+                          {generatedAssets
+                            .filter(asset => asset.type === 'image')
+                            .map(asset => (
+                              <div 
+                                key={asset.id} 
+                                className="relative aspect-square rounded-md overflow-hidden border-2 border-transparent hover:border-brand-500 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleImageSelection(asset.id);
+                                }}
+                              >
+                                <img
+                                  src={asset.image_url || asset.image_data || ''}
+                                  alt="Generated content"
+                                  className="w-full h-full object-cover"
+                                />
+                                <div className={`absolute inset-0 flex items-center justify-center transition-opacity ${
+                                  selectedImages[asset.id] ? 'bg-black/50' : 'bg-black/0 group-hover:bg-black/20'
+                                }`}>
+                                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                    selectedImages[asset.id] 
+                                      ? 'bg-brand-500 border-brand-500' 
+                                      : 'bg-white/80 border-white/50'
+                                  }`}>
+                                    {selectedImages[asset.id] && (
+                                      <Check className="h-3 w-3 text-white" />
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
+
+                <div className="mt-6 flex flex-col sm:flex-row-reverse sm:justify-between sm:items-center gap-3">
+                  <Button 
+                    onClick={() => onDownload(downloadOptions)}
+                    disabled={isDownloading || (!downloadOptions.brandKit && !downloadOptions.allImages && !downloadOptions.allLogos && !downloadOptions.selectedImages)}
+                    isLoading={isDownloading}
+                    className="w-full sm:w-auto"
+                  >
+                    {isDownloading ? 'Preparing Download...' : 'Download'}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={onClose}
+                    disabled={isDownloading}
+                    className="w-full sm:w-auto"
+                  >
+                    Cancel
+                  </Button>
+                </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
+      </div>
+    );
+  });
 
-        <div className="mt-6 flex justify-end space-x-3">
-          <Button 
-            variant="outline" 
-            onClick={() => setShowDownloadOptions(false)}
-            disabled={isDownloading}
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={() => handleDownload(downloadOptions)}
-            disabled={isDownloading || (!downloadOptions.brandKit && !downloadOptions.allImages && !downloadOptions.selectedImages)}
-            isLoading={isDownloading}
-          >
-            {isDownloading ? 'Preparing Download...' : 'Download'}
-          </Button>
-        </div>
-      </motion.div>
-    </div>
-  );
+  // Add display name for better dev tools experience
+  DownloadOptionsPopup.displayName = 'DownloadOptionsPopup';
 
   const handleDeleteBrandKit = async () => {
     if (!brandKit || !confirm('Are you sure you want to delete this brand kit?')) return;
@@ -456,7 +645,7 @@ export const BrandKitPage: React.FC = () => {
       colors: brandKit.colors,
       typography: brandKit.typography,
       logoStyle: brandKit.logo.type,
-      logoChoice: brandKit.logo.image ? 'upload' : 'ai',
+      logoChoice: 'ai',
       step: 1 // Start at the design step
     });
     
@@ -464,14 +653,32 @@ export const BrandKitPage: React.FC = () => {
     navigate('/create/new');
   };
 
-  const handleGenerateMoreLogos = async () => {
+  interface LogoGenerationOptions {
+    style: string;
+    personality: string;
+    complexity: string;
+  }
+
+  const handleGenerateMoreLogos = () => {
+    setShowLogoModal(true);
+  };
+
+  interface LogoGenerationOptions {
+    style: string;
+    personality: string;
+    complexity: string;
+  }
+
+  const handleGenerateWithOptions = async (options: LogoGenerationOptions) => {
     if (!brandKit) return;
 
     try {
       setIsGeneratingLogos(true);
-      const logoUrls = await generateLogoImages({
+      setShowLogoModal(false);
+      
+      const logoOptions: any = {
         brandName: brandKit.name,
-        style: brandKit.logo.type,
+        style: options.style,
         colors: {
           primary: brandKit.colors.primary,
           secondary: brandKit.colors.secondary,
@@ -479,11 +686,14 @@ export const BrandKitPage: React.FC = () => {
         },
         description: brandKit.description,
         industry: brandKit.type,
-        personality: 'modern' // Default to modern style
-      });
+        personality: options.personality,
+        complexity: options.complexity,
+      };
+
+      const logoUrls = await generateLogoImages(logoOptions);
 
       // Save the generated logos
-      const newAssets = await saveGeneratedAssets(brandKit.id, logoUrls, 'logo');
+      await saveGeneratedAssets(brandKit.id, logoUrls, 'logo');
       
       // Update the brand kit with new assets
       const updatedBrandKit = await fetchBrandKitById(brandKit.id);
@@ -506,7 +716,11 @@ export const BrandKitPage: React.FC = () => {
     try {
       setIsSelectingLogo(assetId);
       const updatedBrandKit = await updateBrandKit(brandKit.id, {
-        logo_selected_asset_id: assetId
+        logo_selected_asset_id: assetId,
+        logo: {
+          ...brandKit.logo,
+          image: logoAssets.find(asset => asset.id === assetId)?.image_url || undefined
+        }
       });
       setBrandKit(updatedBrandKit);
       toast.success('Logo updated successfully');
@@ -594,7 +808,7 @@ export const BrandKitPage: React.FC = () => {
       // Upload the file to storage
       const fileExt = file.name.split('.').pop();
       const fileName = `${brandKit.id}-logo-${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`;
+      const filePath = `${brandKit.id}/uploads/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('brand-logos')
@@ -611,7 +825,9 @@ export const BrandKitPage: React.FC = () => {
       const updatedBrandKit = await updateBrandKit(brandKit.id, {
         logo: {
           ...brandKit.logo,
-          image: publicUrl
+          image: publicUrl,
+          type: 'user-uploaded',
+          text: brandKit.name
         }
       });
 
@@ -634,9 +850,13 @@ export const BrandKitPage: React.FC = () => {
 
     try {
       // Extract the file path from the URL
+      // Format: /storage/v1/object/public/brand-logos/{brandkit-id}/uploads/{filename}
       const url = new URL(brandKit.logo.image);
       const pathParts = url.pathname.split('/');
-      const filePath = pathParts[pathParts.length - 1];
+      // console.log('pathParts:', pathParts);
+      const filePath = pathParts.slice(pathParts.indexOf('brand-logos') + 1).join('/');
+      // console.log('filePath:', filePath);
+
 
       // Delete the file from storage
       const { error: deleteError } = await supabase.storage
@@ -645,13 +865,17 @@ export const BrandKitPage: React.FC = () => {
 
       if (deleteError) throw deleteError;
 
+      //set existing image from concept selected or undefined
+      const existingImage = brandKit.logo_selected_asset_id ? brandKit.generated_assets?.find(asset => asset.id === brandKit.logo_selected_asset_id)?.image_data : undefined;
       // Update the brand kit to remove the logo
       const updatedBrandKit = await updateBrandKit(brandKit.id, {
         logo: {
           ...brandKit.logo,
-          image: undefined
+          image: existingImage
         }
       });
+
+
 
       setBrandKit(updatedBrandKit);
       toast.success('Logo removed successfully');
@@ -707,6 +931,70 @@ export const BrandKitPage: React.FC = () => {
       </span>
     </div>
   );
+
+  const renderUnconvertedAssets = () => {
+    const unconvertedAssets = getUnconvertedAssets();
+    
+    if (unconvertedAssets.length === 0) return null;
+
+    return (
+      <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-medium text-gray-500 dark:text-gray-400 mb-1">
+              Assets Needing Conversion
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              These assets need to be converted for better performance
+            </p>
+          </div>
+          <span className="text-sm text-gray-500">
+            {unconvertedAssets.length} asset{unconvertedAssets.length > 1 ? 's' : ''} found
+          </span>
+        </div>
+        
+        <div className="space-y-2 max-h-60 overflow-y-auto">
+          {unconvertedAssets.map(asset => (
+            <div key={asset.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-700 rounded-md">
+              <div className="flex items-center">
+                <span className="w-6 text-lg">
+                  {asset.type === 'logo' ? '🎨' : '🖼️'}
+                </span>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {asset.type === 'logo' ? 'Logo' : 'Image'} {asset.id.substring(0, 6)}...
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-300">
+                    {asset.type === 'logo' ? 'Logo' : 'Image'}
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={() => convertAsset(asset)}
+                size="sm"
+                variant="outline"
+                disabled={conversionProgress[asset.id] === 'converting'}
+                className="ml-4"
+              >
+                {conversionProgress[asset.id] === 'converting' ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : conversionProgress[asset.id] === 'done' ? (
+                  <Check className="mr-2 h-4 w-4" />
+                ) : conversionProgress[asset.id] === 'error' ? (
+                  <X className="mr-2 h-4 w-4" />
+                ) : (
+                  <Upload className="mr-2 h-4 w-4" />
+                )}
+                {conversionProgress[asset.id] === 'converting' ? 'Converting...' :
+                 conversionProgress[asset.id] === 'done' ? 'Converted' :
+                 conversionProgress[asset.id] === 'error' ? 'Retry' : 'Convert'}
+              </Button>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -803,45 +1091,58 @@ export const BrandKitPage: React.FC = () => {
                   </Button>
                   
                   <AnimatePresence>
-                    {showDownloadOptions && <DownloadOptionsPopup />}
+                    {showDownloadOptions && <DownloadOptionsPopup 
+                      onClose={() => setShowDownloadOptions(false)}
+                      onDownload={handleDownload}
+                      downloadOptions={downloadOptions}
+                      setDownloadOptions={setDownloadOptions}
+                      selectedImageCount={selectedImageCount}
+                      isDownloading={isDownloading}
+                      selectedImages={selectedImages}
+                      toggleImageSelection={toggleImageSelection}
+                      generatedAssets={brandKit.generated_assets || []}
+                    />}
                   </AnimatePresence>
                 </div>
               </div>
               
-              <Card className="mb-8">
+              {renderUnconvertedAssets()}
+              <Card className="mt-4">
                 <CardContent className="p-6">
                   <div className="flex flex-col md:flex-row items-start gap-6">
                     <div className="flex-1">
+                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        Description
+                      </h3>
                       <p 
-                        className="text-gray-600 dark:text-gray-400 mb-4"
-                        style={{ fontFamily: brandKit.typography.bodyFont }}
+                        className="text-gray-900 dark:text-white capitalize"
                       >
                         {brandKit.description}
                       </p>
                       
-                      <div className="grid grid-cols-2 gap-4 mb-6">
+                      <div className="grid grid-cols-2 gap-4 my-6">
                         <div>
                           <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
                             Type
                           </h3>
                           <p 
                             className="text-gray-900 dark:text-white capitalize"
-                            style={{ fontFamily: brandKit.typography.bodyFont }}
                           >
                             {brandKit.type || 'Not specified'}
                           </p>
                         </div>
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                            Logo Style
-                          </h3>
-                          <p 
+                        {brandKit.logo.type && (
+                          <div>
+                            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                              Logo Style
+                            </h3>
+                            <p 
                             className="text-gray-900 dark:text-white capitalize"
-                            style={{ fontFamily: brandKit.typography.bodyFont }}
                           >
                             {brandKit.logo.type}
                           </p>
                         </div>
+                      )}
                       </div>
                     </div>
                     
@@ -891,8 +1192,143 @@ export const BrandKitPage: React.FC = () => {
                   </div>
                 </CardFooter>
               </Card>
+
+              <Card className="mt-4">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 
+                      className="text-xl font-semibold text-gray-900 dark:text-white"
+                      style={{ fontFamily: brandKit.typography.headingFont }}
+                    >
+                      Logo Concepts
+                    </h3>
+                    <div className="flex items-center space-x-2">
+                      {logoAssets.length > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDeleteAllLogoConcepts}
+                          leftIcon={<Trash2 className="h-4 w-4" />}
+                          isLoading={isDeletingAllLogos}
+                          disabled={isDeletingAllLogos}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        >
+                          Delete All
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleGenerateMoreLogos}
+                        leftIcon={<Sparkles className="h-4 w-4" />}
+                        isLoading={isGeneratingLogos}
+                        disabled={isGeneratingLogos}
+                      >
+                        Generate More
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-6">
+                    {logoAssets.length > 0 ? (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          {logoAssets.map((asset) => (
+                            <div
+                              key={asset.id}
+                              className={`relative group border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
+                                brandKit.logo_selected_asset_id === asset.id
+                                  ? 'border-brand-600 shadow-lg'
+                                  : 'border-gray-200 dark:border-gray-700'
+                              }`}
+                            >
+                              <div className="relative">
+                                <img
+                                  src={asset.image_url}
+                                  alt="Logo concept"
+                                  className={`w-full h-auto ${isSelectingLogo === asset.id ? 'opacity-50' : ''}`}
+                                  style={{ 
+                                    backgroundColor: brandKit.colors.background
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSelectLogo(asset.id);
+                                  }}
+                                />
+                                {isSelectingLogo === asset.id && (
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-brand-600"></div>
+                                  </div>
+                                )}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteLogoAsset(asset.id);
+                                  }}
+                                  className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 disabled:opacity-100 disabled:bg-gray-300 dark:disabled:bg-gray-600"
+                                  aria-label="Delete logo"
+                                  disabled={isDeletingLogo === asset.id}
+                                >
+                                  {isDeletingLogo === asset.id ? (
+                                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4" />
+                                  )}
+                                </button>
+                              </div>
+                              {brandKit.logo_selected_asset_id === asset.id && (
+                                <div className="absolute inset-0 bg-brand-600/10 flex items-center justify-center">
+                                  <div className="bg-brand-600 text-white px-3 py-1 rounded-full text-sm">
+                                    Selected
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        <p 
+                          className="text-sm text-gray-500 dark:text-gray-400"
+                          style={{ fontFamily: brandKit.typography.bodyFont }}
+                        >
+                          Click on a logo concept to select it as your primary logo.
+                        </p>
+                      </>
+                    ) : (
+                      <div className="text-center py-8">
+                        <div className="mx-auto w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
+                          <ImageIcon className="h-8 w-8 text-gray-400" />
+                        </div>
+                        <h4 
+                          className="text-lg font-medium text-gray-900 dark:text-white mb-1"
+                          style={{ fontFamily: brandKit.typography.headingFont }}
+                        >
+                          No Logo Concepts
+                        </h4>
+                        <p 
+                          className="text-gray-500 dark:text-gray-400 max-w-md mx-auto"
+                          style={{ fontFamily: brandKit.typography.bodyFont }}
+                        >
+                          You haven't generated any logo concepts yet. Click the button below to get started.
+                        </p>
+                        <div className="mt-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleGenerateMoreLogos}
+                            leftIcon={<Sparkles className="h-4 w-4" />}
+                            isLoading={isGeneratingLogos}
+                            disabled={isGeneratingLogos}
+                          >
+                            Generate Logos
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
               
-              <Card className="mb-8">
+              <Card className="mt-4">
                 <CardContent className="p-6">
                   <h3 
                     className="text-xl font-semibold text-gray-900 dark:text-white mb-6"
@@ -957,15 +1393,17 @@ export const BrandKitPage: React.FC = () => {
                       
                       {brandKit.logo.image && (
                         <div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleRemoveLogo}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                            leftIcon={<Trash2 className="h-4 w-4" />}
-                          >
-                            Remove Logo
-                          </Button>
+                          {brandKit.logo.image.includes('uploads') && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleRemoveLogo}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                              leftIcon={<Trash2 className="h-4 w-4" />}
+                            >
+                              Remove Logo
+                            </Button>
+                          )}
                         </div>
                       )}
                       
@@ -979,7 +1417,7 @@ export const BrandKitPage: React.FC = () => {
                 </CardContent>
               </Card>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 my-8">
                 <Card>
                   <CardContent className="p-6">
                     <h3 
@@ -1070,140 +1508,7 @@ export const BrandKitPage: React.FC = () => {
                 </Card>
               </div>
               
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 
-                      className="text-xl font-semibold text-gray-900 dark:text-white"
-                      style={{ fontFamily: brandKit.typography.headingFont }}
-                    >
-                      Logo Concepts
-                    </h3>
-                    <div className="flex items-center space-x-2">
-                      {logoAssets.length > 0 && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleDeleteAllLogoConcepts}
-                          leftIcon={<Trash2 className="h-4 w-4" />}
-                          isLoading={isDeletingAllLogos}
-                          disabled={isDeletingAllLogos}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                        >
-                          Delete All
-                        </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleGenerateMoreLogos}
-                        leftIcon={<Sparkles className="h-4 w-4" />}
-                        isLoading={isGeneratingLogos}
-                        disabled={isGeneratingLogos}
-                      >
-                        Generate More
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-6">
-                    {logoAssets.length > 0 ? (
-                      <>
-                        <div className="grid grid-cols-2 gap-4">
-                          {logoAssets.map((asset) => (
-                            <div
-                              key={asset.id}
-                              className={`relative group border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
-                                brandKit.logo_selected_asset_id === asset.id
-                                  ? 'border-brand-600 shadow-lg'
-                                  : 'border-gray-200 dark:border-gray-700'
-                              }`}
-                            >
-                              <div className="relative">
-                                <img
-                                  src={asset.image_data}
-                                  alt="Logo concept"
-                                  className={`w-full h-auto ${isSelectingLogo === asset.id ? 'opacity-50' : ''}`}
-                                  style={{ 
-                                    backgroundColor: brandKit.colors.background
-                                  }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleSelectLogo(asset.id);
-                                  }}
-                                />
-                                {isSelectingLogo === asset.id && (
-                                  <div className="absolute inset-0 flex items-center justify-center">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-brand-600"></div>
-                                  </div>
-                                )}
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteLogoAsset(asset.id);
-                                  }}
-                                  className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 disabled:opacity-100 disabled:bg-gray-300 dark:disabled:bg-gray-600"
-                                  aria-label="Delete logo"
-                                  disabled={isDeletingLogo === asset.id}
-                                >
-                                  {isDeletingLogo === asset.id ? (
-                                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                  ) : (
-                                    <Trash2 className="h-4 w-4" />
-                                  )}
-                                </button>
-                              </div>
-                              {brandKit.logo_selected_asset_id === asset.id && (
-                                <div className="absolute inset-0 bg-brand-600/10 flex items-center justify-center">
-                                  <div className="bg-brand-600 text-white px-3 py-1 rounded-full text-sm">
-                                    Selected
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                        <p 
-                          className="text-sm text-gray-500 dark:text-gray-400"
-                          style={{ fontFamily: brandKit.typography.bodyFont }}
-                        >
-                          Click on a logo concept to select it as your primary logo.
-                        </p>
-                      </>
-                    ) : (
-                      <div className="text-center py-8">
-                        <div className="mx-auto w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
-                          <ImageIcon className="h-8 w-8 text-gray-400" />
-                        </div>
-                        <h4 
-                          className="text-lg font-medium text-gray-900 dark:text-white mb-1"
-                          style={{ fontFamily: brandKit.typography.headingFont }}
-                        >
-                          No Logo Concepts
-                        </h4>
-                        <p 
-                          className="text-gray-500 dark:text-gray-400 max-w-md mx-auto"
-                          style={{ fontFamily: brandKit.typography.bodyFont }}
-                        >
-                          You haven't generated any logo concepts yet. Click the button below to get started.
-                        </p>
-                        <div className="mt-4">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleGenerateMoreLogos}
-                            leftIcon={<Sparkles className="h-4 w-4" />}
-                            isLoading={isGeneratingLogos}
-                            disabled={isGeneratingLogos}
-                          >
-                            Generate Logos
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+             
 
               {imageAssets.length > 0 && (
                 <div className="mt-8">
@@ -1229,7 +1534,7 @@ export const BrandKitPage: React.FC = () => {
                       <Card key={asset.id} hover>
                         <CardContent className="p-4">
                           <img
-                            src={asset.image_data}
+                            src={asset.image_url}
                             alt="Generated image"
                             className="w-full h-32 object-cover rounded-lg"
                           />
@@ -1243,6 +1548,24 @@ export const BrandKitPage: React.FC = () => {
           </div>
         </div>
       </div>
+      <LogoGenerationModal
+        isOpen={showLogoModal}
+        onClose={() => setShowLogoModal(false)}
+        onSubmit={handleGenerateWithOptions}
+        defaultValues={{
+          style: brandKit?.logo?.type || 'any',
+        }}
+        isLoading={isGeneratingLogos}
+      />
+      <LogoGenerationModal
+        isOpen={showLogoModal}
+        onClose={() => setShowLogoModal(false)}
+        onSubmit={handleGenerateWithOptions}
+        defaultValues={{
+          style: brandKit?.logo?.type || 'any',
+        }}
+        isLoading={isGeneratingLogos}
+      />
     </Layout>
   );
 };
