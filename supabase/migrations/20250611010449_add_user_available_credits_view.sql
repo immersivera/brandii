@@ -28,21 +28,9 @@ COMMENT ON VIEW public.user_available_credits IS 'Provides a consolidated view o
 -- Grant permissions
 GRANT SELECT ON public.user_available_credits TO authenticated;
 
--- Add RLS policy to ensure users can only see their own credits
-ALTER VIEW public.user_available_credits OWNER TO postgres;
+-- Note: Not applying RLS to the view as it's handled at the table level
+-- The underlying tables (user_credits, user_subscriptions) already have RLS policies
+-- that restrict users to only see their own data
 
--- Create a policy to restrict access to the view
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_policies 
-        WHERE schemaname = 'public' 
-        AND tablename = 'user_available_credits'
-        AND policyname = 'Users can view their own credit information'
-    ) THEN
-        CREATE POLICY "Users can view their own credit information" 
-        ON public.user_available_credits
-        FOR SELECT
-        USING (auth.uid() = user_id);
-    END IF;
-END $$;
+-- Grant permissions (already handled above)
+-- GRANT SELECT ON public.user_available_credits TO authenticated;
