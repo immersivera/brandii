@@ -64,11 +64,74 @@ export function useAuthActions() {
     }
   };
 
+  const resetPassword = async (email: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/reset-password',
+      });
+      
+      if (error) throw error;
+    } catch (err) {
+      const authError = err as AuthError;
+      setError(authError);
+      throw authError;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      
+      if (error) throw error;
+    } catch (err) {
+      const authError = err as AuthError;
+      setError(authError);
+      throw authError;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const signInWithMagicLink = async (email: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: window.location.origin + '/dashboard',
+        },
+      });
+      
+      if (error) throw error;
+    } catch (err) {
+      const authError = err as AuthError;
+      setError(authError);
+      throw authError;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     isLoading,
     error,
     signIn,
     signUp,
     signOut,
+    resetPassword,
+    updatePassword,
+    signInWithMagicLink,
   };
 }

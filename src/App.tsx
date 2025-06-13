@@ -11,6 +11,7 @@ import { ImageGeneratorPage } from './pages/ImageGeneratorPage';
 import { GalleryPage } from './pages/GalleryPage';
 import { GlobalGalleryPage } from './pages/GlobalGalleryPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { AuthModal } from './components/AuthModal';
 import { useAuthModal } from './context/AuthModalContext';
 import { useUser } from './context/UserContext';
@@ -51,6 +52,7 @@ function App() {
         {/* Public routes */}
         <Route path="/" element={<HomePage />} />
         <Route path="/gallery" element={<GlobalGalleryPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* Protected routes */}
         <Route path="/create" element={
