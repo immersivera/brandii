@@ -97,7 +97,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                   disabled={isLoading}
                 >
                   {isLoading ? (
-                    <Loader className="h-5 w-5 animate-spin" />
+                    <></>
                   ) : isSignUp ? (
                     'Create Account'
                   ) : (
