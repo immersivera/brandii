@@ -58,6 +58,12 @@ export const GlobalGalleryPage: React.FC = () => {
     setCurrentPage(isNaN(page) ? 1 : page);
     setSearchQuery(search);
   // eslint-disable-next-line react-hooks/exhaustive-deps
+
+  const imageId = searchParams.get('image');
+  if (imageId) {
+    //save to localStorage
+    localStorage.setItem('pendingGlobalImageId', imageId);
+  }
   }, []); // Run only once on mount
 
   // Update URL when search or page changes
@@ -124,14 +130,6 @@ export const GlobalGalleryPage: React.FC = () => {
     fetchImages();
   }, [currentPage, debouncedSearchQuery]);
 
-  // const handleDownload = (imageUrl: string, index: number) => {
-  //   const link = document.createElement('a');
-  //   link.href = imageUrl;
-  //   link.download = `generated-image-${index + 1}.png`;
-  //   document.body.appendChild(link);
-  //   link.click();
-  //   document.body.removeChild(link);
-  // };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -198,6 +196,38 @@ export const GlobalGalleryPage: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Handle image selection from URL on component mount
+  useEffect(() => {
+    const imageId = localStorage.getItem('pendingGlobalImageId');
+    if (imageId && !selectedImage) {
+      const imageToSelect = images.find((img: any) => img.id === imageId);
+      if (imageToSelect) {
+        setSelectedImage(imageToSelect);
+        // Clear the pending image after setting it
+        localStorage.removeItem('pendingGlobalImageId');
+        // Update URL with the new image ID
+        const params = new URLSearchParams(searchParams);
+        params.set('image', imageId);
+        navigate(`?${params.toString()}`, { replace: true });
+      }
+    }
+  }, [images, selectedImage]);
+
+  // Update URL when an image is selected
+  const handleImageSelect = (image: any) => {
+    setSelectedImage(image);
+    const params = new URLSearchParams(searchParams);
+    params.set('image', image.id);
+    navigate(`?${params.toString()}`, { replace: true });
+  };
+
+  // Update URL when modal is closed
+  const handleCloseModal = () => {
+    setSelectedImage(null);
+    const params = new URLSearchParams(searchParams);
+    params.delete('image');
+    navigate(`?${params.toString()}`, { replace: true });
+  };
 
   return (
     <Layout>
@@ -275,7 +305,7 @@ export const GlobalGalleryPage: React.FC = () => {
                       >
                         <div 
                           className="relative group cursor-pointer overflow-hidden rounded-xl"
-                          onClick={() => setSelectedImage(image)}
+                          onClick={() => handleImageSelect(image)}
                         >
                           <OptimizedImage
                             src={image.image_url || image.image_data}
@@ -383,7 +413,7 @@ export const GlobalGalleryPage: React.FC = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4"
-            onClick={() => setSelectedImage(null)}
+            onClick={handleCloseModal}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
@@ -395,7 +425,7 @@ export const GlobalGalleryPage: React.FC = () => {
               {/* Close Button - Sticky on mobile */}
               <div className="sticky top-0 z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm p-2 flex justify-end border-b border-gray-200/50 dark:border-gray-800/50">
                 <button
-                  onClick={() => setSelectedImage(null)}
+                  onClick={handleCloseModal}
                   className="p-1.5 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-sm border border-gray-200 dark:border-gray-700 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
                   aria-label="Close modal"
                 >

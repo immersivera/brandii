@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useDebounce } from '../lib/utils';
@@ -15,6 +15,7 @@ const ITEMS_PER_PAGE = 12;
 export const GalleryPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [images, setImages] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPageLoading, setIsPageLoading] = useState(false);
@@ -23,7 +24,6 @@ export const GalleryPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [brandKit, setBrandKit] = useState<any>(null);
-  const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
@@ -44,6 +44,14 @@ export const GalleryPage: React.FC = () => {
     setCurrentPage(isNaN(page) ? 1 : page);
     setSearchQuery(search);
   // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    const imageId = searchParams.get('image');
+    
+    // Save to localStorage if we have an image ID in the URL
+    if (imageId) {
+      localStorage.setItem('pendingImageId', imageId);
+    } 
+
   }, []); // Run only once on mount
 
   // Update URL when search or page changes
@@ -116,13 +124,75 @@ export const GalleryPage: React.FC = () => {
     if (id) fetchImages();
   }, [id, currentPage, debouncedSearchQuery]);
 
+  // Handle URL changes and image selection with localStorage
+  useEffect(() => {
+    
+    // If we have images but no selected image yet, check for pending image
+    if (images.length > 0 && !selectedImage) {
+      const pendingImageId = localStorage.getItem('pendingImageId');
+      if (pendingImageId) {
+        const imageToSelect = images.find(img => img.id === pendingImageId);
+        if (imageToSelect) {
+          // Use setTimeout to ensure the modal opens after the component is mounted
+          const timer = setTimeout(() => {
+            setSelectedImage(imageToSelect);
+            // Clear the pending image after setting it
+            localStorage.removeItem('pendingImageId');
+            // Update URL with the new image ID
+            const params = new URLSearchParams(searchParams);
+            params.set('image', pendingImageId);
+            navigate(`?${params.toString()}`, { replace: true });
+          }, 100);
+          return () => clearTimeout(timer);
+        }
+      }
+    }
+    
+  }, [images, selectedImage]);
+
+  // Handle image selection with URL update
+  const handleImageSelect = useCallback((image: any) => {
+    // Don't update if selecting the same image
+    if (selectedImage?.id === image.id) return;
+    
+    setSelectedImage(image);
+    
+    // Update URL with the new image ID
+    const params = new URLSearchParams(searchParams);
+    params.set('image', image.id);
+    
+    // Only update URL if it's different from current
+    if (searchParams.get('image') !== image.id) {
+      // Save to localStorage before navigation
+      localStorage.setItem('pendingImageId', image.id);
+      navigate(`?${params.toString()}`, { replace: true });
+    }
+  }, [navigate, searchParams, selectedImage]);
+
+  // Handle modal close with URL cleanup
+  const handleCloseModal = useCallback(() => {
+    if (!selectedImage) return; // Already closed
+    
+    setSelectedImage(null);
+    
+    // Clear from localStorage
+    localStorage.removeItem('pendingImageId');
+    
+    const params = new URLSearchParams(searchParams);
+    params.delete('image');
+    
+    // Only update URL if it still contains the image param
+    if (searchParams.has('image')) {
+      navigate(`?${params.toString()}`, { replace: true });
+    }
+  }, [navigate, searchParams, selectedImage]);
+
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
 
   const handleDownload = async (imageUrl: string, index: number) => {
     try {
@@ -303,7 +373,7 @@ export const GalleryPage: React.FC = () => {
                     >
                       <div 
                         className="relative group cursor-pointer overflow-hidden rounded-xl"
-                        onClick={() => setSelectedImage(asset)}
+                        onClick={() => handleImageSelect(asset)}
                       >
                         <OptimizedImage
                           src={asset.image_url || asset.image_data}
@@ -408,8 +478,8 @@ export const GalleryPage: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4"
-            onClick={() => setSelectedImage(null)}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={handleCloseModal}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
@@ -421,7 +491,7 @@ export const GalleryPage: React.FC = () => {
               {/* Close Button - Sticky on mobile */}
               <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 p-2 flex justify-end border-b border-gray-200 dark:border-gray-800">
                 <button
-                  onClick={() => setSelectedImage(null)}
+                  onClick={handleCloseModal}
                   className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
                   aria-label="Close modal"
                 >
