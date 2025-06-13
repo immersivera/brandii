@@ -394,7 +394,7 @@ export const HomePage: React.FC = () => {
               },
               {
                 name: 'Pro',
-                price: 19,
+                price: 20,
                 description: 'For growing brands',
                 monthlyCredits: 150,
                 features: [
@@ -406,7 +406,7 @@ export const HomePage: React.FC = () => {
                   'Priority support',
                   'Email support'
                 ],
-                buttonText: 'Go Pro',
+                buttonText: 'Get Started',
                 popular: true
               },
               {
@@ -469,7 +469,7 @@ export const HomePage: React.FC = () => {
                     <Button
                       variant={plan.popular ? 'primary' : 'outline'}
                       className={`w-full ${plan.popular ? 'shadow-lg shadow-brand-500/20' : ''}`}
-                      onClick={() => plan.price > 0 ? navigate('/signup') : navigate('/create')}
+                      onClick={() => navigate('/create')}
                     >
                       {plan.buttonText}
                     </Button>
