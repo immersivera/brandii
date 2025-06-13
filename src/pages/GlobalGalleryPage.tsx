@@ -90,7 +90,6 @@ export const GlobalGalleryPage: React.FC = () => {
             `
             id,
             image_url,
-            image_data,
             image_prompt,
             created_at,
             brand_kit:brand_kit_id (id, name, type, user_id)

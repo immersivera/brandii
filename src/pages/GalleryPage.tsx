@@ -92,8 +92,17 @@ export const GalleryPage: React.FC = () => {
         }
 
         let queryBuilder = supabase
-          .from('generated_assets')
-          .select('*', { count: 'exact' })
+        .from('generated_assets')
+        .select(
+          `
+          id,
+          image_url,
+          image_prompt,
+          created_at,
+          brand_kit:brand_kit_id (id, name, type, user_id)
+          `,
+          { count: 'exact' }
+        )
           .eq('brand_kit_id', id)
           .eq('type', 'image')
           .order('created_at', { ascending: false })
