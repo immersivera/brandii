@@ -22,6 +22,8 @@ const IMAGE_SIZES = [
 const IMAGE_COUNTS = [
   { value: '1', label: '1 Image' },
   { value: '2', label: '2 Images' },
+  { value: '3', label: '3 Images' },
+  { value: '4', label: '4 Images' },
 ] as const;
 
 export const ImageGeneratorPage: React.FC = () => {
@@ -41,8 +43,8 @@ export const ImageGeneratorPage: React.FC = () => {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   
   // Check if user is on free plan (no active subscription)
-  const isFreePlan = !profile?.subscription_status || profile.subscription_status !== 'active';
-  
+  const isFreePlan = (profile?.user_type == 'free');
+
   // Brand asset controls
   const [includeBrandAssets, setIncludeBrandAssets] = useState(true);
   const [includeLogo, setIncludeLogo] = useState(false);
@@ -404,14 +406,13 @@ return (
                   <div className="relative">
                     <Select
                       label="Number of Images"
-                      options={isFreePlan ? [IMAGE_COUNTS[0]] : IMAGE_COUNTS}
+                      options={isFreePlan ? [IMAGE_COUNTS[0], IMAGE_COUNTS[1]] : IMAGE_COUNTS}
                       value={String(imageCount)}
                       onChange={(value) => setImageCount(Number(value))}
-                      helperText={isFreePlan ? 'Upgrade to Pro to generate multiple images at once' : 'Choose how many images to generate'}
-                      disabled={isFreePlan}
+                      helperText={isFreePlan ? 'Upgrade to Pro to generate up to 4 images at once' : 'Choose how many images to generate'}
                     />
                     {isFreePlan && (
-                      <div className="absolute -bottom-6 right-0">
+                      <div className="relative">
                         <Button 
                           variant="link" 
                           size="sm" 
@@ -596,9 +597,12 @@ return (
               transition={{ duration: 0.5 }}
               className="mt-12"
             >
-              <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
-                Generated {generatedImages.length > 1 ? 'Images' : 'Image'}
-              </h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
+                  Generated {generatedImages.length > 1 ? 'Images' : 'Image'}
+                </h2>
+                <Button onClick={() => navigate(`/kit/${id}`)} variant="outline" size="sm">View Images in Gallery</Button>
+              </div>
 
                 <div className={`grid grid-cols-1 ${generatedImages.length > 1 ? 'md:grid-cols-2' : ''} gap-6`}>
                   {generatedImages.map((imageUrl, index) => (
