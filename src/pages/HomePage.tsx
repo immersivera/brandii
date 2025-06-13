@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
+import { useUser } from '../context/UserContext';
 import { 
   Palette, 
   PenTool, 
@@ -102,6 +103,7 @@ const testimonials = [
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
+  const { profile } = useUser();
 
   return (
     <Layout>
@@ -469,7 +471,13 @@ export const HomePage: React.FC = () => {
                     <Button
                       variant={plan.popular ? 'primary' : 'outline'}
                       className={`w-full ${plan.popular ? 'shadow-lg shadow-brand-500/20' : ''}`}
-                      onClick={() => navigate('/create')}
+                      onClick={() => {
+                        if (profile) {
+                          navigate('/profile');
+                        } else {
+                          navigate('/create');
+                        }
+                      }}
                     >
                       {plan.buttonText}
                     </Button>
