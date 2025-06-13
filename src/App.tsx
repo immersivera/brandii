@@ -12,6 +12,8 @@ import { GalleryPage } from './pages/GalleryPage';
 import { GlobalGalleryPage } from './pages/GlobalGalleryPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
+import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
+import { TermsOfServicePage } from './pages/TermsOfServicePage';
 import { AuthModal } from './components/AuthModal';
 import { useAuthModal } from './context/AuthModalContext';
 import { useUser } from './context/UserContext';
@@ -53,6 +55,8 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/gallery" element={<GlobalGalleryPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
+        <Route path="/terms" element={<TermsOfServicePage />} />
 
         {/* Protected routes */}
         <Route path="/create" element={
