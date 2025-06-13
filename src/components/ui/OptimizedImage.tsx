@@ -191,7 +191,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   }
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full flex items-center justify-center">
       {isLoading && (
         <div className={`absolute inset-0 bg-gray-200 dark:bg-gray-800 rounded-xl animate-pulse ${className}`} />
       )}
@@ -199,7 +199,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
         ref={imgRef}
         src={imageSrc || src}
         alt={alt}
-        className={`${className} transition-opacity duration-300 ${
+        className={`${className} transition-opacity duration-300 object-contain ${
           isLoading ? 'opacity-0' : 'opacity-100'
         }`}
         loading={isThumbnail ? 'lazy' : 'eager'}
