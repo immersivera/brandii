@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
+import { useUser } from '../context/UserContext';
 import { 
   Palette, 
   PenTool, 
@@ -81,27 +82,28 @@ const featuresList = [
 
 const testimonials = [
   {
-    quote: "Brandii helped us create a cohesive brand identity in minutes instead of weeks. The AI suggestions were spot on!",
-    author: "Sarah Johnson",
-    role: "Founder, TechStart",
-    avatar: "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=150"
+    quote: "Brandii helped me establish a cohesive brand identity in minutes instead of weeks. Generating images that matched my brand were spot on!",
+    author: "K. Montaque",
+    role: "Content Creator",
+    avatar: "#"
   },
   {
-    quote: "As a solo entrepreneur, I couldn't afford a design agency. Brandii gave me professional results at a fraction of the cost.",
-    author: "Michael Chen",
+    quote: "As a solopreneur, I couldn't afford a design agency. Brandii gives me great results at a fraction of the cost & time.",
+    author: "K. Thompson",
     role: "Independent Consultant",
-    avatar: "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=150"
+    avatar: "#"
   },
   {
     quote: "The brand kit we created with Brandii has received countless compliments. It's impressive how consistent our materials look now.",
-    author: "Emma Rodriguez",
-    role: "Marketing Director, GreenLife",
-    avatar: "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=150"
+    author: "D. Beckford",
+    role: "Marketing Specialist",
+    avatar: "#"
   },
 ];
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
+  const { profile } = useUser();
 
   return (
     <Layout>
@@ -122,7 +124,7 @@ export const HomePage: React.FC = () => {
           <div className="flex justify-center mb-12">
             <div className="dark:bg-black/20 bg-white backdrop-blur-md border border-black/20 dark:border-white/20 rounded-full py-2 px-4 flex items-center gap-2">
               <span className="text-brand-500 text-lg">🚀</span>
-              <span className="dark:text-white/90 text-black/90 text-sm font-medium">AI-Powered Brand Kit & Image Generator</span>
+              <span className="dark:text-white/90 text-black/90 md:text-sm font-medium text-xs">Brand Kit, Logo Maker & Image&nbsp;Generator</span>
               <div className="w-2 h-2 rounded-full bg-green-500 ml-1"></div>
             </div>
           </div>
@@ -133,7 +135,7 @@ export const HomePage: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              Think it. Brand it. Launch it.
+              Think&nbsp;it. Brand&nbsp;it. Launch&nbsp;it.
             </motion.h1>
             
             <motion.p 
@@ -177,7 +179,7 @@ export const HomePage: React.FC = () => {
               transition={{ duration: 0.5, delay: 0.2 }}
             >
               <div className="text-center">
-                <div className="text-4xl font-bold dark:text-white text-black mb-1">500+</div>
+                <div className="text-4xl font-bold dark:text-white text-black mb-1">100+</div>
                 <div className="text-gray-400 text-sm">Brand Kits Created</div>
               </div>
               <div className="text-center">
@@ -185,7 +187,7 @@ export const HomePage: React.FC = () => {
                 <div className="text-gray-400 text-sm">Client Satisfaction</div>
               </div>
               <div className="text-center">
-                <div className="text-4xl font-bold dark:text-white text-black mb-1">10M+</div>
+                <div className="text-4xl font-bold dark:text-white text-black mb-1">2.1k+</div>
                 <div className="text-gray-400 text-sm">Assets Generated</div>
               </div>
             </motion.div>
@@ -342,11 +344,11 @@ export const HomePage: React.FC = () => {
                       "{testimonial.quote}"
                     </p>
                     <div className="flex items-center">
-                      <img
+                      {/* <img
                         src={testimonial.avatar}
                         alt={testimonial.author}
                         className="w-12 h-12 rounded-full object-cover mr-4"
-                      />
+                      /> */}
                       <div>
                         <h4 className="font-semibold text-gray-900 dark:text-white">
                           {testimonial.author}
@@ -379,14 +381,13 @@ export const HomePage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {[
               {
-                name: 'Starter',
+                name: 'Free',
                 price: 0,
                 description: 'Perfect for trying out Brandii',
                 monthlyCredits: 10,
                 features: [
-                  '50 one-time credits',
-                  'Up to 3 basic brand kits',
-                  'All images generated are public',
+                  '10 one-time credits',
+                  'All assets generated are public',
                   'Community support',
                 ],
                 buttonText: 'Get Started',
@@ -394,32 +395,32 @@ export const HomePage: React.FC = () => {
               },
               {
                 name: 'Pro',
-                price: 19,
+                price: 15,
                 description: 'For growing brands',
-                monthlyCredits: 150,
+                monthlyCredits: 90,
                 features: [
-                  '100 monthly credits',
-                  '50 bonus credits (special offer)',
+                  '40 monthly credits',
+                  '60 bonus credits (special offer)',
                   'Unlimited brand kits',
                   'Private and public image options',
-                  'Advanced features unlocked',
+                  'All premium features',
                   'Priority support',
                   'Email support'
                 ],
-                buttonText: 'Go Pro',
+                buttonText: 'Get Started',
                 popular: true
               },
               {
                 name: 'Elite',
                 price: 99,
                 description: 'For large work loads',
-                monthlyCredits: 1200,
+                monthlyCredits: 500,
                 features: [
-                  '1000 monthly credits',
+                  '300 monthly credits',
                   '200 bonus credits (special offer)',
                   'Unlimited brand kits',
                   'Private and public image options',
-                  'Advanced features unlocked',
+                  'All premium features',
                   'Priority support',
                   'Email support'
                 ],
@@ -469,7 +470,13 @@ export const HomePage: React.FC = () => {
                     <Button
                       variant={plan.popular ? 'primary' : 'outline'}
                       className={`w-full ${plan.popular ? 'shadow-lg shadow-brand-500/20' : ''}`}
-                      onClick={() => plan.price > 0 ? navigate('/signup') : navigate('/create')}
+                      onClick={() => {
+                        if (profile) {
+                          navigate('/profile');
+                        } else {
+                          navigate('/create');
+                        }
+                      }}
                     >
                       {plan.buttonText}
                     </Button>

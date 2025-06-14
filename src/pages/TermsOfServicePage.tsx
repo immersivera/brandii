@@ -10,23 +10,29 @@ export const TermsOfServicePage: React.FC = () => {
           <CardContent className="p-8">
             <h1 className="text-3xl font-bold mb-6">Terms of Service</h1>
             <p className="text-gray-600 dark:text-gray-400 mb-8">
-              Last updated: June 13, 2025
+              Last updated: June 14, 2025
             </p>
 
             <div className="prose dark:prose-invert max-w-none">
               <section className="mb-8">
-                <h2 className="text-2xl font-semibold mb-4">1. Acceptance of Terms</h2>
+                <h2 className="text-2xl font-semibold mb-4">1. Introduction and Acceptance</h2>
                 <p className="mb-4">
-                  By accessing or using the Brandii platform ("Service"), you agree to be bound by these Terms of Service ("Terms"). If you disagree with any part of the terms, you may not access the Service.
+                  Welcome to Brandii, a service provided by Immersive Solutions ("Company", "we", "us", or "our"). By accessing or using our platform at brandii.app or any related services (collectively, the "Service"), you agree to be bound by these Terms of Service ("Terms").
+                </p>
+                <p className="mb-4">
+                  Please read these Terms carefully. If you do not agree with any part of these Terms, you must not access or use the Service. By using the Service, you represent that you are at least 18 years of age or the legal age of majority in your jurisdiction.
                 </p>
               </section>
 
               <section className="mb-8">
-                <h2 className="text-2xl font-semibold mb-4">2. Description of Service</h2>
-                <p className="mb-4">
-                  Brandii provides an AI-powered platform for creating and managing brand assets, including but not limited to color palettes, typography, logos, and marketing materials (the "Service").
-                </p>
-              </section>
+              <p className="mb-4">
+                Brandii provides an AI-powered platform for creating and managing brand assets, including but not limited to color palettes, typography, logos, and marketing materials (the "Service").
+              </p>
+              <h2 className="text-2xl font-semibold mb-4">2. Description of Service</h2>
+              <p className="mb-4">
+                Brandii provides an AI-powered platform for creating and managing brand assets, including but not limited to color palettes, typography, logos, and marketing materials (the "Service").
+              </p>
+            </section>
 
               <section className="mb-8">
                 <h2 className="text-2xl font-semibold mb-4">3. User Accounts</h2>

@@ -22,7 +22,6 @@ export const CreatePage: React.FC = () => {
 
       try {
         const hasBrandKit = await checkUserHasBrandKit();
-        console.log('hasBrandKit:', hasBrandKit);
         setHasExistingBrandKits(hasBrandKit);
       } catch (error) {
         console.error('Error checking brand kits:', error);
@@ -71,28 +70,37 @@ export const CreatePage: React.FC = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className={`grid grid-cols-1 ${hasExistingBrandKits ? '' : 'md:grid-cols-2'} gap-8`}>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
+                transition={{ duration: 0.3, delay: hasExistingBrandKits ? 0.1 : 0 }}
+                className={hasExistingBrandKits ? 'order-1' : 'order-2'}
               >
-                <Card hover interactive onClick={() => { resetBrandDetails(); navigate('/create/new');}} className="h-full">
-                  <CardContent className="p-8 flex flex-col items-center text-center">
-                    <div className="w-16 h-16 bg-brand-100 dark:bg-brand-900/30 rounded-full flex items-center justify-center mb-6">
-                      <Plus className="h-8 w-8 text-brand-600" />
+                <Card 
+                  hover 
+                  interactive 
+                  onClick={handleMediaAssetsClick}
+                  className={`h-full transition-all ${hasExistingBrandKits ? 'border-2 border-brand-500 shadow-lg' : ''}`}
+                >
+                  <CardContent className={`p-8 flex flex-col items-center text-center ${hasExistingBrandKits ? 'pt-12' : ''}`}>
+                   
+                    <div className={`${hasExistingBrandKits ? 'w-20 h-20' : 'w-16 h-16'} bg-accent-100 dark:bg-accent-900/30 rounded-full flex items-center justify-center mb-6`}>
+                      <Image className={`${hasExistingBrandKits ? 'h-10 w-10' : 'h-8 w-8'} text-accent-600`} />
                     </div>
-                    <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-3">
-                      New Brand Kit
+                    <h2 className={`${hasExistingBrandKits ? 'text-3xl' : 'text-2xl'} font-semibold text-gray-900 dark:text-white mb-3`}>
+                      Create Media Assets
                     </h2>
                     <p className="text-gray-600 dark:text-gray-400 mb-6">
-                      Create a new brand identity with colors, typography, and logo concepts
+                      Generate images and content using your existing brand kits
                     </p>
                     <Button
                       rightIcon={<ArrowRight className="h-4 w-4" />}
-                      className="mt-auto"
+                      className={`mt-auto ${hasExistingBrandKits ? 'px-6 py-2' : ''}`}
+                      variant={hasExistingBrandKits ? 'primary' : 'outline'}
+                      size={hasExistingBrandKits ? 'lg' : 'md'}
                     >
-                      Get Started
+                      {hasExistingBrandKits ? 'Start Creating' : 'Get Started'}
                     </Button>
                   </CardContent>
                 </Card>
@@ -102,33 +110,46 @@ export const CreatePage: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: 0.1 }}
+                className={hasExistingBrandKits ? 'mt-6 border-t pt-8 border-gray-200 dark:border-gray-800 order-2' : 'order-1'}
               >
-                <Card 
-                  hover 
-                  interactive 
-                  onClick={handleMediaAssetsClick}
-                  className={`h-full ${!hasExistingBrandKits ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  <CardContent className="p-8 flex flex-col items-center text-center">
-                    <div className="w-16 h-16 bg-accent-100 dark:bg-accent-900/30 rounded-full flex items-center justify-center mb-6">
-                      <Image className="h-8 w-8 text-accent-600" />
-                    </div>
-                    <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-3">
-                      Create Media Assets
-                    </h2>
-                    <p className="text-gray-600 dark:text-gray-400 mb-6">
-                      Generate images and assets using your existing brand kit styles
+                {hasExistingBrandKits ? (
+                  <>
+                  <div className="text-center">
+                    <p className="text-gray-600 dark:text-gray-400 mb-4">
+                      Or create a new brand kit
                     </p>
-                    <Button
-                      variant={hasExistingBrandKits ? 'primary' : 'outline'}
-                      rightIcon={<ArrowRight className="h-4 w-4" />}
-                      disabled={!hasExistingBrandKits}
-                      className="mt-auto"
+                    <Button 
+                      variant="outline" 
+                      onClick={() => { resetBrandDetails(); navigate('/create/new'); }}
+                      className="inline-flex items-center"
                     >
-                      {hasExistingBrandKits ? 'Continue' : 'No Brand Kits Available'}
+                      <Plus className="h-4 w-4 mr-2" />
+                      New Brand Kit
                     </Button>
-                  </CardContent>
-                </Card>
+                  </div>
+                  </>
+                ) : (
+                  <Card hover interactive onClick={() => { resetBrandDetails(); navigate('/create/new');}} className="h-full">
+                    <CardContent className="p-8 flex flex-col items-center text-center">
+                      <div className="w-16 h-16 bg-brand-100 dark:bg-brand-900/30 rounded-full flex items-center justify-center mb-6">
+                        <Plus className="h-8 w-8 text-brand-600" />
+                      </div>
+                      <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-3">
+                        New Brand Kit
+                      </h2>
+                      <p className="text-gray-600 dark:text-gray-400 mb-6">
+                        Create a new brand identity with colors, typography, and logo concepts
+                      </p>
+                      <Button
+                        rightIcon={<ArrowRight className="h-4 w-4" />}
+                        className="mt-auto"
+                        variant="outline"
+                      >
+                        Get Started
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
               </motion.div>
             </div>
 

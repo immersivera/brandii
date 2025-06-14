@@ -4,6 +4,20 @@ import { v4 as uuidv4 } from 'uuid';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Function to send upgrade notification via Edge Function
+export const sendUpgradeNotification = async (planId: string, planName: string) => {
+  const { data, error } = await supabase.functions.invoke('upgrade-notification', {
+    body: { planId, planName }
+  });
+  
+  if (error) {
+    console.error('Error sending upgrade notification:', error);
+    throw error;
+  }
+  
+  return data;
+};
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
@@ -93,6 +107,17 @@ export type BrandKitForGeneration = Pick<BrandKit,
   'logo'
 >;
 
+export type UserCredits = {
+  user_id: string;
+  purchased_credits: number;
+  monthly_credits: number;
+  credits_used: number;
+  available_credits: number;
+  subscription_status: string | null;
+  subscription_ends_at: string | null;
+  updated_at: string;
+};
+
 export async function disableUserAccount(): Promise<boolean> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -168,7 +193,6 @@ export async function uploadBase64Image(
     
     // Convert base64 to File
     const file = dataURLtoFile(image_data, fileName);
-    console.log('b64 to file:', file);
     // Determine the bucket based on asset type
     const bucket = type === 'logo' ? 'brand-logos' : 'brand-assets';
     
@@ -399,7 +423,7 @@ export async function updateBrandKit(id: string, updates: Partial<BrandKit>): Pr
 
   // If logo_selected_asset_id is being updated, fetch the asset to get its URL
   let finalUpdates = { ...updateData };
-  if (updateData.logo_selected_asset_id) {
+  if (updateData.logo_selected_asset_id && updateData.logo?.image === undefined) {
     const { data: selectedAsset } = await supabase
       .from('generated_assets')
       .select('image_url')
@@ -520,16 +544,89 @@ export async function saveGeneratedAssets(
     image_prompt: imagePrompt
   }));
 
-  const { data: savedAssets, error } = await supabase
+  try {
+    
+    // First, try the transaction-based approach
+    // const { data: savedAssets, error } = await supabase.rpc('with_transaction', {
+    //   callback_fn_name: 'save_assets_and_deduct_credits',
+    //   payload: JSON.stringify({
+    //     user_id: session.user.id,
+    //     brand_kit_id: brandKitId,
+    //     assets,
+    //     credits_to_use: imageDataArray.length, // 1 credit per image
+    //     description: `Generated ${imageDataArray.length} ${type} image(s)`,
+    //     reference_type: 'image_generation'
+    //   })
+    // });
+
+    // if (error) {
+    //   if ( error.code === 'P0001' || error.code === 'PGRST301' || error.code === 'PGRST302' || error.code === 'PGRST303' || error.code === 'PGRST304' || error.code === 'PGRST305') {
+    //     console.warn('Transaction function not available, falling back to direct save:', error.message);
+    //     // Fallback to direct save without credit deduction
+    //     return await saveAssetsDirectly(assets, session);
+    //   } 
+    //   throw error;
+    // } 
+    // return savedAssets;
+
+    // Fallback to direct save without credit deduction
+    return await saveAssetsDirectly(assets, session);
+
+  } catch (error) {
+    console.error('Error in saveGeneratedAssets:', error);
+    
+    // If it's a 400 error (bad request), fall back to direct save
+    if ((error as any).code === 'P0001' || (error as any).code === 'PGRST301' || (error as any).code === 'PGRST302' || (error as any).code === 'PGRST303' || (error as any).code === 'PGRST304' || (error as any).code === 'PGRST305') {
+      console.warn('Transaction function not available, falling back to direct save:', (error as any).message);
+      // Fallback to direct save without credit deduction
+      return await saveAssetsDirectly(assets, session);
+    }
+    
+    // For other errors, rethrow
+    throw error;
+  }
+}
+
+// Helper function to save assets directly without transaction
+async function saveAssetsDirectly(assets: any[], session: any): Promise<GeneratedAsset[]> {
+  // First save the assets
+  const { data: savedAssets, error: saveError } = await supabase
     .from('generated_assets')
     .insert(assets)
     .select();
 
-  if (error) {
-    console.error('Error saving generated assets:', error);
-    throw error;
+  if (saveError) {
+    console.error('Error saving assets directly:', saveError);
+    throw new Error(`Failed to save assets: ${saveError.message}`);
   }
 
+  try {
+    // Then try to log the credit usage
+    const { error: creditError } = await supabase
+      .from('credit_usage')
+      .insert({
+        user_id: session.user.id,
+        credits_used: assets.length,
+        description: `Generated ${assets.length} image(s)`,
+        reference_id: savedAssets[0].brand_kit_id,
+        reference_type: 'image_generation',
+        metadata: {
+          is_fallback: true,
+          asset_ids: savedAssets.map(asset => asset.id),
+          brand_kit_id: assets[0]?.brand_kit_id
+        }
+      });
+
+    if (creditError) {
+      console.error('Error logging credit usage (non-critical):', creditError);
+      // Don't fail the operation if credit logging fails
+    }
+  } catch (logError) {
+    console.error('Error in credit logging (non-critical):', logError);
+    // Continue even if credit logging fails
+  }
+
+  console.warn('Saved assets directly with separate credit logging');
   return savedAssets;
 }
 
@@ -686,4 +783,239 @@ export async function fetchBrandKitForGeneration(id: string): Promise<BrandKitFo
   }
 
   return brandKit;
+}
+
+/**
+ * Fetches the current user's credit balance
+ * @returns Promise with the user's credit information
+ */
+export async function fetchUserCredits(): Promise<UserCredits | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session?.user) {
+    throw new Error('Authentication required');
+  }
+
+  const { data, error } = await supabase
+    .from('user_available_credits')
+    .select('*')
+    .eq('user_id', session.user.id)
+    .single();
+
+  if (error) {
+    console.error('Error fetching user credits:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * Checks if the current user has enough credits for an operation
+ * @param requiredCredits Number of credits required
+ * @returns Promise that resolves to a boolean indicating if the user has enough credits
+ */
+export async function hasEnoughCredits(requiredCredits: number): Promise<boolean> {
+  try {
+    const credits = await fetchUserCredits();
+    return credits ? credits.available_credits >= requiredCredits : false;
+  } catch (error) {
+    console.error('Error checking credits:', error);
+    return false;
+  }
+}
+
+/**
+ * Updates a user's purchased credits after a successful payment
+ * @param userId The ID of the user to update
+ * @param creditsToAdd Number of credits to add to the user's purchased credits
+ * @param paymentReference Payment reference ID (e.g., PayPal transaction ID)
+ * @returns Promise that resolves to the updated UserCredits object
+ */
+export async function addPurchasedCredits(userId: string, creditsToAdd: number, paymentReference: string): Promise<UserCredits | null> {
+  try {
+    // First, get the current credits
+    const { data: currentCredits, error: fetchError } = await supabase
+      .from('user_credits')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+    
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      console.error('Error fetching current credits:', fetchError);
+      throw fetchError;
+    }
+    
+    //check if the credit_usage refrence_id/paymentreference doesn't already exist
+    const { data: existingCreditUsage } = await supabase
+      .from('credit_usage')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('reference_id', paymentReference)
+      .single();
+    
+    if (existingCreditUsage) {
+      return null;
+    }
+
+    //check payments
+    const { data: existingPayment } = await supabase
+      .from('payments')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('provider_payment_id', paymentReference)
+      .single();
+    
+    if (existingPayment) {
+      return null;
+    }
+    
+    // If user doesn't have a credits record yet, create one
+    if (!currentCredits) {
+      // const { data: newCredits, error: insertError } = await supabase
+      //   .from('user_credits')
+      //   .insert({
+      //     user_id: userId,
+      //     purchased_credits: creditsToAdd,
+      //     monthly_credits: 0,
+      //     credits_used: 0
+      //   })
+      //   .select()
+      //   .single();
+      
+      // if (insertError) {
+      //   console.error('Error creating credits record:', insertError);
+      //   throw insertError;
+      // }
+
+      // // Log the credit purchase in credit_usage table (as a negative value to indicate addition)
+      // await supabase
+      //   .from('credit_usage')
+      //   .insert({
+      //     user_id: userId,
+      //     credits_used: -creditsToAdd, // Negative value indicates credits added
+      //     description: 'Credits purchased via PayPal',
+      //     reference_id: paymentReference,
+      //     reference_type: 'paypal_payment',
+      //     metadata: { payment_method: 'paypal' }
+      //   });
+      
+      return null;
+    } else {
+
+      const newCredits = Number(currentCredits.purchased_credits) + Number(creditsToAdd);
+      // Update existing credits record
+      const { data: updatedCredits, error: updateError } = await supabase
+        .from('user_credits')
+        .update({
+          purchased_credits: newCredits,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId)
+        .select()
+        .single();
+      
+      if (updateError) {
+        console.error('Error updating credits:', updateError);
+        throw updateError;
+      }
+      
+      // Log the credit purchase in credit_usage table (as a negative value to indicate addition)
+      // await supabase
+      //   .from('credit_usage')
+      //   .insert({
+      //     user_id: userId,
+      //     credits_used: -creditsToAdd, // Negative value indicates credits added
+      //     description: 'Credits purchased via PayPal',
+      //     reference_id: paymentReference,
+      //     reference_type: 'paypal_payment',
+      //     metadata: { payment_method: 'paypal' }
+      //   });
+      
+      return updatedCredits;
+    }
+  } catch (error) {
+    console.error('Error adding purchased credits:', error);
+    throw error;
+  }
+}
+
+/**
+ * Inserts a payment record into the payments table
+ * @param paymentData Object containing payment details
+ * @returns The created payment record
+ */
+export async function createPaymentRecord(paymentData: {
+  user_id: string;
+  provider: 'stripe' | 'paypal' | 'manual';
+  provider_payment_id: string;
+  amount: number;
+  currency?: string;
+  status: string;
+  metadata?: Record<string, any>;
+}) {
+  try {
+    // Check if payment with this provider_payment_id already exists
+    const { data: existingPayment } = await supabase
+      .from('payments')
+      .select('id')
+      .eq('provider', paymentData.provider)
+      .eq('provider_payment_id', paymentData.provider_payment_id)
+      .single();
+    
+    if (existingPayment) {
+      throw new Error('Payment record already exists');
+    }
+
+    const { data: currentCredits, error: fetchError } = await supabase
+    .from('user_credits')
+    .select('*')
+    .eq('user_id', paymentData.user_id)
+    .single();
+
+    if (fetchError) {
+      console.error('Error fetching current credits:', fetchError);
+      throw fetchError;
+    }
+    
+    const { data, error } = await supabase
+      .from('payments')
+      .insert({
+        user_id: paymentData.user_id,
+        provider: paymentData.provider,
+        provider_payment_id: paymentData.provider_payment_id,
+        amount: paymentData.amount,
+        currency: paymentData.currency || 'USD',
+        status: paymentData.status,
+        metadata: paymentData.metadata || {}
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating payment record:', error);
+      throw error;
+    }
+
+    //update purchasedcredits
+    const { data: updatedCredits, error: updateError } = await supabase
+      .from('user_credits')
+      .update({
+        purchased_credits: Number(currentCredits.purchased_credits) + Number(paymentData.metadata?.credits_added),
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', paymentData.user_id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Error updating purchased credits:', updateError);
+      throw updateError;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in createPaymentRecord:', error);
+    throw error;
+  }
 }
