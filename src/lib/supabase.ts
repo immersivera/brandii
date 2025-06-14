@@ -93,6 +93,17 @@ export type BrandKitForGeneration = Pick<BrandKit,
   'logo'
 >;
 
+export type UserCredits = {
+  user_id: string;
+  purchased_credits: number;
+  monthly_credits: number;
+  credits_used: number;
+  available_credits: number;
+  subscription_status: string | null;
+  subscription_ends_at: string | null;
+  updated_at: string;
+};
+
 export async function disableUserAccount(): Promise<boolean> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -519,16 +530,89 @@ export async function saveGeneratedAssets(
     image_prompt: imagePrompt
   }));
 
-  const { data: savedAssets, error } = await supabase
+  try {
+    
+    // First, try the transaction-based approach
+    // const { data: savedAssets, error } = await supabase.rpc('with_transaction', {
+    //   callback_fn_name: 'save_assets_and_deduct_credits',
+    //   payload: JSON.stringify({
+    //     user_id: session.user.id,
+    //     brand_kit_id: brandKitId,
+    //     assets,
+    //     credits_to_use: imageDataArray.length, // 1 credit per image
+    //     description: `Generated ${imageDataArray.length} ${type} image(s)`,
+    //     reference_type: 'image_generation'
+    //   })
+    // });
+
+    // if (error) {
+    //   if ( error.code === 'P0001' || error.code === 'PGRST301' || error.code === 'PGRST302' || error.code === 'PGRST303' || error.code === 'PGRST304' || error.code === 'PGRST305') {
+    //     console.warn('Transaction function not available, falling back to direct save:', error.message);
+    //     // Fallback to direct save without credit deduction
+    //     return await saveAssetsDirectly(assets, session);
+    //   } 
+    //   throw error;
+    // } 
+    // return savedAssets;
+
+    // Fallback to direct save without credit deduction
+    return await saveAssetsDirectly(assets, session);
+
+  } catch (error) {
+    console.error('Error in saveGeneratedAssets:', error);
+    
+    // If it's a 400 error (bad request), fall back to direct save
+    if ((error as any).code === 'P0001' || (error as any).code === 'PGRST301' || (error as any).code === 'PGRST302' || (error as any).code === 'PGRST303' || (error as any).code === 'PGRST304' || (error as any).code === 'PGRST305') {
+      console.warn('Transaction function not available, falling back to direct save:', (error as any).message);
+      // Fallback to direct save without credit deduction
+      return await saveAssetsDirectly(assets, session);
+    }
+    
+    // For other errors, rethrow
+    throw error;
+  }
+}
+
+// Helper function to save assets directly without transaction
+async function saveAssetsDirectly(assets: any[], session: any): Promise<GeneratedAsset[]> {
+  // First save the assets
+  const { data: savedAssets, error: saveError } = await supabase
     .from('generated_assets')
     .insert(assets)
     .select();
 
-  if (error) {
-    console.error('Error saving generated assets:', error);
-    throw error;
+  if (saveError) {
+    console.error('Error saving assets directly:', saveError);
+    throw new Error(`Failed to save assets: ${saveError.message}`);
   }
 
+  try {
+    // Then try to log the credit usage
+    const { error: creditError } = await supabase
+      .from('credit_usage')
+      .insert({
+        user_id: session.user.id,
+        credits_used: assets.length,
+        description: `Generated ${assets.length} image(s)`,
+        reference_id: savedAssets[0].brand_kit_id,
+        reference_type: 'image_generation',
+        metadata: {
+          is_fallback: true,
+          asset_ids: savedAssets.map(asset => asset.id),
+          brand_kit_id: assets[0]?.brand_kit_id
+        }
+      });
+
+    if (creditError) {
+      console.error('Error logging credit usage (non-critical):', creditError);
+      // Don't fail the operation if credit logging fails
+    }
+  } catch (logError) {
+    console.error('Error in credit logging (non-critical):', logError);
+    // Continue even if credit logging fails
+  }
+
+  console.warn('Saved assets directly with separate credit logging');
   return savedAssets;
 }
 
@@ -685,4 +769,44 @@ export async function fetchBrandKitForGeneration(id: string): Promise<BrandKitFo
   }
 
   return brandKit;
+}
+
+/**
+ * Fetches the current user's credit balance
+ * @returns Promise with the user's credit information
+ */
+export async function fetchUserCredits(): Promise<UserCredits | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session?.user) {
+    throw new Error('Authentication required');
+  }
+
+  const { data, error } = await supabase
+    .from('user_available_credits')
+    .select('*')
+    .eq('user_id', session.user.id)
+    .single();
+
+  if (error) {
+    console.error('Error fetching user credits:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * Checks if the current user has enough credits for an operation
+ * @param requiredCredits Number of credits required
+ * @returns Promise that resolves to a boolean indicating if the user has enough credits
+ */
+export async function hasEnoughCredits(requiredCredits: number): Promise<boolean> {
+  try {
+    const credits = await fetchUserCredits();
+    return credits ? credits.available_credits >= requiredCredits : false;
+  } catch (error) {
+    console.error('Error checking credits:', error);
+    return false;
+  }
 }
