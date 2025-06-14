@@ -387,8 +387,7 @@ export const HomePage: React.FC = () => {
                 monthlyCredits: 10,
                 features: [
                   '10 one-time credits',
-                  'Up to 3 brand kits',
-                  'All images generated are public',
+                  'All assets generated are public',
                   'Community support',
                 ],
                 buttonText: 'Get Started',

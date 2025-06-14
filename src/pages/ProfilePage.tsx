@@ -464,7 +464,7 @@ export const ProfilePage: React.FC = () => {
                                   </li>
                                   <li className="flex items-center gap-2 text-sm">
                                     <Zap className="h-4 w-4 text-brand-500 min-w-4" />
-                                    Priority 24/7 support
+                                    Priority support
                                   </li>
                                 </>
                               )}
