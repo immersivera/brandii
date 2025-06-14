@@ -168,7 +168,6 @@ export async function uploadBase64Image(
     
     // Convert base64 to File
     const file = dataURLtoFile(image_data, fileName);
-    console.log('b64 to file:', file);
     // Determine the bucket based on asset type
     const bucket = type === 'logo' ? 'brand-logos' : 'brand-assets';
     

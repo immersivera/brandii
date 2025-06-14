@@ -153,19 +153,15 @@ export const BrandKitPage: React.FC = () => {
         `${asset.id}.png`,
         asset.type as 'logo' | 'image'
       );
-      console.log('Image URL:', imageUrl);
       
       // Create updates object with correct types
       const updates: Partial<GeneratedAsset> = {
         image_url: imageUrl,
       };
       
-      console.log('Updating asset with:', updates);
       
       // Update the database
-      const updatedAsset = await updateGeneratedAsset(asset.id, updates);
-      console.log('Updated Asset in DB:', updatedAsset);
-      
+      const updatedAsset = await updateGeneratedAsset(asset.id, updates);      
       // Update local state
       setBrandKit(prev => {
         if (!prev || !prev.generated_assets) return prev;
@@ -718,7 +714,6 @@ export const BrandKitPage: React.FC = () => {
     try {
       setIsSelectingLogo(assetId);
       const logoAssetImage = logoAssets.find(asset => asset.id === assetId)?.image_url || undefined
-      // console.log('BrandKit updated:', logoAssetImage);
 
       //visually update brandkit logo to the brandkit
       // setBrandKit(prev => ({
@@ -866,9 +861,7 @@ export const BrandKitPage: React.FC = () => {
       // Format: /storage/v1/object/public/brand-logos/{brandkit-id}/uploads/{filename}
       const url = new URL(brandKit.logo.image);
       const pathParts = url.pathname.split('/');
-      // console.log('pathParts:', pathParts);
       const filePath = pathParts.slice(pathParts.indexOf('brand-logos') + 1).join('/');
-      // console.log('filePath:', filePath);
 
 
       // Delete the file from storage
