@@ -403,74 +403,105 @@ export const ProfilePage: React.FC = () => {
             
             {/* Subscription Plans */}
             {profile?.user_type !== 'pro' && (
-              <Card className="mb-8 border-2 border-dashed border-brand-300 bg-brand-50 dark:bg-transparent dark:border-brand-800" ref={subscriptionSectionRef}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Award className="h-5 w-5" />
-                    Upgrade Your Plan
-                  </CardTitle>
-                  <CardDescription>
-                    Get more credits and features with a Pro subscription
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {subscriptionPlans.map(plan => (
-                      <Card key={plan.id} className={`overflow-hidden ${plan.name === 'Pro' ? 'border-brand-500 shadow-md' : ''}`}>
-                        <div className={`px-6 py-3 ${plan.name === 'Pro' ? 'bg-brand-100 dark:bg-brand-900' : 'bg-gray-50 dark:bg-gray-800'}`}>
-                          <h3 className="font-semibold text-lg">{plan.name}</h3>
-                          <div className="mt-1 text-sm text-gray-600 dark:text-gray-300">{plan.description}</div>
-                        </div>
-                        <CardContent className="p-6">
-                          <div className="mb-4">
-                            <span className="text-3xl font-bold">${plan.price}</span>
-                            <span className="text-gray-600 dark:text-gray-400">/month</span>
+              <div className="relative mb-8">
+                {/* Most Popular Badge - Moved outside the card */}
+                <div className="absolute lg:-top-[-115px] md:-top-[-115px] top-[430px] lg:left-1/2 md:left-[73%] left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-brand-500 to-accent-500 text-white text-xs font-semibold px-4 py-1.5 rounded-full whitespace-nowrap z-10">
+                  Most Popular
+                </div>
+                <Card className="border-2 border-dashed border-brand-300 bg-brand-50 dark:bg-transparent dark:border-brand-800 pt-2" ref={subscriptionSectionRef}>
+                  <CardHeader className="pt-6">
+                    <CardTitle className="flex items-center gap-2">
+                      <Award className="h-5 w-5" />
+                      Upgrade Your Plan
+                    </CardTitle>
+                    <CardDescription>
+                      Get more credits and features with a Pro subscription
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {subscriptionPlans.map(plan => (
+                        <Card key={plan.id} className={`overflow-hidden ${plan.name === 'Pro' ? 'border-2 border-brand-500 shadow-lg' : ''}`}>
+                          <div className={`px-6 py-3 ${plan.name === 'Pro' ? 'bg-brand-100 dark:bg-brand-900/30' : 'bg-gray-50 dark:bg-gray-800'}`}>
+                            <h3 className="font-semibold text-lg">{plan.name}</h3>
+                            <div className="mt-1 text-sm text-gray-600 dark:text-gray-300">{plan.description}</div>
                           </div>
-                          <ul className="space-y-2 mb-6">
-                            <li className="flex items-center gap-2 text-sm">
-                              <Zap className="h-4 w-4 text-brand-500" />
-                              {plan.monthly_credits} monthly credits
-                            </li>
-                            {plan.name === 'Pro' && (
+                          <CardContent className="p-6">
+                            <div className="mb-4">
+                              <span className="text-3xl font-bold">${plan.price}</span>
+                              <span className="text-gray-600 dark:text-gray-400">/month</span>
+                            </div>
+                            <ul className="space-y-2 mb-6">
                               <li className="flex items-center gap-2 text-sm">
                                 <Zap className="h-4 w-4 text-brand-500" />
-                                Premium features unlocked
+                                {plan.monthly_credits} monthly credits
                               </li>
-                            )}
-                            {plan.name === 'Pro' && (
-                              <li className="flex items-center gap-2 text-sm">
-                                <Zap className="h-4 w-4 text-brand-500" />
-                                Priority support
-                              </li>
-                            )}
-                          </ul>
-                          <Button
-                            variant={plan.name === 'Pro' ? 'primary' : 'outline'}
-                            className="w-full"
-                            onClick={() => handleUpgrade(plan.id)}
-                            isLoading={isUpgrading}
-                            disabled={plan.name === 'Free' || (userSubscription?.plan_id === plan.id && userSubscription?.status === 'active')}
-                          >
-                            {plan.name === 'Free' ? 'Current Plan' : 
-                              (userSubscription?.plan_id === plan.id && userSubscription?.status === 'active') ? 'Current Plan' : 'Upgrade'}
-                          </Button>
-                        </CardContent>
-                      </Card>
-
-                    ))}
-                  </div>
-                </CardContent>
-                <CardContent className="p-6 text-center">
-                  <Button 
-                    variant="outline"
-                    className="w-full md:w-auto text-center"
-                    onClick={handleAdditionalCredits}
-                  >
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    Purchase Additional Credits
-                  </Button>
-                </CardContent>
-              </Card>
+                              {plan.name === 'Pro' && (
+                                <>
+                                  <li className="flex items-center gap-2 text-sm">
+                                    <Zap className="h-4 w-4 text-brand-500 min-w-4" />
+                                    50 bonus credits (special offer)
+                                  </li>
+                                  <li className="flex items-center gap-2 text-sm">
+                                    <Zap className="h-4 w-4 text-brand-500 min-w-4" />
+                                    Premium features unlocked
+                                  </li>
+                                  <li className="flex items-center gap-2 text-sm">
+                                    <Zap className="h-4 w-4 text-brand-500 min-w-4" />
+                                    Priority support
+                                  </li>
+                                </>
+                              )}
+                              {plan.name === 'Elite' && (
+                                <>
+                                  <li className="flex items-center gap-2 text-sm">
+                                    <Zap className="h-4 w-4 text-brand-500 min-w-4" />
+                                    200 bonus credits (special offer)
+                                  </li>
+                                  <li className="flex items-center gap-2 text-sm">
+                                    <Zap className="h-4 w-4 text-brand-500 min-w-4" />
+                                    All premium features
+                                  </li>
+                                  <li className="flex items-center gap-2 text-sm">
+                                    <Zap className="h-4 w-4 text-brand-500 min-w-4" />
+                                    Priority 24/7 support
+                                  </li>
+                                </>
+                              )}
+                              {plan.name === 'Free' && (
+                                <li className="flex items-center gap-2 text-sm">
+                                  <Zap className="h-4 w-4 text-brand-500 min-w-4" />
+                                  Basic features
+                                </li>
+                              )}
+                            </ul>
+                            <Button
+                              variant={plan.name === 'Pro' ? 'primary' : 'outline'}
+                              className={`w-full ${plan.name === 'Pro' ? 'shadow-lg shadow-brand-500/20' : ''}`}
+                              onClick={() => handleUpgrade(plan.id)}
+                              isLoading={isUpgrading}
+                              disabled={plan.name === 'Free' || (userSubscription?.plan_id === plan.id && userSubscription?.status === 'active')}
+                            >
+                              {plan.name === 'Free' ? 'Current Plan' : 
+                                (userSubscription?.plan_id === plan.id && userSubscription?.status === 'active') ? 'Current Plan' : 'Upgrade'}
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </CardContent>
+                  <CardContent className="p-6 text-center">
+                    <Button 
+                      variant="outline"
+                      className="w-full md:w-auto text-center"
+                      onClick={handleAdditionalCredits}
+                    >
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Purchase Additional Credits
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
             )}
             
             <form onSubmit={handleSubmit}>
