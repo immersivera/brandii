@@ -60,7 +60,7 @@ END;
 $$;
 
 -- Grant execute permission to authenticated users
-GRANTE EXECUTE ON FUNCTION public.save_assets_and_deduct_credits(
+GRANT EXECUTE ON FUNCTION public.save_assets_and_deduct_credits(
   UUID, UUID, JSONB[], INTEGER, TEXT, TEXT
 ) TO authenticated;
 
