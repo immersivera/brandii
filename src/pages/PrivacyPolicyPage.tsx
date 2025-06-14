@@ -10,14 +10,17 @@ export const PrivacyPolicyPage: React.FC = () => {
           <CardContent className="p-8">
             <h1 className="text-3xl font-bold mb-6">Privacy Policy</h1>
             <p className="text-gray-600 dark:text-gray-400 mb-8">
-              Last updated: June 13, 2025
+              Last updated: June 14, 2025
             </p>
 
             <div className="prose dark:prose-invert max-w-none">
               <section className="mb-8">
                 <h2 className="text-2xl font-semibold mb-4">1. Introduction</h2>
+                <p className="mb-4"> 
+                  Welcome to Brandii, a service provided by Immersive Solutions ("Company", "we", "us", or "our"). By accessing or using our platform at brandii.app or any related services (collectively, the "Service"), you agree to comply with and be bound by this Privacy Policy.
+                </p> 
                 <p className="mb-4">
-                  Welcome to Brandii. We respect your privacy and are committed to protecting your personal data. This privacy policy will inform you about how we look after your personal data when you visit our website and tell you about your privacy rights and how the law protects you.
+                  This Privacy Policy explains how we collect, use, and safeguard your personal information when you use our Service.
                 </p>
               </section>
 

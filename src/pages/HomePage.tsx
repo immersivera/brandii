@@ -381,14 +381,13 @@ export const HomePage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {[
               {
-                name: 'Starter',
+                name: 'Free',
                 price: 0,
                 description: 'Perfect for trying out Brandii',
                 monthlyCredits: 10,
                 features: [
-                  '50 one-time credits',
-                  'Up to 3 basic brand kits',
-                  'All images generated are public',
+                  '10 one-time credits',
+                  'All assets generated are public',
                   'Community support',
                 ],
                 buttonText: 'Get Started',
@@ -396,15 +395,15 @@ export const HomePage: React.FC = () => {
               },
               {
                 name: 'Pro',
-                price: 20,
+                price: 15,
                 description: 'For growing brands',
-                monthlyCredits: 150,
+                monthlyCredits: 90,
                 features: [
-                  '100 monthly credits',
-                  '50 bonus credits (special offer)',
+                  '40 monthly credits',
+                  '60 bonus credits (special offer)',
                   'Unlimited brand kits',
                   'Private and public image options',
-                  'Advanced features unlocked',
+                  'All premium features',
                   'Priority support',
                   'Email support'
                 ],
@@ -415,13 +414,13 @@ export const HomePage: React.FC = () => {
                 name: 'Elite',
                 price: 99,
                 description: 'For large work loads',
-                monthlyCredits: 1200,
+                monthlyCredits: 500,
                 features: [
-                  '1000 monthly credits',
+                  '300 monthly credits',
                   '200 bonus credits (special offer)',
                   'Unlimited brand kits',
                   'Private and public image options',
-                  'Advanced features unlocked',
+                  'All premium features',
                   'Priority support',
                   'Email support'
                 ],

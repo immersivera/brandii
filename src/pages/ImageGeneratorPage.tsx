@@ -8,7 +8,7 @@ import { Textarea } from '../components/ui/Textarea';
 import { Select } from '../components/ui/Select';
 import { useUser } from '../context/UserContext';
 import { ArrowLeft, Sparkles, Download, X, Calendar, Clock, Upload, Image as ImageIcon, Trash2 } from 'lucide-react';
-import { BrandKitForGeneration, fetchBrandKitForGeneration, saveGeneratedAssets } from '../lib/supabase';
+import { BrandKitForGeneration, fetchBrandKitForGeneration, hasEnoughCredits, saveGeneratedAssets } from '../lib/supabase';
 import { generateImageAssets, type ImageSize } from '../lib/openai';
 import toast from 'react-hot-toast';
 
@@ -51,7 +51,7 @@ export const ImageGeneratorPage: React.FC = () => {
   const [includeBrandColors, setIncludeBrandColors] = useState(true);
   const [includeBrandTypography, setIncludeBrandTypography] = useState(true);
   const [includeBrandStyle, setIncludeBrandStyle] = useState(true);
-
+  
   useEffect(() => {
     const loadBrandKit = async () => {
       if (!id) return;
@@ -221,7 +221,11 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
       toast.error('Please enter a prompt');
       return;
     }
-
+    const hasCredits = await hasEnoughCredits(imageCount); // Check for 5 credits
+    if (!hasCredits) {
+      toast.error('Not enough credits');
+      return;
+    }
     setIsGenerating(true);
     setGeneratedImages([]);
     setSelectedImage(null);
@@ -287,7 +291,7 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
       // Get the brand assets prompt and combine with the user's prompt
       const brandAssetsPrompt = getBrandAssetsPrompt();
       const fullPrompt = `${prompt.trim()}\n\n${brandAssetsPrompt}`.trim();
-
+    
       const images = await generateImageAssets(
         fullPrompt,
         imagesForApi.length > 0 ? imagesForApi : undefined,
