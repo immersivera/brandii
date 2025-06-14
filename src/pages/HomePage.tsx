@@ -124,7 +124,7 @@ export const HomePage: React.FC = () => {
           <div className="flex justify-center mb-12">
             <div className="dark:bg-black/20 bg-white backdrop-blur-md border border-black/20 dark:border-white/20 rounded-full py-2 px-4 flex items-center gap-2">
               <span className="text-brand-500 text-lg">🚀</span>
-              <span className="dark:text-white/90 text-black/90 text-sm font-medium">AI-Powered Brand Kit & Image Generator</span>
+              <span className="dark:text-white/90 text-black/90 md:text-sm font-medium text-xs">Brand Kit, Logo Maker & Image&nbsp;Generator</span>
               <div className="w-2 h-2 rounded-full bg-green-500 ml-1"></div>
             </div>
           </div>
@@ -135,7 +135,7 @@ export const HomePage: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              Think it. Brand it. Launch it.
+              Think&nbsp;it. Brand&nbsp;it. Launch&nbsp;it.
             </motion.h1>
             
             <motion.p 
