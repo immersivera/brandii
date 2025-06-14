@@ -82,22 +82,22 @@ const featuresList = [
 
 const testimonials = [
   {
-    quote: "Brandii helped us create a cohesive brand identity in minutes instead of weeks. The AI suggestions were spot on!",
-    author: "Sarah Johnson",
-    role: "Founder, TechStart",
-    avatar: "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=150"
+    quote: "Brandii helped me establish a cohesive brand identity in minutes instead of weeks. Generating images that matched my brand were spot on!",
+    author: "K. Montaque",
+    role: "Content Creator",
+    avatar: "#"
   },
   {
-    quote: "As a solo entrepreneur, I couldn't afford a design agency. Brandii gave me professional results at a fraction of the cost.",
-    author: "Michael Chen",
+    quote: "As a solopreneur, I couldn't afford a design agency. Brandii gives me great results at a fraction of the cost & time.",
+    author: "K. Thompson",
     role: "Independent Consultant",
-    avatar: "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=150"
+    avatar: "#"
   },
   {
     quote: "The brand kit we created with Brandii has received countless compliments. It's impressive how consistent our materials look now.",
-    author: "Emma Rodriguez",
-    role: "Marketing Director, GreenLife",
-    avatar: "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=150"
+    author: "D. Beckford",
+    role: "Marketing Specialist",
+    avatar: "#"
   },
 ];
 
@@ -179,7 +179,7 @@ export const HomePage: React.FC = () => {
               transition={{ duration: 0.5, delay: 0.2 }}
             >
               <div className="text-center">
-                <div className="text-4xl font-bold dark:text-white text-black mb-1">500+</div>
+                <div className="text-4xl font-bold dark:text-white text-black mb-1">100+</div>
                 <div className="text-gray-400 text-sm">Brand Kits Created</div>
               </div>
               <div className="text-center">
@@ -187,7 +187,7 @@ export const HomePage: React.FC = () => {
                 <div className="text-gray-400 text-sm">Client Satisfaction</div>
               </div>
               <div className="text-center">
-                <div className="text-4xl font-bold dark:text-white text-black mb-1">10M+</div>
+                <div className="text-4xl font-bold dark:text-white text-black mb-1">2.1k+</div>
                 <div className="text-gray-400 text-sm">Assets Generated</div>
               </div>
             </motion.div>
@@ -344,11 +344,11 @@ export const HomePage: React.FC = () => {
                       "{testimonial.quote}"
                     </p>
                     <div className="flex items-center">
-                      <img
+                      {/* <img
                         src={testimonial.avatar}
                         alt={testimonial.author}
                         className="w-12 h-12 rounded-full object-cover mr-4"
-                      />
+                      /> */}
                       <div>
                         <h4 className="font-semibold text-gray-900 dark:text-white">
                           {testimonial.author}
