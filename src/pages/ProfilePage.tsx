@@ -440,11 +440,11 @@ export const ProfilePage: React.FC = () => {
                                 <>
                                   <li className="flex items-center gap-2 text-sm">
                                     <Zap className="h-4 w-4 text-brand-500 min-w-4" />
-                                    50 bonus credits (special offer)
+                                    60 bonus credits (special offer)
                                   </li>
                                   <li className="flex items-center gap-2 text-sm">
                                     <Zap className="h-4 w-4 text-brand-500 min-w-4" />
-                                    Premium features unlocked
+                                    All premium features
                                   </li>
                                   <li className="flex items-center gap-2 text-sm">
                                     <Zap className="h-4 w-4 text-brand-500 min-w-4" />

@@ -386,8 +386,8 @@ export const HomePage: React.FC = () => {
                 description: 'Perfect for trying out Brandii',
                 monthlyCredits: 10,
                 features: [
-                  '50 one-time credits',
-                  'Up to 3 basic brand kits',
+                  '10 one-time credits',
+                  'Up to 3 brand kits',
                   'All images generated are public',
                   'Community support',
                 ],
@@ -396,15 +396,15 @@ export const HomePage: React.FC = () => {
               },
               {
                 name: 'Pro',
-                price: 20,
+                price: 15,
                 description: 'For growing brands',
-                monthlyCredits: 150,
+                monthlyCredits: 90,
                 features: [
-                  '100 monthly credits',
-                  '50 bonus credits (special offer)',
+                  '40 monthly credits',
+                  '60 bonus credits (special offer)',
                   'Unlimited brand kits',
                   'Private and public image options',
-                  'Advanced features unlocked',
+                  'All premium features',
                   'Priority support',
                   'Email support'
                 ],
@@ -415,13 +415,13 @@ export const HomePage: React.FC = () => {
                 name: 'Elite',
                 price: 99,
                 description: 'For large work loads',
-                monthlyCredits: 1200,
+                monthlyCredits: 500,
                 features: [
-                  '1000 monthly credits',
+                  '300 monthly credits',
                   '200 bonus credits (special offer)',
                   'Unlimited brand kits',
                   'Private and public image options',
-                  'Advanced features unlocked',
+                  'All premium features',
                   'Priority support',
                   'Email support'
                 ],
