@@ -420,7 +420,9 @@ export const ProfilePage: React.FC = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {subscriptionPlans.map(plan => (
+                      {subscriptionPlans
+                        .filter(plan => !plan.name.toLowerCase().includes('credit'))
+                        .map(plan => (
                         <Card key={plan.id} className={`overflow-hidden ${plan.name === 'Pro' ? 'border-2 border-brand-500 shadow-lg' : ''}`}>
                           <div className={`px-6 py-3 ${plan.name === 'Pro' ? 'bg-brand-100 dark:bg-brand-900/30' : 'bg-gray-50 dark:bg-gray-800'}`}>
                             <h3 className="font-semibold text-lg">{plan.name}</h3>
