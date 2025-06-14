@@ -4,6 +4,20 @@ import { v4 as uuidv4 } from 'uuid';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Function to send upgrade notification via Edge Function
+export const sendUpgradeNotification = async (planId: string, planName: string) => {
+  const { data, error } = await supabase.functions.invoke('upgrade-notification', {
+    body: { planId, planName }
+  });
+  
+  if (error) {
+    console.error('Error sending upgrade notification:', error);
+    throw error;
+  }
+  
+  return data;
+};
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,

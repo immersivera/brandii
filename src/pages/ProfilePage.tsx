@@ -13,7 +13,7 @@ import {
   Progress 
 } from '../components/ui';
 import { useUser } from '../context/UserContext';
-import { updateUserProfile, supabase, disableUserAccount } from '../lib/supabase';
+import { updateUserProfile, supabase, disableUserAccount, sendUpgradeNotification } from '../lib/supabase';
 import { AlertTriangle, ArrowLeft, Save, Trash2, Twitter, Github, Linkedin, CreditCard, Award, Zap, User2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -100,16 +100,20 @@ export const ProfilePage: React.FC = () => {
   };
 
   const handleAdditionalCredits = async () => {
-    navigate('/additional-credits');
+    window.location.href = `${import.meta.env.VITE_ADDITIONAL_CREDITS_URL}`;
   };
   
   const handleUpgrade = async (planId: string) => {
     setIsUpgrading(true);
     try {
-      // In a real app, this would redirect to Stripe checkout
-      toast.success('Redirecting to payment gateway...');
-      // For this example, we'll simulate a successful upgrade
-      navigate('/checkout?plan=pro');
+      // Get plan name for the email
+      const plan = subscriptionPlans.find(p => p.id === planId);
+      const planName = plan?.name || planId;
+      
+      // Call the Edge Function to send the upgrade notification
+      await sendUpgradeNotification(planId, planName);
+      
+      toast.success('Upgrade request received! We\'ll contact you soon to complete the process.');
     } catch (error) {
       console.error('Error initiating upgrade:', error);
       toast.error('Failed to initiate plan upgrade');
@@ -375,6 +379,16 @@ export const ProfilePage: React.FC = () => {
                             {new Date(userSubscription.current_period_end).toLocaleDateString()}
                           </span>
                         </div>
+
+                        <Button 
+                          variant="outline"
+                          className="w-full mt-4"
+                          onClick={handleAdditionalCredits}
+                        >
+                          <CreditCard className="mr-2 h-4 w-4" />
+                          Purchase Additional Credits
+                        </Button>
+
                         {userSubscription.status === 'active' && !userSubscription.cancel_at_period_end && (
                           <Button 
                             variant="outline" 
@@ -485,14 +499,25 @@ export const ProfilePage: React.FC = () => {
                               disabled={plan.name === 'Free' || (userSubscription?.plan_id === plan.id && userSubscription?.status === 'active')}
                             >
                               {plan.name === 'Free' ? 'Current Plan' : 
-                                (userSubscription?.plan_id === plan.id && userSubscription?.status === 'active') ? 'Current Plan' : 'Upgrade'}
+                                (userSubscription?.plan_id === plan.id && userSubscription?.status === 'active') ? 'Current Plan' : 'Contact Us'}
                             </Button>
+                            {plan.name === 'Free' && ( 
+                              <Button 
+                              variant="outline"
+                              className="w-full md:w-auto text-center text-xs mt-2"
+                              onClick={handleAdditionalCredits}
+                            >
+                              Purchase Additional Credits
+                            </Button>
+                            )}
                           </CardContent>
                         </Card>
                       ))}
                     </div>
                   </CardContent>
+
                   <CardContent className="p-6 text-center">
+                    <p>Auto Upgrade Coming Soon!</p>
                     <Button 
                       variant="outline"
                       className="w-full md:w-auto text-center"

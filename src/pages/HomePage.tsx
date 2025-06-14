@@ -381,7 +381,7 @@ export const HomePage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {[
               {
-                name: 'Starter',
+                name: 'Free',
                 price: 0,
                 description: 'Perfect for trying out Brandii',
                 monthlyCredits: 10,
