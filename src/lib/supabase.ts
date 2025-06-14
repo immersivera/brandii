@@ -168,7 +168,6 @@ export async function uploadBase64Image(
     
     // Convert base64 to File
     const file = dataURLtoFile(image_data, fileName);
-    console.log('b64 to file:', file);
     // Determine the bucket based on asset type
     const bucket = type === 'logo' ? 'brand-logos' : 'brand-assets';
     
@@ -399,7 +398,7 @@ export async function updateBrandKit(id: string, updates: Partial<BrandKit>): Pr
 
   // If logo_selected_asset_id is being updated, fetch the asset to get its URL
   let finalUpdates = { ...updateData };
-  if (updateData.logo_selected_asset_id) {
+  if (updateData.logo_selected_asset_id && updateData.logo?.image === undefined) {
     const { data: selectedAsset } = await supabase
       .from('generated_assets')
       .select('image_url')

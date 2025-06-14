@@ -58,6 +58,12 @@ export const GlobalGalleryPage: React.FC = () => {
     setCurrentPage(isNaN(page) ? 1 : page);
     setSearchQuery(search);
   // eslint-disable-next-line react-hooks/exhaustive-deps
+
+  const imageId = searchParams.get('image');
+  if (imageId) {
+    //save to localStorage
+    localStorage.setItem('pendingGlobalImageId', imageId);
+  }
   }, []); // Run only once on mount
 
   // Update URL when search or page changes
@@ -84,7 +90,6 @@ export const GlobalGalleryPage: React.FC = () => {
             `
             id,
             image_url,
-            image_data,
             image_prompt,
             created_at,
             brand_kit:brand_kit_id (id, name, type, user_id)
@@ -122,16 +127,9 @@ export const GlobalGalleryPage: React.FC = () => {
     };
 
     fetchImages();
+    handlePageChange(currentPage);
   }, [currentPage, debouncedSearchQuery]);
 
-  // const handleDownload = (imageUrl: string, index: number) => {
-  //   const link = document.createElement('a');
-  //   link.href = imageUrl;
-  //   link.download = `generated-image-${index + 1}.png`;
-  //   document.body.appendChild(link);
-  //   link.click();
-  //   document.body.removeChild(link);
-  // };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -195,9 +193,43 @@ export const GlobalGalleryPage: React.FC = () => {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (images.length > 0) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
+  // Handle image selection from URL on component mount
+  useEffect(() => {
+    const imageId = localStorage.getItem('pendingGlobalImageId');
+    if (imageId && !selectedImage) {
+      const imageToSelect = images.find((img: any) => img.id === imageId);
+      if (imageToSelect) {
+        setSelectedImage(imageToSelect);
+        // Clear the pending image after setting it
+        localStorage.removeItem('pendingGlobalImageId');
+        // Update URL with the new image ID
+        const params = new URLSearchParams(searchParams);
+        params.set('image', imageId);
+        navigate(`?${params.toString()}`, { replace: true });
+      }
+    }
+  }, [images, selectedImage]);
+
+  // Update URL when an image is selected
+  const handleImageSelect = (image: any) => {
+    setSelectedImage(image);
+    const params = new URLSearchParams(searchParams);
+    params.set('image', image.id);
+    navigate(`?${params.toString()}`, { replace: true });
+  };
+
+  // Update URL when modal is closed
+  const handleCloseModal = () => {
+    setSelectedImage(null);
+    const params = new URLSearchParams(searchParams);
+    params.delete('image');
+    navigate(`?${params.toString()}`, { replace: true });
+  };
 
   return (
     <Layout>
@@ -208,7 +240,7 @@ export const GlobalGalleryPage: React.FC = () => {
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Community Gallery</h1>
                 Explore AI-generated images from our community.
-                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                <p className="text-gray-600 dark:text-gray-400 mt-1 hidden">
                   {totalItems > 0 ? `${totalItems} ${totalItems === 1 ? 'image' : 'images'} found` : 'No images yet'}
                   {debouncedSearchQuery && ` for "${debouncedSearchQuery}"`}
                 </p>
@@ -275,7 +307,7 @@ export const GlobalGalleryPage: React.FC = () => {
                       >
                         <div 
                           className="relative group cursor-pointer overflow-hidden rounded-xl"
-                          onClick={() => setSelectedImage(image)}
+                          onClick={() => handleImageSelect(image)}
                         >
                           <OptimizedImage
                             src={image.image_url || image.image_data}
@@ -382,60 +414,66 @@ export const GlobalGalleryPage: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setSelectedImage(null)}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4"
+            onClick={handleCloseModal}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white dark:bg-gray-900 rounded-xl shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden"
+              className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-5xl max-h-[95vh] sm:max-h-[90vh] overflow-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex flex-col md:flex-row h-full">
+              {/* Close Button - Sticky on mobile */}
+              <div className="sticky top-0 z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm p-2 flex justify-end border-b border-gray-200/50 dark:border-gray-800/50">
+                <button
+                  onClick={handleCloseModal}
+                  className="p-1.5 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-sm border border-gray-200 dark:border-gray-700 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                  aria-label="Close modal"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              <div className="flex flex-col lg:flex-row">
                 {/* Image Section */}
-                <div className="w-full md:w-2/3 bg-black p-4 flex items-center justify-center">
+                <div className="w-full lg:w-2/3 bg-black p-2 sm:p-4 flex items-center justify-center min-h-[40vh] lg:min-h-[60vh]">
                   <OptimizedImage
                     src={selectedImage.image_url || selectedImage.image_data}
                     alt={selectedImage.image_prompt || 'Generated image'}
-                    className="max-w-full max-h-[50vh] md:max-h-[80vh] object-contain rounded-lg"
+                    className="max-w-full max-h-[calc(95vh-200px)] sm:max-h-[80vh] object-contain"
                     isThumbnail={false}
+                    fullResolutionSrc={selectedImage.image_url || selectedImage.image_data}
                   />
                 </div>
 
                 {/* Details Section */}
-                <div className="w-full md:w-1/3 p-6 flex flex-col">
-                  <div className="flex justify-between items-start mb-6">
-                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                      Image Details
-                    </h3>
-                    <button
-                      onClick={() => setSelectedImage(null)}
-                      className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                    >
-                      <X className="h-5 w-5" />
-                    </button>
-                  </div>
+                <div className="w-full lg:w-1/3 p-4 sm:p-6 flex flex-col border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-gray-800">
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4 sm:mb-6">
+                    Image Details
+                  </h3>
 
-                  <div className="space-y-6 flex-grow">
+                  <div className="space-y-4 sm:space-y-6 flex-grow">
                     {selectedImage.brand_kit && (
                       <div>
-                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        <h4 className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
                           Brand Kit
                         </h4>
-                        <p className="text-gray-900 dark:text-white font-medium">
+                        <p className="text-sm sm:text-base text-gray-900 dark:text-white font-medium">
                           {selectedImage.brand_kit.name}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                          {selectedImage.brand_kit.description}
-                        </p>
+                        {selectedImage.brand_kit.description && (
+                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1">
+                            {selectedImage.brand_kit.description}
+                          </p>
+                        )}
                         {isImageOwner(selectedImage) && (
                           <Link
                             to={`/kit/${selectedImage.brand_kit.id}`}
-                            className="inline-flex items-center mt-2 text-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
+                            className="inline-flex items-center mt-2 text-xs sm:text-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <ExternalLink className="h-4 w-4 mr-1" />
+                            <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
                             View Brand Kit
                           </Link>
                         )}
@@ -443,16 +481,16 @@ export const GlobalGalleryPage: React.FC = () => {
                     )}
 
                     <div>
-                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                      <h4 className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 sm:mb-2">
                         Created
                       </h4>
-                      <div className="space-y-2">
-                        <div className="flex items-center text-gray-600 dark:text-gray-300">
-                          <Calendar className="h-4 w-4 mr-2" />
+                      <div className="space-y-1 sm:space-y-2">
+                        <div className="flex items-center text-sm sm:text-base text-gray-600 dark:text-gray-300">
+                          <Calendar className="h-4 w-4 sm:h-5 sm:w-5 mr-2 flex-shrink-0" />
                           <span>{formatDate(selectedImage.created_at)}</span>
                         </div>
-                        <div className="flex items-center text-gray-600 dark:text-gray-300">
-                          <Clock className="h-4 w-4 mr-2" />
+                        <div className="flex items-center text-sm sm:text-base text-gray-600 dark:text-gray-300">
+                          <Clock className="h-4 w-4 sm:h-5 sm:w-5 mr-2 flex-shrink-0" />
                           <span>{formatTime(selectedImage.created_at)}</span>
                         </div>
                       </div>
@@ -460,10 +498,10 @@ export const GlobalGalleryPage: React.FC = () => {
 
                     {selectedImage.image_prompt && (
                       <div>
-                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                        <h4 className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 sm:mb-2">
                           Generation Prompt
                         </h4>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm">
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 overflow-y-auto max-h-32 sm:max-h-48 pr-2">
                           {selectedImage.image_prompt}
                         </p>
                       </div>
@@ -474,6 +512,7 @@ export const GlobalGalleryPage: React.FC = () => {
                     className="w-full mt-6"
                     leftIcon={<Download className="h-4 w-4" />}
                     onClick={() => handleDownload(selectedImage.image_url || selectedImage.image_data, images.indexOf(selectedImage))}
+                    size="sm"
                   >
                     Download Image
                   </Button>

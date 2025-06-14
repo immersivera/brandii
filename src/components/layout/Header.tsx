@@ -24,15 +24,15 @@ export const Header: React.FC = () => {
   const isTransparent = isHomePage && !isMenuOpen;
 
   // Log authentication state changes
-  useEffect(() => {
-    console.log('Auth State:', {
-      isAuthenticated: !!userId,
-      userId,
-      hasProfile: !!profile,
-      profileEmail: profile?.email,
-      currentPath: location.pathname
-    });
-  }, [userId, profile, location.pathname]);
+  // useEffect(() => {
+  //   console.log('Auth State:', {
+  //     isAuthenticated: !!userId,
+  //     userId,
+  //     hasProfile: !!profile,
+  //     profileEmail: profile?.email,
+  //     currentPath: location.pathname
+  //   });
+  // }, [userId, profile, location.pathname]);
   
   const navLinks = [
     { name: 'Home', path: '/' },

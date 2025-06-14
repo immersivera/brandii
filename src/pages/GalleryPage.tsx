@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useDebounce } from '../lib/utils';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
-import { ArrowLeft, Download, Plus, X, Calendar, Clock, Trash2, MessageSquare, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Download, Plus, X, Calendar, Clock, Trash2, MessageSquare, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { supabase, deleteGeneratedAsset } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import Masonry from 'react-masonry-css';
@@ -14,6 +15,7 @@ const ITEMS_PER_PAGE = 12;
 export const GalleryPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [images, setImages] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPageLoading, setIsPageLoading] = useState(false);
@@ -22,7 +24,8 @@ export const GalleryPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [brandKit, setBrandKit] = useState<any>(null);
-  const [searchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
   const breakpointColumns = {
     default: 4,
@@ -33,26 +36,32 @@ export const GalleryPage: React.FC = () => {
     640: 1
   };
 
-  // Initialize currentPage from URL params
+  // Initialize state from URL params on component mount
   useEffect(() => {
-    const pageFromUrl = parseInt(searchParams.get('page') || '1', 10);
-    if (!isNaN(pageFromUrl) && pageFromUrl > 0) {
-      setCurrentPage(pageFromUrl);
-    }
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const search = searchParams.get('search') || '';
+    
+    setCurrentPage(isNaN(page) ? 1 : page);
+    setSearchQuery(search);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only on mount, searchParams should be stable
 
-  // Update URL when currentPage changes
+    const imageId = searchParams.get('image');
+    
+    // Save to localStorage if we have an image ID in the URL
+    if (imageId) {
+      localStorage.setItem('pendingImageId', imageId);
+    } 
+
+  }, []); // Run only once on mount
+
+  // Update URL when search or page changes
   useEffect(() => {
-    const params = new URLSearchParams(searchParams);
-    if (currentPage > 1) {
-      params.set('page', currentPage.toString());
-    } else {
-      params.delete('page');
-    }
+    const params = new URLSearchParams();
+    if (currentPage > 1) params.set('page', currentPage.toString());
+    if (debouncedSearchQuery) params.set('search', debouncedSearchQuery);
+    
     navigate(`?${params.toString()}`, { replace: true });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, navigate]); // searchParams removed to avoid loop with its own update
+  }, [currentPage, debouncedSearchQuery, navigate]);
 
   useEffect(() => {
     const fetchBrandKitDetails = async () => {
@@ -81,25 +90,112 @@ export const GalleryPage: React.FC = () => {
         } else {
           setIsPageLoading(true);
         }
-        const { data, error, count } = await supabase
-          .from('generated_assets')
-          .select('*', { count: 'exact' })
+
+        let queryBuilder = supabase
+        .from('generated_assets')
+        .select(
+          `
+          id,
+          image_url,
+          image_prompt,
+          created_at,
+          brand_kit:brand_kit_id (id, name, type, user_id)
+          `,
+          { count: 'exact' }
+        )
           .eq('brand_kit_id', id)
           .eq('type', 'image')
           .order('created_at', { ascending: false })
-          .range((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE - 1);
+          .range(
+            (currentPage - 1) * ITEMS_PER_PAGE,
+            currentPage * ITEMS_PER_PAGE - 1
+          );
+
+        if (debouncedSearchQuery) {
+          queryBuilder = queryBuilder.ilike('image_prompt', `%${debouncedSearchQuery}%`);
+        }
+
+        const { data, error, count } = await queryBuilder;
+
         if (error) throw error;
+        
         setTotalItems(count || 0);
         setImages(data || []);
       } catch (error) {
+        console.error('Error fetching images:', error);
         toast.error('Failed to load images');
       } finally {
         setIsLoading(false);
         setIsPageLoading(false);
       }
     };
+
     if (id) fetchImages();
-  }, [id, currentPage]);
+    handlePageChange(currentPage);
+  }, [id, currentPage, debouncedSearchQuery]);
+
+  // Handle URL changes and image selection with localStorage
+  useEffect(() => {
+    
+    // If we have images but no selected image yet, check for pending image
+    if (images.length > 0 && !selectedImage) {
+      const pendingImageId = localStorage.getItem('pendingImageId');
+      if (pendingImageId) {
+        const imageToSelect = images.find(img => img.id === pendingImageId);
+        if (imageToSelect) {
+          // Use setTimeout to ensure the modal opens after the component is mounted
+          const timer = setTimeout(() => {
+            setSelectedImage(imageToSelect);
+            // Clear the pending image after setting it
+            localStorage.removeItem('pendingImageId');
+            // Update URL with the new image ID
+            const params = new URLSearchParams(searchParams);
+            params.set('image', pendingImageId);
+            navigate(`?${params.toString()}`, { replace: true });
+          }, 100);
+          return () => clearTimeout(timer);
+        }
+      }
+    }
+    
+  }, [images, selectedImage]);
+
+  // Handle image selection with URL update
+  const handleImageSelect = useCallback((image: any) => {
+    // Don't update if selecting the same image
+    if (selectedImage?.id === image.id) return;
+    
+    setSelectedImage(image);
+    
+    // Update URL with the new image ID
+    const params = new URLSearchParams(searchParams);
+    params.set('image', image.id);
+    
+    // Only update URL if it's different from current
+    if (searchParams.get('image') !== image.id) {
+      // Save to localStorage before navigation
+      localStorage.setItem('pendingImageId', image.id);
+      navigate(`?${params.toString()}`, { replace: true });
+    }
+  }, [navigate, searchParams, selectedImage]);
+
+  // Handle modal close with URL cleanup
+  const handleCloseModal = useCallback(() => {
+    if (!selectedImage) return; // Already closed
+    
+    setSelectedImage(null);
+    
+    // Clear from localStorage
+    localStorage.removeItem('pendingImageId');
+    
+    const params = new URLSearchParams(searchParams);
+    params.delete('image');
+    
+    // Only update URL if it still contains the image param
+    if (searchParams.has('image')) {
+      navigate(`?${params.toString()}`, { replace: true });
+    }
+  }, [navigate, searchParams, selectedImage]);
 
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
 
@@ -107,7 +203,6 @@ export const GalleryPage: React.FC = () => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
 
   const handleDownload = async (imageUrl: string, index: number) => {
     try {
@@ -212,7 +307,7 @@ export const GalleryPage: React.FC = () => {
       <div className="min-h-screen bg-white dark:bg-gray-900 py-12">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-[1920px] mx-auto">
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
               <div>
                 <Button
                   variant="ghost"
@@ -227,18 +322,34 @@ export const GalleryPage: React.FC = () => {
                   {brandKit.name} Image Gallery
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400">
-                  View and manage your brand's generated images
+                  {totalItems > 0 ? `${totalItems} ${totalItems === 1 ? 'image' : 'images'} found` : 'No images yet'}
+                  {debouncedSearchQuery && ` for "${debouncedSearchQuery}"`}
                 </p>
               </div>
+              <div className="flex items-center gap-2 justify-end">
+                <div className="relative w-full md:w-80">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by prompt..."
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setCurrentPage(1); // Reset to first page when searching
+                    }}
+                  />
+                </div>
 
-              <Button
-                onClick={() => navigate(`/kit/${id}/create`)}
-                leftIcon={<Plus className="h-4 w-4" />}
-              >
-                Create New Image
-              </Button>
-            </div>
-
+                <Button
+                  onClick={() => navigate(`/kit/${id}/create`)}
+                  leftIcon={<Plus className="h-4 w-4" />}
+                  className="w-48"
+                >
+                 Create Image
+                </Button>
+              </div>
+            </div>                  
             {images.length === 0 && !isLoading ? (
               <div className="text-center py-20">
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
@@ -273,7 +384,7 @@ export const GalleryPage: React.FC = () => {
                     >
                       <div 
                         className="relative group cursor-pointer overflow-hidden rounded-xl"
-                        onClick={() => setSelectedImage(asset)}
+                        onClick={() => handleImageSelect(asset)}
                       >
                         <OptimizedImage
                           src={asset.image_url || asset.image_data}
@@ -379,52 +490,57 @@ export const GalleryPage: React.FC = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => setSelectedImage(null)}
+            onClick={handleCloseModal}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white dark:bg-gray-900 rounded-xl shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden"
+              className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-5xl max-h-[95vh] sm:max-h-[90vh] overflow-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Image & Details Section (modal) */}
-              <div className="flex flex-col md:flex-row h-full">
+              {/* Close Button - Sticky on mobile */}
+              <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 p-2 flex justify-end border-b border-gray-200 dark:border-gray-800">
+                <button
+                  onClick={handleCloseModal}
+                  className="p-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                  aria-label="Close modal"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              {/* Image & Details Section */}
+              <div className="flex flex-col lg:flex-row">
                 {/* Image Section */}
-                <div className="w-full md:w-2/3 bg-black p-4 flex items-center justify-center">
+                <div className="w-full lg:w-2/3 bg-black p-2 sm:p-4 flex items-center justify-center min-h-[40vh] lg:min-h-[60vh]">
                   <OptimizedImage
                     src={selectedImage.image_url || selectedImage.image_data}
                     alt={selectedImage.image_prompt || "Selected image"}
-                    className="max-w-full max-h-[50vh] md:max-h-[80vh] object-contain rounded-lg"
+                    className="max-w-full max-h-[calc(95vh-200px)] sm:max-h-[80vh] object-contain"
                     isThumbnail={false}
                     fullResolutionSrc={selectedImage.image_url || selectedImage.image_data}
                   />
                 </div>
+                
                 {/* Details Section */}
-                <div className="w-full md:w-1/3 p-6 flex flex-col">
-                  <div className="flex justify-between items-start mb-6">
-                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                      Image Details
-                    </h3>
-                    <button
-                      onClick={() => setSelectedImage(null)}
-                      className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-                    >
-                      <X className="h-5 w-5" />
-                    </button>
-                  </div>
-                  <div className="space-y-6 flex-grow">
+                <div className="w-full lg:w-1/3 p-4 sm:p-6 flex flex-col border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-gray-800">
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4 sm:mb-6">
+                    Image Details
+                  </h3>
+                  
+                  <div className="space-y-4 sm:space-y-6 flex-grow">
                     <div>
-                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                      <h4 className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 sm:mb-2">
                         Created
                       </h4>
-                      <div className="space-y-2">
-                        <div className="flex items-center text-gray-600 dark:text-gray-300">
-                          <Calendar className="h-4 w-4 mr-2" />
+                      <div className="space-y-1 sm:space-y-2">
+                        <div className="flex items-center text-sm sm:text-base text-gray-600 dark:text-gray-300">
+                          <Calendar className="h-4 w-4 sm:h-5 sm:w-5 mr-2 flex-shrink-0" />
                           <span>{formatDate(selectedImage.created_at)}</span>
                         </div>
-                        <div className="flex items-center text-gray-600 dark:text-gray-300">
-                          <Clock className="h-4 w-4 mr-2" />
+                        <div className="flex items-center text-sm sm:text-base text-gray-600 dark:text-gray-300">
+                          <Clock className="h-4 w-4 sm:h-5 sm:w-5 mr-2 flex-shrink-0" />
                           <span>{formatTime(selectedImage.created_at)}</span>
                         </div>
                       </div>
@@ -432,30 +548,33 @@ export const GalleryPage: React.FC = () => {
 
                     {selectedImage.image_prompt && (
                       <div>
-                        <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                        <h4 className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 sm:mb-2">
                           Generation Prompt
                         </h4>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm">
+                        <p className="text-sm text-gray-600 dark:text-gray-300 overflow-y-auto max-h-32 sm:max-h-48 pr-2">
                           {selectedImage.image_prompt}
                         </p>
                       </div>
                     )}
                   </div>
-                  <div className="flex gap-2 mt-6">
+                  
+                  <div className="flex flex-col sm:flex-row gap-2 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800">
                     <Button
                       variant="outline"
-                      className="w-1/2"
+                      className="flex-1"
                       leftIcon={<Trash2 className="h-4 w-4" />}
                       onClick={() => handleDeleteImage(selectedImage.id)}
                       isLoading={isDeletingImage}
+                      size="sm"
                     >
                       Delete
                     </Button>
                     <Button
                       variant="primary"
-                      className="w-1/2"
+                      className="flex-1"
                       leftIcon={<Download className="h-4 w-4" />}
                       onClick={() => handleDownload(selectedImage.image_url || selectedImage.image_data, images.indexOf(selectedImage))}
+                      size="sm"
                     >
                       Download
                     </Button>

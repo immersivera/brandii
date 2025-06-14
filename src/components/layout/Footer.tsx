@@ -1,10 +1,35 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Twitter, Instagram, Github as GitHub } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 
 export const Footer: React.FC = () => {
   const { theme } = useTheme();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleNavigation = (path: string, sectionId?: string) => {
+    if (location.pathname === '/' && sectionId) {
+      // If we're on the homepage, scroll to the section
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else if (sectionId) {
+      // If we're not on the homepage, navigate to the homepage with hash
+      navigate(`/#${sectionId}`);
+      // Then scroll to the section after a small delay to allow the page to load
+      setTimeout(() => {
+        const element = document.getElementById(sectionId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    } else {
+      // Regular navigation for other links
+      navigate(path);
+    }
+  };
   
   return (
     <footer className="bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
@@ -23,15 +48,15 @@ export const Footer: React.FC = () => {
               logo concepts, and brand guidelines in minutes.
             </p>
             <div className="flex space-x-4">
-              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400 transition-colors">
+              <a href="https://twitter.com/#" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400 transition-colors">
                 <Twitter className="h-5 w-5" />
                 <span className="sr-only">Twitter</span>
               </a>
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400 transition-colors">
+              <a href="https://instagram.com/#" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400 transition-colors">
                 <Instagram className="h-5 w-5" />
                 <span className="sr-only">Instagram</span>
               </a>
-              <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400 transition-colors">
+              <a href="https://github.com/#" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400 transition-colors">
                 <GitHub className="h-5 w-5" />
                 <span className="sr-only">GitHub</span>
               </a>
@@ -47,17 +72,23 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/features" className="text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
+                <button 
+                  onClick={() => handleNavigation('/', 'features')} 
+                  className="text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors text-left"
+                >
                   Features
-                </Link>
+                </button>
               </li>
               <li>
-                <Link to="/pricing" className="text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
+                <button 
+                  onClick={() => handleNavigation('/', 'pricing')} 
+                  className="text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors text-left"
+                >
                   Pricing
-                </Link>
+                </button>
               </li>
               <li>
-                <Link to="/showcase" className="text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
+                <Link to="/gallery" className="text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
                   Showcase
                 </Link>
               </li>
@@ -67,22 +98,22 @@ export const Footer: React.FC = () => {
           <div>
             <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Company</h3>
             <ul className="space-y-2">
-              <li>
+              <li className="hidden">
                 <Link to="/about" className="text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
                   About
                 </Link>
               </li>
-              <li>
+              <li className="">
                 <Link to="/blog" className="text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
                   Blog
                 </Link>
               </li>
-              <li>
-                <Link to="/contact" className="text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
+              <li className="">
+                <Link to={`mailto:${import.meta.env.VITE_APP_EMAIL}`} className="text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
                   Contact
                 </Link>
               </li>
-              <li>
+              <li className="hidden">
                 <Link to="/careers" className="text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
                   Careers
                 </Link>
