@@ -399,7 +399,7 @@ export async function updateBrandKit(id: string, updates: Partial<BrandKit>): Pr
 
   // If logo_selected_asset_id is being updated, fetch the asset to get its URL
   let finalUpdates = { ...updateData };
-  if (updateData.logo_selected_asset_id) {
+  if (updateData.logo_selected_asset_id && updateData.logo?.image === undefined) {
     const { data: selectedAsset } = await supabase
       .from('generated_assets')
       .select('image_url')

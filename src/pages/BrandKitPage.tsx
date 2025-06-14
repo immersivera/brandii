@@ -12,6 +12,7 @@ import {
   Check, 
   Copy, 
   Download, 
+  Eye, 
   FileImage, 
   FileText, 
   Image as ImageIcon, 
@@ -57,6 +58,7 @@ export const BrandKitPage: React.FC = () => {
   const [showLogoModal, setShowLogoModal] = useState(false);
   const [conversionProgress, setConversionProgress] = useState<{[key: string]: 'pending' | 'converting' | 'done' | 'error'}>({});
   const [showDownloadOptions, setShowDownloadOptions] = useState(false);
+  const [previewLogo, setPreviewLogo] = useState<string | null>(null);
   
   // Track if any conversion is in progress
   const isConverting = Object.values(conversionProgress).some(
@@ -715,11 +717,22 @@ export const BrandKitPage: React.FC = () => {
 
     try {
       setIsSelectingLogo(assetId);
+      const logoAssetImage = logoAssets.find(asset => asset.id === assetId)?.image_url || undefined
+      // console.log('BrandKit updated:', logoAssetImage);
+
+      //visually update brandkit logo to the brandkit
+      // setBrandKit(prev => ({
+      //   ...prev!,
+      //   logo: {
+      //     ...prev!.logo,
+      //     image: logoAssetImage
+      //   }
+      // }));
       const updatedBrandKit = await updateBrandKit(brandKit.id, {
         logo_selected_asset_id: assetId,
         logo: {
           ...brandKit.logo,
-          image: logoAssets.find(asset => asset.id === assetId)?.image_url || undefined
+          image: logoAssetImage
         }
       });
       setBrandKit(updatedBrandKit);
@@ -1232,65 +1245,105 @@ export const BrandKitPage: React.FC = () => {
                   <div className="space-y-6">
                     {logoAssets.length > 0 ? (
                       <>
-                        <div className="grid grid-cols-2 gap-4">
-                          {logoAssets.map((asset) => (
-                            <div
-                              key={asset.id}
-                              className={`relative group border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
-                                brandKit.logo_selected_asset_id === asset.id
-                                  ? 'border-brand-600 shadow-lg'
-                                  : 'border-gray-200 dark:border-gray-700'
-                              }`}
-                            >
-                              <div className="relative">
-                                <img
-                                  src={asset.image_url}
-                                  alt="Logo concept"
-                                  className={`w-full h-auto ${isSelectingLogo === asset.id ? 'opacity-50' : ''}`}
-                                  style={{ 
-                                    backgroundColor: brandKit.colors.background
-                                  }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleSelectLogo(asset.id);
-                                  }}
-                                />
-                                {isSelectingLogo === asset.id && (
-                                  <div className="absolute inset-0 flex items-center justify-center">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-brand-600"></div>
+                        <div className="flex flex-col md:flex-row gap-6">
+                          <div className="flex flex-col space-y-2 flex-1">
+                            {logoAssets.map((asset) => (
+                              <div
+                                key={asset.id}
+                                className={`flex items-center justify-between p-3 ${
+                                  brandKit.logo_selected_asset_id === asset.id
+                                    ? 'bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800'
+                                    : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700'
+                                } rounded-lg ${previewLogo === asset.image_url ? 'border-2 border-brand-900 dark:border-brand-500' : ''}`}
+                              >
+                                <div className="flex items-center space-x-3">
+                                  <div 
+                                    className="w-12 h-12 relative rounded overflow-hidden border border-gray-200 dark:border-gray-700"
+                                    style={{ backgroundColor: brandKit.colors.background }}
+                                  >
+                                    <img
+                                      src={asset.image_url}
+                                      alt="Logo concept"
+                                      className="w-full h-full object-contain"
+                                    />
                                   </div>
-                                )}
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteLogoAsset(asset.id);
-                                  }}
-                                  className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 disabled:opacity-100 disabled:bg-gray-300 dark:disabled:bg-gray-600"
-                                  aria-label="Delete logo"
-                                  disabled={isDeletingLogo === asset.id}
-                                >
-                                  {isDeletingLogo === asset.id ? (
-                                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                  ) : (
-                                    <Trash2 className="h-4 w-4" />
-                                  )}
-                                </button>
-                              </div>
-                              {brandKit.logo_selected_asset_id === asset.id && (
-                                <div className="absolute inset-0 bg-brand-600/10 flex items-center justify-center">
-                                  <div className="bg-brand-600 text-white px-3 py-1 rounded-full text-sm">
-                                    Selected
+                                  <div>
+                                    <p className="text-sm font-medium">Logo {asset.id.substring(0, 6)}</p>
+                                    <a 
+                                      href={asset.image_url} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="text-xs text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
+                                    >
+                                      View full size
+                                    </a>
                                   </div>
                                 </div>
-                              )}
+                                
+                                <div className="flex items-center space-x-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setPreviewLogo(asset.image_url || '')}
+                                    className="text-xs"
+                                  >
+                                    <Eye className="h-3 w-3 mr-1" />
+                                    Preview
+                                  </Button>
+                                  <Button
+                                    variant={brandKit.logo_selected_asset_id === asset.id ? "primary" : "outline"}
+                                    size="sm"
+                                    onClick={() => handleSelectLogo(asset.id)}
+                                    disabled={isSelectingLogo === asset.id}
+                                    className="text-xs"
+                                  >
+                                    {isSelectingLogo === asset.id ? (
+                                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                    ) : brandKit.logo_selected_asset_id === asset.id ? (
+                                      "Selected"
+                                    ) : (
+                                      "Select"
+                                    )}
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteLogoAsset(asset.id)}
+                                    disabled={isDeletingLogo === asset.id}
+                                    className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 p-1"
+                                  >
+                                    {isDeletingLogo === asset.id ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="h-3 w-3" />
+                                    )}
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          {previewLogo && (
+                            <div className="w-full md:w-1/2 flex flex-col items-center">
+                              <div 
+                                className="w-full aspect-square flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
+                                style={{ backgroundColor: brandKit.colors.background }}
+                              >
+                                <img
+                                  src={previewLogo}
+                                  alt="Logo preview"
+                                  className="max-w-full max-h-full object-contain p-4"
+                                />
+                              </div>
+                              <p className="text-sm text-gray-500 mt-2">Logo Preview</p>
                             </div>
-                          ))}
+                          )}
                         </div>
                         <p 
                           className="text-sm text-gray-500 dark:text-gray-400"
                           style={{ fontFamily: brandKit.typography.bodyFont }}
                         >
-                          Click on a logo concept to select it as your primary logo.
+                          Select a logo to use as your primary brand logo.
                         </p>
                       </>
                     ) : (
