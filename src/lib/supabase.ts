@@ -824,3 +824,198 @@ export async function hasEnoughCredits(requiredCredits: number): Promise<boolean
     return false;
   }
 }
+
+/**
+ * Updates a user's purchased credits after a successful payment
+ * @param userId The ID of the user to update
+ * @param creditsToAdd Number of credits to add to the user's purchased credits
+ * @param paymentReference Payment reference ID (e.g., PayPal transaction ID)
+ * @returns Promise that resolves to the updated UserCredits object
+ */
+export async function addPurchasedCredits(userId: string, creditsToAdd: number, paymentReference: string): Promise<UserCredits | null> {
+  try {
+    // First, get the current credits
+    const { data: currentCredits, error: fetchError } = await supabase
+      .from('user_credits')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+    
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      console.error('Error fetching current credits:', fetchError);
+      throw fetchError;
+    }
+    
+    //check if the credit_usage refrence_id/paymentreference doesn't already exist
+    const { data: existingCreditUsage } = await supabase
+      .from('credit_usage')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('reference_id', paymentReference)
+      .single();
+    
+    if (existingCreditUsage) {
+      return null;
+    }
+
+    //check payments
+    const { data: existingPayment } = await supabase
+      .from('payments')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('provider_payment_id', paymentReference)
+      .single();
+    
+    if (existingPayment) {
+      return null;
+    }
+    
+    // If user doesn't have a credits record yet, create one
+    if (!currentCredits) {
+      // const { data: newCredits, error: insertError } = await supabase
+      //   .from('user_credits')
+      //   .insert({
+      //     user_id: userId,
+      //     purchased_credits: creditsToAdd,
+      //     monthly_credits: 0,
+      //     credits_used: 0
+      //   })
+      //   .select()
+      //   .single();
+      
+      // if (insertError) {
+      //   console.error('Error creating credits record:', insertError);
+      //   throw insertError;
+      // }
+
+      // // Log the credit purchase in credit_usage table (as a negative value to indicate addition)
+      // await supabase
+      //   .from('credit_usage')
+      //   .insert({
+      //     user_id: userId,
+      //     credits_used: -creditsToAdd, // Negative value indicates credits added
+      //     description: 'Credits purchased via PayPal',
+      //     reference_id: paymentReference,
+      //     reference_type: 'paypal_payment',
+      //     metadata: { payment_method: 'paypal' }
+      //   });
+      
+      return null;
+    } else {
+
+      const newCredits = Number(currentCredits.purchased_credits) + Number(creditsToAdd);
+      // Update existing credits record
+      const { data: updatedCredits, error: updateError } = await supabase
+        .from('user_credits')
+        .update({
+          purchased_credits: newCredits,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId)
+        .select()
+        .single();
+      
+      if (updateError) {
+        console.error('Error updating credits:', updateError);
+        throw updateError;
+      }
+      
+      // Log the credit purchase in credit_usage table (as a negative value to indicate addition)
+      // await supabase
+      //   .from('credit_usage')
+      //   .insert({
+      //     user_id: userId,
+      //     credits_used: -creditsToAdd, // Negative value indicates credits added
+      //     description: 'Credits purchased via PayPal',
+      //     reference_id: paymentReference,
+      //     reference_type: 'paypal_payment',
+      //     metadata: { payment_method: 'paypal' }
+      //   });
+      
+      return updatedCredits;
+    }
+  } catch (error) {
+    console.error('Error adding purchased credits:', error);
+    throw error;
+  }
+}
+
+/**
+ * Inserts a payment record into the payments table
+ * @param paymentData Object containing payment details
+ * @returns The created payment record
+ */
+export async function createPaymentRecord(paymentData: {
+  user_id: string;
+  provider: 'stripe' | 'paypal' | 'manual';
+  provider_payment_id: string;
+  amount: number;
+  currency?: string;
+  status: string;
+  metadata?: Record<string, any>;
+}) {
+  try {
+    // Check if payment with this provider_payment_id already exists
+    const { data: existingPayment } = await supabase
+      .from('payments')
+      .select('id')
+      .eq('provider', paymentData.provider)
+      .eq('provider_payment_id', paymentData.provider_payment_id)
+      .single();
+    
+    if (existingPayment) {
+      throw new Error('Payment record already exists');
+    }
+
+    const { data: currentCredits, error: fetchError } = await supabase
+    .from('user_credits')
+    .select('*')
+    .eq('user_id', paymentData.user_id)
+    .single();
+
+    if (fetchError) {
+      console.error('Error fetching current credits:', fetchError);
+      throw fetchError;
+    }
+    
+    const { data, error } = await supabase
+      .from('payments')
+      .insert({
+        user_id: paymentData.user_id,
+        provider: paymentData.provider,
+        provider_payment_id: paymentData.provider_payment_id,
+        amount: paymentData.amount,
+        currency: paymentData.currency || 'USD',
+        status: paymentData.status,
+        metadata: paymentData.metadata || {}
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating payment record:', error);
+      throw error;
+    }
+
+    //update purchasedcredits
+    const { data: updatedCredits, error: updateError } = await supabase
+      .from('user_credits')
+      .update({
+        purchased_credits: Number(currentCredits.purchased_credits) + Number(paymentData.metadata?.credits_added),
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', paymentData.user_id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Error updating purchased credits:', updateError);
+      throw updateError;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in createPaymentRecord:', error);
+    throw error;
+  }
+}
