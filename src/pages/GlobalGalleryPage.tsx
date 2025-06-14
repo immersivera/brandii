@@ -127,6 +127,7 @@ export const GlobalGalleryPage: React.FC = () => {
     };
 
     fetchImages();
+    handlePageChange(currentPage);
   }, [currentPage, debouncedSearchQuery]);
 
 
@@ -192,7 +193,9 @@ export const GlobalGalleryPage: React.FC = () => {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (images.length > 0) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   // Handle image selection from URL on component mount

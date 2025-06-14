@@ -15,6 +15,7 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 import { TermsOfServicePage } from './pages/TermsOfServicePage';
 import { AuthModal } from './components/AuthModal';
+import { ScrollToTop } from './components/ScrollToTop';
 import { useAuthModal } from './context/AuthModalContext';
 import { useUser } from './context/UserContext';
 
@@ -50,6 +51,7 @@ function App() {
 
   return (
     <>
+      <ScrollToTop />
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<HomePage />} />

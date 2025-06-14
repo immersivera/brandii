@@ -65,6 +65,7 @@ export const LibraryPage: React.FC = () => {
     };
     
     loadBrandKits();
+    handlePageChange(currentPage);
   }, [currentPage, debouncedSearchQuery]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
