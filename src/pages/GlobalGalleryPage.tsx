@@ -240,7 +240,7 @@ export const GlobalGalleryPage: React.FC = () => {
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Community Gallery</h1>
                 Explore AI-generated images from our community.
-                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                <p className="text-gray-600 dark:text-gray-400 mt-1 hidden">
                   {totalItems > 0 ? `${totalItems} ${totalItems === 1 ? 'image' : 'images'} found` : 'No images yet'}
                   {debouncedSearchQuery && ` for "${debouncedSearchQuery}"`}
                 </p>
