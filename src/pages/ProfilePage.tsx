@@ -383,7 +383,7 @@ export const ProfilePage: React.FC = () => {
                         </div>
 
                         <Button 
-                          variant="outline"
+                          variant="primary"
                           className="w-full mt-4"
                           onClick={handleAdditionalCredits}
                         >
