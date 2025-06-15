@@ -6,8 +6,35 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Function to send upgrade notification via Edge Function
 export const sendUpgradeNotification = async (planId: string, planName: string) => {
+  // Get current user information
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+  
+  // Get user profile information if available
+  let userProfile;
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single();
+    userProfile = profile;
+  } catch (e) {
+    console.warn('Could not fetch profile, continuing with basic user info');
+    userProfile = { full_name: null };
+  }
+  
+  // Send all necessary information to the edge function
   const { data, error } = await supabase.functions.invoke('upgrade-notification', {
-    body: { planId, planName }
+    body: { 
+      planId, 
+      planName,
+      userEmail: user.email,
+      userId: user.id,
+      userName: userProfile?.full_name || 'User'
+    }
   });
   
   if (error) {
