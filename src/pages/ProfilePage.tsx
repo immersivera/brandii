@@ -116,7 +116,7 @@ export const ProfilePage: React.FC = () => {
       toast.success('Upgrade request received! We\'ll contact you soon to complete the process.');
     } catch (error) {
       console.error('Error initiating upgrade:', error);
-      toast.error('Failed to initiate plan upgrade');
+      toast.error('Failed to initiate plan upgrade - contact support to upgrade your plan');
     } finally {
       setIsUpgrading(false);
     }

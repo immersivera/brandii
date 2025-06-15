@@ -488,7 +488,7 @@ export const HomePage: React.FC = () => {
           
           <div className="mt-12 text-center">
             <p className="text-gray-600 dark:text-gray-400">
-              Need more? <a href="#" className="text-brand-600 hover:text-brand-500 dark:text-brand-400 dark:hover:text-brand-300 font-medium">Contact sales</a> for custom plans.
+              Need more? <a href={`mailto:${import.meta.env.VITE_APP_EMAIL}`} className="text-brand-600 hover:text-brand-500 dark:text-brand-400 dark:hover:text-brand-300 font-medium">Contact sales</a> for custom plans.
             </p>
           </div>
         </div>
