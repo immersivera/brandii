@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
+import { useUser } from '../context/UserContext';
 import { 
   Palette, 
   PenTool, 
@@ -12,10 +13,38 @@ import {
   ArrowRight, 
   Sparkles,
   Image as ImageIcon,
-  LayoutGrid,
   Wand2,
-  Palette as PaletteIcon
+  Check,
+  Zap,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
+
+// FAQ Item Component
+const FAQItem = ({ question, answer }: { question: string; answer: string }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  return (
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+      <button
+        className="w-full px-6 py-4 text-left flex justify-between items-center bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className="font-medium text-gray-900 dark:text-white">{question}</span>
+        {isOpen ? (
+          <ChevronUp className="h-5 w-5 text-gray-500" />
+        ) : (
+          <ChevronDown className="h-5 w-5 text-gray-500" />
+        )}
+      </button>
+      {isOpen && (
+        <div className="px-6 pb-4 pt-0 bg-white dark:bg-gray-800">
+          <p className="text-gray-600 dark:text-gray-300">{answer}</p>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const featuresList = [
   {
@@ -53,27 +82,28 @@ const featuresList = [
 
 const testimonials = [
   {
-    quote: "Brandii helped us create a cohesive brand identity in minutes instead of weeks. The AI suggestions were spot on!",
-    author: "Sarah Johnson",
-    role: "Founder, TechStart",
-    avatar: "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=150"
+    quote: "Brandii helped me establish a cohesive brand identity in minutes instead of weeks. Generating images that matched my brand were spot on!",
+    author: "K. Montaque",
+    role: "Content Creator",
+    avatar: "#"
   },
   {
-    quote: "As a solo entrepreneur, I couldn't afford a design agency. Brandii gave me professional results at a fraction of the cost.",
-    author: "Michael Chen",
+    quote: "As a solopreneur, I couldn't afford a design agency. Brandii gives me great results at a fraction of the cost & time.",
+    author: "K. Thompson",
     role: "Independent Consultant",
-    avatar: "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=150"
+    avatar: "#"
   },
   {
     quote: "The brand kit we created with Brandii has received countless compliments. It's impressive how consistent our materials look now.",
-    author: "Emma Rodriguez",
-    role: "Marketing Director, GreenLife",
-    avatar: "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=150"
+    author: "D. Beckford",
+    role: "Marketing Specialist",
+    avatar: "#"
   },
 ];
 
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
+  const { profile } = useUser();
 
   return (
     <Layout>
@@ -94,7 +124,7 @@ export const HomePage: React.FC = () => {
           <div className="flex justify-center mb-12">
             <div className="dark:bg-black/20 bg-white backdrop-blur-md border border-black/20 dark:border-white/20 rounded-full py-2 px-4 flex items-center gap-2">
               <span className="text-brand-500 text-lg">🚀</span>
-              <span className="dark:text-white/90 text-black/90 text-sm font-medium">AI-Powered Brand Kit & Image Generator</span>
+              <span className="dark:text-white/90 text-black/90 md:text-sm font-medium text-xs">Brand Kit, Logo Maker & Image&nbsp;Generator</span>
               <div className="w-2 h-2 rounded-full bg-green-500 ml-1"></div>
             </div>
           </div>
@@ -105,7 +135,7 @@ export const HomePage: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              Think it. Brand it. Launch it.
+              Think&nbsp;it. Brand&nbsp;it. Launch&nbsp;it.
             </motion.h1>
             
             <motion.p 
@@ -149,7 +179,7 @@ export const HomePage: React.FC = () => {
               transition={{ duration: 0.5, delay: 0.2 }}
             >
               <div className="text-center">
-                <div className="text-4xl font-bold dark:text-white text-black mb-1">500+</div>
+                <div className="text-4xl font-bold dark:text-white text-black mb-1">100+</div>
                 <div className="text-gray-400 text-sm">Brand Kits Created</div>
               </div>
               <div className="text-center">
@@ -157,7 +187,7 @@ export const HomePage: React.FC = () => {
                 <div className="text-gray-400 text-sm">Client Satisfaction</div>
               </div>
               <div className="text-center">
-                <div className="text-4xl font-bold dark:text-white text-black mb-1">10M+</div>
+                <div className="text-4xl font-bold dark:text-white text-black mb-1">2.1k+</div>
                 <div className="text-gray-400 text-sm">Assets Generated</div>
               </div>
             </motion.div>
@@ -166,7 +196,7 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* Features Section */}
-      <section className="pb-20 pt-5 bg-gray-50 dark:bg-gray-900">
+      <section id="features" className="pb-20 pt-5 bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900 dark:text-white">
@@ -314,11 +344,11 @@ export const HomePage: React.FC = () => {
                       "{testimonial.quote}"
                     </p>
                     <div className="flex items-center">
-                      <img
+                      {/* <img
                         src={testimonial.avatar}
                         alt={testimonial.author}
                         className="w-12 h-12 rounded-full object-cover mr-4"
-                      />
+                      /> */}
                       <div>
                         <h4 className="font-semibold text-gray-900 dark:text-white">
                           {testimonial.author}
@@ -331,6 +361,187 @@ export const HomePage: React.FC = () => {
                   </CardContent>
                 </Card>
               </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+      
+      {/* Pricing Section */}
+      <section id="pricing" className="py-20 bg-gray-50 dark:bg-gray-900">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900 dark:text-white">
+              Simple, Transparent Pricing
+            </h2>
+            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+              Choose the plan that fits your needs. No hidden fees, cancel anytime.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            {[
+              {
+                name: 'Free',
+                price: 0,
+                description: 'Perfect for trying out Brandii',
+                monthlyCredits: 10,
+                features: [
+                  '10 one-time credits',
+                  'All assets generated are public',
+                  'Community support',
+                ],
+                buttonText: 'Get Started',
+                popular: false
+              },
+              {
+                name: 'Pro',
+                price: 15,
+                description: 'For growing brands',
+                monthlyCredits: 90,
+                features: [
+                  '40 monthly credits',
+                  '60 bonus credits (special offer)',
+                  'Unlimited brand kits',
+                  'Private and public image options',
+                  'All premium features',
+                  'Priority support',
+                  'Email support'
+                ],
+                buttonText: 'Get Started',
+                popular: true
+              },
+              {
+                name: 'Elite',
+                price: 99,
+                description: 'For large work loads',
+                monthlyCredits: 500,
+                features: [
+                  '300 monthly credits',
+                  '200 bonus credits (special offer)',
+                  'Unlimited brand kits',
+                  'Private and public image options',
+                  'All premium features',
+                  'Priority support',
+                  'Email support'
+                ],
+                buttonText: 'Get Started',
+                popular: false
+              }
+            ].map((plan, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                viewport={{ once: true }}
+                className="relative"
+              >
+                {plan.popular && (
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-brand-500 to-accent-500 text-white text-xs font-semibold px-4 py-1 rounded-full whitespace-nowrap">
+                    Most Popular
+                  </div>
+                )}
+                <Card className={`h-full ${plan.popular ? 'border-2 border-brand-500 shadow-lg' : ''}`}>
+                  <CardContent className="p-6">
+                    <div className="text-center mb-6">
+                      <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{plan.name}</h3>
+                      <p className="text-gray-600 dark:text-gray-400 mb-4">{plan.description}</p>
+                      <div className="flex items-baseline justify-center mb-4">
+                        <span className="text-4xl font-bold text-gray-900 dark:text-white">
+                          ${plan.price}
+                        </span>
+                        {plan.price > 0 && (
+                          <span className="text-gray-600 dark:text-gray-400 ml-1">/month</span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-center text-sm text-gray-600 dark:text-gray-400 mb-6">
+                        <Zap className="h-4 w-4 text-brand-500 mr-1" />
+                        {plan.monthlyCredits} credits included
+                      </div>
+                    </div>
+                    <ul className="space-y-3 mb-8">
+                      {plan.features.map((feature, i) => (
+                        <li key={i} className="flex items-center">
+                          <Check className="h-5 w-5 text-green-500 mr-2" />
+                          <span className="text-gray-700 dark:text-gray-300">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <Button
+                      variant={plan.popular ? 'primary' : 'outline'}
+                      className={`w-full ${plan.popular ? 'shadow-lg shadow-brand-500/20' : ''}`}
+                      onClick={() => {
+                        if (profile) {
+                          navigate('/profile');
+                        } else {
+                          navigate('/create');
+                        }
+                      }}
+                    >
+                      {plan.buttonText}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+          
+          <div className="mt-12 text-center">
+            <p className="text-gray-600 dark:text-gray-400">
+              Need more? <a href={`mailto:${import.meta.env.VITE_APP_EMAIL}?subject=Custom%20Plan%20Inquiry&body=I%20am%20interested%20in%20a%20custom%20plan.`} className="text-brand-600 hover:text-brand-500 dark:text-brand-400 dark:hover:text-brand-300 font-medium">Contact sales</a> for custom plans.
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      {/* FAQ Section */}
+      <section className="py-20">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900 dark:text-white">
+              Frequently Asked Questions
+            </h2>
+            <p className="text-xl text-gray-600 dark:text-gray-400">
+              Everything you need to know about Brandii
+            </p>
+          </div>
+          
+          <div className="space-y-4">
+            {[
+              {
+                question: 'What is a credit?',
+                answer: 'A credit is used each time you generate a new asset (like a color palette, logo, or image) with Brandii. Different types of generations may use different amounts of credits.'
+              },
+              {
+                question: 'Can I cancel my subscription?',
+                answer: 'Yes, you can cancel your subscription at any time. Your subscription will remain active until the end of your current billing period.'
+              },
+              {
+                question: 'Do unused credits roll over?',
+                answer: 'Only purchased credits roll over each month. Unused monthly credits from the previous month will not roll over to the next month.'
+              },
+              {
+                question: 'Do I get bonus credits? (Limited time special offer)',
+                answer: 'Yes, you can get up to 50 or 200 in bonus credits (limited time special offer) with our Pro and Elite plans. Bonus credits will be added to your account within 24 hours of purchase and will be available as purchased credits. These bonus credits will roll over each month until they are used up.'
+              },
+              {
+                question: 'What payment methods do you accept?',
+                answer: 'We accept all major credit cards including Visa, Mastercard, American Express, and Discover. We also support payments through PayPal.'
+              },
+              {
+                question: 'Is there a free trial?',
+                answer: 'Yes! You can try Brandii for free with our Starter plan which includes free one-time credits (set as purchased credits and will roll over each month until they are used up). No credit card required to get started.'
+              },
+              {
+                question: 'How do I upgrade or change my plan?',
+                answer: 'You can upgrade, downgrade, or change your plan at any time from your account settings. Changes will be reflected in your next billing cycle.'
+              },
+              {
+                question: 'Can I purchase credits?',
+                answer: 'Yes! You can purchase credits at any time from your account settings. Credits will be added to your account within 24 hours of purchase and will be available as purchased credits. These credits will roll over each month until they are used up.'
+              }
+            ].map((faq, index) => (
+              <FAQItem key={index} question={faq.question} answer={faq.answer} />
             ))}
           </div>
         </div>

@@ -131,6 +131,7 @@ export const GalleryPage: React.FC = () => {
     };
 
     if (id) fetchImages();
+    handlePageChange(currentPage);
   }, [id, currentPage, debouncedSearchQuery]);
 
   // Handle URL changes and image selection with localStorage
@@ -325,29 +326,30 @@ export const GalleryPage: React.FC = () => {
                   {debouncedSearchQuery && ` for "${debouncedSearchQuery}"`}
                 </p>
               </div>
-              
-              <div className="relative w-full md:w-80">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search by prompt..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors"
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setCurrentPage(1); // Reset to first page when searching
-                  }}
-                />
+              <div className="flex items-center gap-2 justify-end">
+                <div className="relative w-full md:w-80">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by prompt..."
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-colors"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setCurrentPage(1); // Reset to first page when searching
+                    }}
+                  />
+                </div>
+
+                <Button
+                  onClick={() => navigate(`/kit/${id}/create`)}
+                  leftIcon={<Plus className="h-4 w-4" />}
+                  className="w-48"
+                >
+                 Create Image
+                </Button>
               </div>
-
-              <Button
-                onClick={() => navigate(`/kit/${id}/create`)}
-                leftIcon={<Plus className="h-4 w-4" />}
-              >
-                Create New Image
-              </Button>
-            </div>
-
+            </div>                  
             {images.length === 0 && !isLoading ? (
               <div className="text-center py-20">
                 <p className="text-gray-600 dark:text-gray-400 mb-4">

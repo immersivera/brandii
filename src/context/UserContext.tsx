@@ -66,7 +66,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (error) {
         console.error('Error initializing auth:', error);
         if (isSubscribed) {
-          console.log('set profile to null')
           setUserId(null);
           setProfile(null);
         }

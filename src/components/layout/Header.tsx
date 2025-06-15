@@ -5,9 +5,10 @@ import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import { useAuthModal } from '../../context/AuthModalContext';
 import { useAuthActions } from '../../lib/hooks/useAuthActions';
-import { Moon, Sun, Menu, X, LogIn, LogOut, User, ChevronDown, Settings } from 'lucide-react';
+import { Moon, Sun, Menu, X, LogIn, LogOut, User, ChevronDown, Settings, Sparkles, Plus } from 'lucide-react';
 import { Button } from '../ui/Button';
 import toast from 'react-hot-toast';
+import { fetchUserCredits } from '../../lib/supabase';
 
 export const Header: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
@@ -18,21 +19,22 @@ export const Header: React.FC = () => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [credits, setCredits] = useState<{ available_credits: number } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   const isHomePage = location.pathname === '/';
   const isTransparent = isHomePage && !isMenuOpen;
 
   // Log authentication state changes
-  useEffect(() => {
-    console.log('Auth State:', {
-      isAuthenticated: !!userId,
-      userId,
-      hasProfile: !!profile,
-      profileEmail: profile?.email,
-      currentPath: location.pathname
-    });
-  }, [userId, profile, location.pathname]);
+  // useEffect(() => {
+  //   console.log('Auth State:', {
+  //     isAuthenticated: !!userId,
+  //     userId,
+  //     hasProfile: !!profile,
+  //     profileEmail: profile?.email,
+  //     currentPath: location.pathname
+  //   });
+  // }, [userId, profile, location.pathname]);
   
   const navLinks = [
     { name: 'Home', path: '/' },
@@ -51,6 +53,28 @@ export const Header: React.FC = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Fetch user credits when user changes
+  useEffect(() => {
+    const loadCredits = async () => {
+      if (userId) {
+        try {
+          const creditsData = await fetchUserCredits();
+          if (creditsData) {
+            setCredits({
+              available_credits: creditsData.available_credits
+            });
+          }
+        } catch (error) {
+          console.error('Error loading credits:', error);
+        }
+      } else {
+        setCredits(null);
+      }
+    };
+
+    loadCredits();
+  }, [userId]);
 
   const handleLogout = async () => {
     try {
@@ -154,25 +178,42 @@ export const Header: React.FC = () => {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 10 }}
                       transition={{ duration: 0.2 }}
-                      className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg py-1 z-50"
+                      className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg py-1 z-50 divide-y divide-gray-100 dark:divide-gray-700"
                     >
-                      <button
-                        onClick={() => {
-                          setIsDropdownOpen(false);
-                          navigate('/profile');
-                        }}
-                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        <Settings className="h-4 w-4 mr-2" />
-                        Profile Settings
-                      </button>
-                      <button
-                        onClick={handleLogout}
-                        className="flex items-center w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Sign Out
-                      </button>
+                      <div className="px-4 py-3 text-sm">
+                        <div className="font-medium text-gray-900 dark:text-white truncate">
+                          {profile?.username || profile?.full_name || profile?.email}
+                        </div>
+                        {credits !== null && (
+                          <div>
+                          <button 
+                          onClick={() => navigate('/profile')} 
+                          className="flex items-center mt-1 text-sm text-gray-600 dark:text-gray-400 hover:scale-110 hover:text-brand-600 dark:hover:text-brand-400 ">
+                            <Sparkles className="h-4 w-4 mr-1 text-yellow-500" />
+                            <span>{credits.available_credits} credit{credits.available_credits === 1 ? '' : 's'} available</span>
+                          </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="py-1">
+                        <button
+                          onClick={() => {
+                            setIsDropdownOpen(false);
+                            navigate('/profile');
+                          }}
+                          className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
+                          <Settings className="h-4 w-4 mr-2" />
+                          Profile Settings
+                        </button>
+                        <button
+                          onClick={handleLogout}
+                          className="flex items-center w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Sign Out
+                        </button>
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
