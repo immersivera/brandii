@@ -336,7 +336,7 @@ export async function checkUserHasBrandKit(): Promise<boolean> {
 
   const { data, error } = await supabase
     .from('brand_kits')
-    .select('id')
+    .select('id', { count: 'exact' })
     .eq('user_id', session.user.id)
 
   if (error) {
@@ -344,7 +344,7 @@ export async function checkUserHasBrandKit(): Promise<boolean> {
     return false;
   }
 
-  return true;
+  return data.length > 0;
 }
 
 export async function fetchBrandKits(

@@ -23,6 +23,7 @@ export const CreatePage: React.FC = () => {
       try {
         const hasBrandKit = await checkUserHasBrandKit();
         setHasExistingBrandKits(hasBrandKit);
+        console.log('Has existing brand kits:', hasBrandKit);
       } catch (error) {
         console.error('Error checking brand kits:', error);
         toast.error('Failed to check existing brand kits');
