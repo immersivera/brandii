@@ -110,10 +110,12 @@ export const ProfilePage: React.FC = () => {
       const plan = subscriptionPlans.find(p => p.id === planId);
       const planName = plan?.name || planId;
       
-      // Call the Edge Function to send the upgrade notification
-      await sendUpgradeNotification(planId, planName);
+      // Open email client with pre-filled upgrade request
+      const subject = `Upgrade Request: ${planName} Plan`;
+      const body = `I would like to upgrade to the ${planName} plan. My user emails is: ${profile?.email}`;
+      window.location.href = `mailto:${import.meta.env.VITE_APP_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       
-      toast.success('Upgrade request received! We\'ll contact you soon to complete the process.');
+      toast.success('Opening email client to request upgrade');
     } catch (error) {
       console.error('Error initiating upgrade:', error);
       toast.error('Failed to initiate plan upgrade - contact support to upgrade your plan');
@@ -517,7 +519,7 @@ export const ProfilePage: React.FC = () => {
                   </CardContent>
 
                   <CardContent className="p-6 text-center">
-                    <p>Auto Upgrade Coming Soon!</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Automatic Upgrades Coming Soon!</p>
                     <Button 
                       variant="outline"
                       className="w-full md:w-auto text-center"
