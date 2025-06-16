@@ -272,8 +272,14 @@ export const Header: React.FC = () => {
           exit={{ opacity: 0, height: 0 }}
         >
           <nav className="px-4 pt-2 pb-4 space-y-2">
-            {navLinks.map((link) => (
-              (!link.protected || userId) && (
+            {navLinks.map((link) => {
+              // Skip protected routes for non-logged in users
+              if (link.protected && !userId) return null;
+              
+              // Skip pricing and FAQs for logged in users
+              if (userId && (link.path === '#pricing' || link.path === '#faqs')) return null;
+              
+              return (
                 <Link
                   key={link.path}
                   to={link.path}
@@ -282,7 +288,7 @@ export const Header: React.FC = () => {
                       ? 'bg-brand-50 dark:bg-gray-800 text-brand-600 dark:text-brand-400'
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
-                  onClick={() => setIsMenuOpen(false)}
+                  onClick={() => {setIsMenuOpen(false); handleNavigation(link.path, link.path.split('#')[1])}}
                 >
                   {link.name}
                   <span className={`absolute bottom-1 left-3 w-0 h-0.5 bg-brand-600 dark:bg-brand-400 transition-all duration-300 group-hover:w-[calc(100%-24px)] ${
@@ -290,7 +296,7 @@ export const Header: React.FC = () => {
                   }`} />
                 </Link>
               )
-            ))}
+            })}
             
             <button
               className="flex w-full items-center px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
