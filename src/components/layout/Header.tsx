@@ -133,8 +133,7 @@ export const Header: React.FC = () => {
             {navLinks.map((link) => (
               (!link.protected || userId) && 
               !(userId && (link.path === '/#pricing' || link.path === '/#faqs')) && (
-                <Link
-                  to={link.path}
+                <button
                   key={link.path}
                   onClick={() => handleNavigation(link.path, link.path.split('#')[1])}
                   className={`text-sm font-medium transition-colors relative group ${
@@ -149,7 +148,7 @@ export const Header: React.FC = () => {
                   <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-brand-600 dark:bg-brand-400 transition-all duration-300 group-hover:w-full ${
                     location.pathname === link.path ? 'w-full' : ''
                   }`} />
-                </Link>
+                </button>
               )
             ))}
             

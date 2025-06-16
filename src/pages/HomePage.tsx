@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
@@ -104,6 +104,33 @@ const testimonials = [
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { profile } = useUser();
+
+  // Handle hash-based scrolling on initial load
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash;
+      if (hash) {
+        const element = document.querySelector(hash);
+        if (element) {
+          // Small timeout to ensure all elements are rendered
+          setTimeout(() => {
+            element.scrollIntoView({ behavior: 'smooth' });
+          }, 100);
+        }
+      }
+    };
+
+    // Initial check
+    handleHash();
+
+    // Listen for hash changes
+    window.addEventListener('hashchange', handleHash);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('hashchange', handleHash);
+    };
+  }, []);
 
   return (
     <Layout>
@@ -371,10 +398,10 @@ export const HomePage: React.FC = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900 dark:text-white">
-              Simple, Transparent Pricing
+              Pricing 
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              Choose the plan that fits your needs. No hidden fees, cancel anytime.
+              Choose the plan that fits your needs, cancel anytime.
             </p>
           </div>
           
