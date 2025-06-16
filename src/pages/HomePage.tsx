@@ -401,7 +401,10 @@ export const HomePage: React.FC = () => {
               Pricing 
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              Choose the plan that fits your needs, cancel anytime.
+              Choose the plan that fits your needs, upgrade or cancel anytime.
+            </p>
+            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+              1 credit = 1 image generation
             </p>
           </div>
           
@@ -537,7 +540,7 @@ export const HomePage: React.FC = () => {
             {[
               {
                 question: 'What is a credit?',
-                answer: 'A credit is used each time you generate a new asset (like a color palette, logo, or image) with Brandii. Different types of generations may use different amounts of credits.'
+                answer: 'A credit is used each time you generate a new asset (like a color palette, logo, or image) with Brandii. Different types of generations may use different amounts of credits. The largest generation cost is 1 credit = 1 image generation.'
               },
               {
                 question: 'Can I cancel my subscription?',
