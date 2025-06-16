@@ -24,24 +24,41 @@ export const Header: React.FC = () => {
   
   const isHomePage = location.pathname === '/';
   const isTransparent = isHomePage && !isMenuOpen;
-
-  // Log authentication state changes
-  // useEffect(() => {
-  //   console.log('Auth State:', {
-  //     isAuthenticated: !!userId,
-  //     userId,
-  //     hasProfile: !!profile,
-  //     profileEmail: profile?.email,
-  //     currentPath: location.pathname
-  //   });
-  // }, [userId, profile, location.pathname]);
   
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'Create', path: '/create', protected: true },
     { name: 'Library', path: '/library', protected: true },
-    { name: 'Gallery', path: '/gallery' }
+    { name: 'Gallery', path: '/gallery' },
+    //pricing
+    { name: 'Pricing', path: '#pricing' },
+    //faqs
+    { name: 'FAQs', path: '#faqs' },
   ];
+
+  //if navigation is clicked scroll to anchor
+  const handleNavigation = (path: string, sectionId?: string) => {
+    if (location.pathname === '/' && sectionId) {
+      // If we're on the homepage, scroll to the section
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else if (sectionId) {
+      // If we're not on the homepage, navigate to the homepage with hash
+      navigate(`/#${sectionId}`);
+      // Then scroll to the section after a small delay to allow the page to load
+      setTimeout(() => {
+        const element = document.getElementById(sectionId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    } else {
+      // Regular navigation for other links
+      navigate(path);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -108,16 +125,23 @@ export const Header: React.FC = () => {
                 alt="Brandii" 
                 className="h-8 w-auto"
               />
+              <span className="text-xs text-gray-500 dark:text-gray-400 mt-[-15px] hidden">Beta</span>
             </Link>
           </div>
           
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            {navLinks.map((link) => (
-              (!link.protected || userId) && (
-                <Link
+            {navLinks.map((link) => {
+              // Skip protected routes for non-logged in users
+              if (link.protected && !userId) return null;
+              
+              // Skip pricing and FAQs for logged in users
+              if (userId && (link.path === '#pricing' || link.path === '#faqs')) return null;
+              
+              return (
+                <button
                   key={link.path}
-                  to={link.path}
+                  onClick={() => handleNavigation(link.path, link.path.split('#')[1])}
                   className={`text-sm font-medium transition-colors relative group ${
                     location.pathname === link.path
                       ? 'text-brand-600 dark:text-brand-400'
@@ -130,9 +154,9 @@ export const Header: React.FC = () => {
                   <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-brand-600 dark:bg-brand-400 transition-all duration-300 group-hover:w-full ${
                     location.pathname === link.path ? 'w-full' : ''
                   }`} />
-                </Link>
-              )
-            ))}
+                </button>
+              );
+            })}
             
             <Button
               variant="ghost"
@@ -249,8 +273,14 @@ export const Header: React.FC = () => {
           exit={{ opacity: 0, height: 0 }}
         >
           <nav className="px-4 pt-2 pb-4 space-y-2">
-            {navLinks.map((link) => (
-              (!link.protected || userId) && (
+            {navLinks.map((link) => {
+              // Skip protected routes for non-logged in users
+              if (link.protected && !userId) return null;
+              
+              // Skip pricing and FAQs for logged in users
+              if (userId && (link.path === '#pricing' || link.path === '#faqs')) return null;
+              
+              return (
                 <Link
                   key={link.path}
                   to={link.path}
@@ -259,7 +289,7 @@ export const Header: React.FC = () => {
                       ? 'bg-brand-50 dark:bg-gray-800 text-brand-600 dark:text-brand-400'
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
-                  onClick={() => setIsMenuOpen(false)}
+                  onClick={() => {setIsMenuOpen(false); handleNavigation(link.path, link.path.split('#')[1])}}
                 >
                   {link.name}
                   <span className={`absolute bottom-1 left-3 w-0 h-0.5 bg-brand-600 dark:bg-brand-400 transition-all duration-300 group-hover:w-[calc(100%-24px)] ${
@@ -267,7 +297,7 @@ export const Header: React.FC = () => {
                   }`} />
                 </Link>
               )
-            ))}
+            })}
             
             <button
               className="flex w-full items-center px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -302,7 +332,7 @@ export const Header: React.FC = () => {
                 <Link
                   to="/profile"
                   className="flex items-center w-full px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                  onClick={() => setIsMenuOpen(false)}
+                  onClick={() => {setIsMenuOpen(false); navigate('/profile')}}
                 >
                   <Settings className="h-4 w-4 mr-2" />
                   Profile Settings
