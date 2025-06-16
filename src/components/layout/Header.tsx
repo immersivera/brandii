@@ -130,9 +130,14 @@ export const Header: React.FC = () => {
           
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            {navLinks.map((link) => (
-              (!link.protected || userId) && 
-              !(userId && (link.path === '/#pricing' || link.path === '/#faqs')) && (
+            {navLinks.map((link) => {
+              // Skip protected routes for non-logged in users
+              if (link.protected && !userId) return null;
+              
+              // Skip pricing and FAQs for logged in users
+              if (userId && (link.path === '#pricing' || link.path === '#faqs')) return null;
+              
+              return (
                 <button
                   key={link.path}
                   onClick={() => handleNavigation(link.path, link.path.split('#')[1])}
@@ -149,8 +154,8 @@ export const Header: React.FC = () => {
                     location.pathname === link.path ? 'w-full' : ''
                   }`} />
                 </button>
-              )
-            ))}
+              );
+            })}
             
             <Button
               variant="ghost"
