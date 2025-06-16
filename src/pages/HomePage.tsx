@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout/Layout';
@@ -104,6 +104,33 @@ const testimonials = [
 export const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { profile } = useUser();
+
+  // Handle hash-based scrolling on initial load
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash;
+      if (hash) {
+        const element = document.querySelector(hash);
+        if (element) {
+          // Small timeout to ensure all elements are rendered
+          setTimeout(() => {
+            element.scrollIntoView({ behavior: 'smooth' });
+          }, 100);
+        }
+      }
+    };
+
+    // Initial check
+    handleHash();
+
+    // Listen for hash changes
+    window.addEventListener('hashchange', handleHash);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('hashchange', handleHash);
+    };
+  }, []);
 
   return (
     <Layout>
@@ -371,10 +398,13 @@ export const HomePage: React.FC = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900 dark:text-white">
-              Simple, Transparent Pricing
+              Pricing 
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              Choose the plan that fits your needs. No hidden fees, cancel anytime.
+              Choose the plan that fits your needs, upgrade or cancel anytime.
+            </p>
+            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+              1 credit = 1 image generation
             </p>
           </div>
           
@@ -495,7 +525,7 @@ export const HomePage: React.FC = () => {
       </section>
       
       {/* FAQ Section */}
-      <section className="py-20">
+      <section id="faqs" className="py-20">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900 dark:text-white">
@@ -510,7 +540,7 @@ export const HomePage: React.FC = () => {
             {[
               {
                 question: 'What is a credit?',
-                answer: 'A credit is used each time you generate a new asset (like a color palette, logo, or image) with Brandii. Different types of generations may use different amounts of credits.'
+                answer: 'A credit is used each time you generate a new asset (like a color palette, logo, or image) with Brandii. Different types of generations may use different amounts of credits. The largest generation cost is 1 credit = 1 image generation.'
               },
               {
                 question: 'Can I cancel my subscription?',
