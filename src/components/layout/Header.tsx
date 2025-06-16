@@ -331,7 +331,7 @@ export const Header: React.FC = () => {
                 <Link
                   to="/profile"
                   className="flex items-center w-full px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                  onClick={() => setIsMenuOpen(false)}
+                  onClick={() => {setIsMenuOpen(false); navigate('/profile')}}
                 >
                   <Settings className="h-4 w-4 mr-2" />
                   Profile Settings
