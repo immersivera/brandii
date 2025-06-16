@@ -53,14 +53,16 @@ export const TermsOfServicePage: React.FC = () => {
                   A valid payment method, including credit card, is required to process the payment for your Subscription. You shall provide accurate and complete billing information.
                 </p>
               </section>
-
               <section className="mb-8">
-                <h2 className="text-2xl font-semibold mb-4">5. User Content</h2>
+                <h2 className="text-2xl font-semibold mb-4">5. Refund Policy</h2>
                 <p className="mb-4">
-                  Our Service allows you to generate with AI, post, link, store, share and otherwise make available certain information, text, graphics, or other material ("Content"). You are responsible for the Content that you post on or through the Service, including its legality, reliability, and appropriateness.
+                  Brandii maintains a limited refund policy. Customers may submit a refund request within 14 days of their initial purchase. All such requests are subject to review and approval at Brandii's sole discretion.
                 </p>
                 <p className="mb-4">
-                  By posting Content on or through the Service, you represent and warrant that: (i) the Content is yours (you own it) and/or you have the right to use it and the right to grant us the rights and license as provided in these Terms, and (ii) that the posting of your Content on or through the Service does not violate the privacy rights, publicity rights, copyrights, contract rights or any other rights of any person or entity.
+                  Refunds will not be processed after the 14-day period has expired. Brandii reserves the right to decline refund requests for any reason, including but not limited to extensive service usage or terms of service violations.
+                </p>
+                <p className="mb-4">
+                  This refund policy is without prejudice to any statutory rights that may be applicable under relevant laws. For more information on the refund process, please contact our customer support.
                 </p>
               </section>
 
