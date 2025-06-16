@@ -125,6 +125,7 @@ export const Header: React.FC = () => {
                 alt="Brandii" 
                 className="h-8 w-auto"
               />
+              <span className="text-xs text-gray-500 dark:text-gray-400 mt-[-15px] hidden">Beta</span>
             </Link>
           </div>
           
