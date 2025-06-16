@@ -109,6 +109,11 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li className="">
+                <button onClick={() => handleNavigation('/', 'faqs')} className="text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
+                  FAQs
+                </button>
+              </li>
+              <li className="">
                 <Link to={`mailto:${import.meta.env.VITE_APP_EMAIL}`} className="text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
                   Contact
                 </Link>

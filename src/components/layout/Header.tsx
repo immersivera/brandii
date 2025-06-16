@@ -24,24 +24,41 @@ export const Header: React.FC = () => {
   
   const isHomePage = location.pathname === '/';
   const isTransparent = isHomePage && !isMenuOpen;
-
-  // Log authentication state changes
-  // useEffect(() => {
-  //   console.log('Auth State:', {
-  //     isAuthenticated: !!userId,
-  //     userId,
-  //     hasProfile: !!profile,
-  //     profileEmail: profile?.email,
-  //     currentPath: location.pathname
-  //   });
-  // }, [userId, profile, location.pathname]);
   
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'Create', path: '/create', protected: true },
     { name: 'Library', path: '/library', protected: true },
-    { name: 'Gallery', path: '/gallery' }
+    { name: 'Gallery', path: '/gallery' },
+    //pricing
+    { name: 'Pricing', path: '#pricing' },
+    //faqs
+    { name: 'FAQs', path: '#faqs' },
   ];
+
+  //if navigation is clicked scroll to anchor
+  const handleNavigation = (path: string, sectionId?: string) => {
+    if (location.pathname === '/' && sectionId) {
+      // If we're on the homepage, scroll to the section
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else if (sectionId) {
+      // If we're not on the homepage, navigate to the homepage with hash
+      navigate(`/#${sectionId}`);
+      // Then scroll to the section after a small delay to allow the page to load
+      setTimeout(() => {
+        const element = document.getElementById(sectionId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    } else {
+      // Regular navigation for other links
+      navigate(path);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -114,10 +131,12 @@ export const Header: React.FC = () => {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             {navLinks.map((link) => (
-              (!link.protected || userId) && (
+              (!link.protected || userId) && 
+              !(userId && (link.path === '/#pricing' || link.path === '/#faqs')) && (
                 <Link
-                  key={link.path}
                   to={link.path}
+                  key={link.path}
+                  onClick={() => handleNavigation(link.path, link.path.split('#')[1])}
                   className={`text-sm font-medium transition-colors relative group ${
                     location.pathname === link.path
                       ? 'text-brand-600 dark:text-brand-400'
