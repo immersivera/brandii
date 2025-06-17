@@ -222,6 +222,39 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
+      {/* Demo Video Section */}
+      <section className="mt-0 pb-10 bg-white dark:bg-gray-900">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900 dark:text-white">
+              See Brandii in Action
+            </h2>
+            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
+              Watch our quick demo to see how easy it is to create a complete brand kit with Brandii
+            </p>
+          </div>
+          
+          <motion.div 
+            className="max-w-4xl mx-auto rounded-xl overflow-hidden shadow-2xl"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            viewport={{ once: true }}
+          >
+            <div className="aspect-w-16 aspect-h-9 w-full">
+              <iframe 
+                className="w-full h-[500px]"
+                src="https://www.youtube.com/embed/8wJXoMIC3mo"
+                title="Brandii Demo Video"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen>
+              </iframe>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
       {/* Features Section */}
       <section id="features" className="pb-20 pt-5 bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">

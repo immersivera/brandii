@@ -45,8 +45,8 @@ export const BrandCreationPage: React.FC = () => {
       
       updateBrandDetails({
         industry: suggestion.industry,
-        adjective: suggestion.adjective,
-        logoStyle: suggestion.logoStyle,
+        adjective: suggestion.adjective || 'Modern',
+        logoStyle: suggestion.logoStyle || 'wordmark',
         colors: suggestion.colors,
         typography: suggestion.typography,
         logoChoice: 'ai'
