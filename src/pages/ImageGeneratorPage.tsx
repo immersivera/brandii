@@ -7,7 +7,7 @@ import { Card, CardContent } from '../components/ui/Card';
 import { Textarea } from '../components/ui/Textarea';
 import { Select } from '../components/ui/Select';
 import { useUser } from '../context/UserContext';
-import { ArrowLeft, Sparkles, Download, X, Calendar, Clock, Upload, Image as ImageIcon, Trash2, Info, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Sparkles, Download, X, Calendar, Clock, Upload, Image as ImageIcon, Trash2, Info, AlertCircle, ExternalLink } from 'lucide-react';
 import { BrandKitForGeneration, fetchBrandKitForGeneration, hasEnoughCredits, saveGeneratedAssets } from '../lib/supabase';
 import { generateImageAssets, type ImageSize, validatePrompt as validatePromptApi } from '../lib/openai';
 import toast from 'react-hot-toast';
@@ -499,7 +499,7 @@ return (
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                       </svg> 
                       {/* {validationError}  */}
-                      <div>Your prompt was not allowed. Please read our <a href="/terms" className="text-red-600 dark:text-red-400 hover:no-underline underline">Terms of Service</a>. 
+                      <div>Your prompt was not allowed as it may contain restricted content. Please read our <a href="/terms" className="text-red-600 dark:text-red-400 hover:no-underline underline">Terms of Service</a>. 
                       
                     </div>
                     </div>
@@ -507,8 +507,8 @@ return (
                       onClick={() => setValErrorModal(true)} 
                       className="flex items-center text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:underline text-sm"
                     >
-                      <Info className="w-4 h-4 mr-1" />
-                      <span>See more details</span>
+                      {/* <Info className="w-4 h-4 mr-1" /> */}
+                      <span>See more details</span> <ExternalLink className="w-4 h-4 ml-1" />
                     </button>
                     </>
                   )}
