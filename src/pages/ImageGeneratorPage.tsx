@@ -336,9 +336,9 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
       // Save the generated images with the prompt
       await saveGeneratedAssets(brandKit.id, images, 'image', prompt);
       
-      if (images.length > 0) {
-        setSelectedImage(images[0]);
-      }
+      // if (images.length > 0) {
+      //   // setSelectedImage(images[0]);
+      // }
       
       setGenerationStatus('completed');
       setTimeout(() => {
