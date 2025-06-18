@@ -7,9 +7,9 @@ import { Card, CardContent } from '../components/ui/Card';
 import { Textarea } from '../components/ui/Textarea';
 import { Select } from '../components/ui/Select';
 import { useUser } from '../context/UserContext';
-import { ArrowLeft, Sparkles, Download, X, Calendar, Clock, Upload, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { ArrowLeft, Sparkles, Download, X, Calendar, Clock, Upload, Image as ImageIcon, Trash2, Info, AlertCircle, ExternalLink } from 'lucide-react';
 import { BrandKitForGeneration, fetchBrandKitForGeneration, hasEnoughCredits, saveGeneratedAssets } from '../lib/supabase';
-import { generateImageAssets, type ImageSize } from '../lib/openai';
+import { generateImageAssets, type ImageSize, validatePrompt as validatePromptApi } from '../lib/openai';
 import toast from 'react-hot-toast';
 
 const IMAGE_SIZES = [
@@ -41,7 +41,9 @@ export const ImageGeneratorPage: React.FC = () => {
   const [imageCount, setImageCount] = useState<number>(1);
   const [promptImages, setPromptImages] = useState<Array<{ url: string; file: File }>>([]);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [generationStatus, setGenerationStatus] = useState<'idle' | 'validating' | 'generating' | 'completed'>('idle');
+  const [valErrorModal, setValErrorModal] = useState<boolean>(false);
   // Check if user is on free plan (no active subscription)
   const isFreePlan = (profile?.user_type == 'free');
 
@@ -168,11 +170,24 @@ export const ImageGeneratorPage: React.FC = () => {
       return;
     }
 
+    // Enforce a maximum of 3 images
+    if (promptImages.length >= 3) {
+      toast.error('You can only upload up to 3 images.');
+      event.target.value = '';
+      return;
+    }
+
+    const availableSlots = 3 - promptImages.length;
+    if (validFiles.length > availableSlots) {
+      toast.error(`You can only upload ${availableSlots} more image${availableSlots > 1 ? 's' : ''}.`);
+    }
+    const filesToUpload = validFiles.slice(0, availableSlots);
+
     setIsUploadingImage(true);
     const newImages: Array<{ url: string; file: File }> = [];
     let processedCount = 0;
 
-    validFiles.forEach((file) => {
+    filesToUpload.forEach((file) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         if (e.target?.result) {
@@ -181,20 +196,17 @@ export const ImageGeneratorPage: React.FC = () => {
             file
           });
         }
-
-        // When all files are processed
         processedCount++;
-        if (processedCount === validFiles.length) {
+        if (processedCount === filesToUpload.length) {
           setPromptImages(prev => [...prev, ...newImages]);
           setIsUploadingImage(false);
-          // Clear the input to allow re-uploading the same files
           event.target.value = '';
         }
       };
       reader.onerror = () => {
         console.error('Error reading file:', file.name);
         processedCount++;
-        if (processedCount === validFiles.length) {
+        if (processedCount === filesToUpload.length) {
           setPromptImages(prev => [...prev, ...newImages]);
           setIsUploadingImage(false);
           event.target.value = '';
@@ -216,9 +228,39 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
     reader.readAsDataURL(blob);
   });
 };
+  const validatePrompt = async (promptText: string): Promise<boolean> => {
+    if (!promptText.trim()) {
+      setValidationError('Please enter a prompt');
+      return false;
+    }
+
+    setValidationError(null);
+    
+    try {
+      const result = await validatePromptApi(promptText);
+      if (!result.isValid) {
+        setValidationError(result.reason || 'Prompt contains restricted content');
+        toast.error('Prompt contains restricted content');
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Error validating prompt:', error);
+      // If validation fails, still allow generation but log the error
+      return true;
+    }
+  };
+
   const handleGenerate = async () => {
-    if (!prompt.trim() || !brandKit) {
-      toast.error('Please enter a prompt');
+    if (!brandKit) {
+      toast.error('Brand kit not loaded');
+      return;
+    }
+
+    setGenerationStatus('validating');
+    const isValid = await validatePrompt(prompt);
+    if (!isValid) {
+      setGenerationStatus('idle');
       return;
     }
     const hasCredits = await hasEnoughCredits(imageCount); // Check for 5 credits
@@ -226,6 +268,7 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
       toast.error('Not enough credits');
       return;
     }
+    setGenerationStatus('generating');
     setIsGenerating(true);
     setGeneratedImages([]);
     setSelectedImage(null);
@@ -233,7 +276,8 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
     try {
 
       const allImages = [...promptImages];
-      let logoAdded = false;
+      // Track if logo was added
+    let logoAdded = false;
       
       // If logo is included, add it to promptImages
       if (includeLogo) {
@@ -288,7 +332,7 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
         type: img.file.type || 'image/png' // Default to png if type is not available
       }));
     
-      // Get the brand assets prompt and combine with the user's prompt
+      // // Get the brand assets prompt and combine with the user's prompt
       const brandAssetsPrompt = getBrandAssetsPrompt();
       const fullPrompt = `${prompt.trim()}\n\n${brandAssetsPrompt}`.trim();
     
@@ -302,11 +346,18 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
       setGeneratedImages(images);
       // Save the generated images with the prompt
       await saveGeneratedAssets(brandKit.id, images, 'image', prompt);
-      toast.success('Images generated and saved successfully!');
       
       if (images.length > 0) {
         setSelectedImage(images[0]);
       }
+      // setTimeout(() => {
+        setGenerationStatus('completed');
+      // }, 3000);
+
+      
+      // if (images.length > 0) {
+        toast.success('Images generated and saved successfully!');
+      // }
     } catch (error) {
       console.error('Error generating images:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to generate images');
@@ -356,11 +407,7 @@ if (isLoading) {
   );
 }
 
-// if (!brandKitAssets) return null;
 const hasLogo = brandKit?.logo?.image;
-// const hasLogo = (brandKitAssets.logo_selected_asset_id && brandKitAssets.generated_assets?.some(
-//   (asset: any) => asset.id === brandKitAssets.logo_selected_asset_id
-// )) || !!brandKitAssets.logo?.image;
 
 return (
   <Layout>
@@ -390,13 +437,93 @@ return (
           <Card className="mb-8">
             <CardContent className="p-6">
               <div className="space-y-6">
-                <Textarea
-                  label="Image Prompt"
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Describe the image you want to generate..."
-                  className="h-32"
-                />
+                <div className="space-y-2">
+                  <Textarea
+                    label="Image Prompt"
+                    value={prompt}
+                    onChange={(e) => {
+                      setPrompt(e.target.value);
+                      // Clear validation error when user types
+                      if (validationError) setValidationError(null);
+                    }}
+                    placeholder="Describe the image you want to generate..."
+                    className="h-32"
+                    // error={validationError || undefined}
+                  />
+                  {/* Generation Status Indicator */}
+                    <div className="mt-4 flex flex-wrap items-center gap-4">
+                      <div className="flex items-center">
+                        <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mr-2 ${
+                          generationStatus === 'idle' ? 'bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white' :
+                          generationStatus === 'validating' ? 'bg-blue-500 text-white' : 
+                          validationError ? 'bg-red-500 text-white' : 
+                          'bg-green-500 text-white'
+                        }`}>
+                          {generationStatus === 'idle' && !validationError ? '1' :
+                           generationStatus === 'validating' ? 
+                            <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 
+                            validationError ? '!' : '✓'
+                          }
+                        </div>
+                        <span className={
+                          generationStatus === 'idle' ? 'text-sm font-medium text-gray-600 dark:text-gray-400' :
+                          generationStatus === 'validating' ? 'text-sm font-medium text-blue-600 dark:text-blue-400' : 
+                          validationError ? 'text-sm font-medium text-red-600 dark:text-red-400' : 
+                          'text-sm font-medium text-green-600 dark:text-green-400'
+                        }>
+                          {generationStatus === 'validating' ? 'Validating' : 
+                          validationError ? 'Prompt Error' : 'Prompt'}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center">
+                        <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mr-2 ${
+                          generationStatus === 'generating' ? 'bg-yellow-500 text-white' : 
+                          generationStatus === 'completed' ? 'bg-green-500 text-white' : 
+                          'bg-gray-200 dark:bg-gray-700'
+                        }`}>
+                          {generationStatus === 'generating' ? 
+                            <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 
+                            generationStatus === 'completed' ? '✓' : '2'
+                          }
+                        </div>
+                        <span className={
+                          generationStatus === 'generating' ? 'text-sm font-medium text-yellow-600 dark:text-yellow-400' : 
+                          generationStatus === 'completed' ? 'text-sm font-medium text-green-600 dark:text-green-400' : 
+                          'text-sm text-gray-600 dark:text-gray-400'
+                        }>Generating</span>
+                      </div>
+                      
+                      <div className="flex items-center">
+                        <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mr-2 ${generationStatus !== 'completed' ? 'bg-gray-200 dark:bg-gray-700' : 'bg-green-500 text-white'}`}>
+                          {generationStatus !== 'completed' ? '3' : '✓'}
+                        </div>
+                        <span className={generationStatus === 'completed' ? 'text-sm font-medium text-green-600 dark:text-green-400' : 'text-sm text-gray-600 dark:text-gray-400'}>Completed</span>
+                      </div>
+                    </div>
+
+                  {validationError && (
+                    <>
+                    <div className="flex items-center text-sm text-red-600 dark:text-red-400 min-w-48">
+                      <svg className="w-4 h-4 mr-1.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg> 
+                      {/* {validationError}  */}
+                      <div>Your prompt was not allowed as it may contain restricted content. Please read our <a href="/terms" className="text-red-600 dark:text-red-400 hover:no-underline underline">Terms of Service</a>. 
+                      
+                    </div>
+                    </div>
+                    <button 
+                      onClick={() => setValErrorModal(true)} 
+                      className="flex items-center text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:underline text-sm"
+                    >
+                      {/* <Info className="w-4 h-4 mr-1" /> */}
+                      <span>See more details</span> <ExternalLink className="w-4 h-4 ml-1" />
+                    </button>
+                    </>
+                  )}
+                  
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Select
@@ -461,6 +588,7 @@ return (
                       <Upload className="h-4 w-4 mr-2 text-gray-500" />
                       <span className="text-sm text-gray-600 dark:text-gray-300">
                         {promptImages.length > 0 ? 'Add more images' : 'Upload reference images'}
+                        <span className="ml-2 text-xs text-gray-400">(Max 3 images)</span>
                       </span>
                       <input
                         id="image-upload"
@@ -469,7 +597,7 @@ return (
                         accept="image/*"
                         className="sr-only"
                         onChange={handleImageUpload}
-                        disabled={isUploadingImage}
+                        disabled={isUploadingImage || promptImages.length >= 3}
                       />
                     </label>
                     
@@ -643,7 +771,57 @@ return (
           </div>
         </div>
       </div>
+      {/** Validation error modal */}
+      {valErrorModal && (
+        <AnimatePresence>
+          <motion.div 
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            onClick={() => setValErrorModal(false)}
+          >
+            <motion.div
+              className='bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-md w-full overflow-hidden'
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Error</h3>
+                <button 
+                  onClick={() => setValErrorModal(false)}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="p-4">
+                <div className="flex items-center text-red-600 dark:text-red-400 mb-2">
+                  <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
+                  <span className="font-medium">Validation Error</span>
+                </div>
+<p className="text-sm text-gray-500 dark:text-gray-400">This response is AI generated.</p>
 
+                <p className="text-gray-700 dark:text-gray-300 mt-2">{validationError}</p>
+                <p className="text-gray-700 dark:text-gray-300 mt-2">Please read our <a href="/terms" className="text-red-600 dark:text-red-400 hover:no-underline underline">Terms of Service</a> for more details.</p>
+                <div className="mt-4 flex justify-end">
+                  <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    onClick={() => setValErrorModal(false)}
+                  >
+                    Dismiss
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        </AnimatePresence> 
+      )}
       {/* Image Modal */}
       <AnimatePresence>
         {selectedImage && (
