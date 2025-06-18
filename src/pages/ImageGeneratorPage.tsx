@@ -7,7 +7,7 @@ import { Card, CardContent } from '../components/ui/Card';
 import { Textarea } from '../components/ui/Textarea';
 import { Select } from '../components/ui/Select';
 import { useUser } from '../context/UserContext';
-import { ArrowLeft, Sparkles, Download, X, Calendar, Clock, Upload, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { ArrowLeft, Sparkles, Download, X, Calendar, Clock, Upload, Image as ImageIcon, Trash2, Info, AlertCircle } from 'lucide-react';
 import { BrandKitForGeneration, fetchBrandKitForGeneration, hasEnoughCredits, saveGeneratedAssets } from '../lib/supabase';
 import { generateImageAssets, type ImageSize, validatePrompt as validatePromptApi } from '../lib/openai';
 import toast from 'react-hot-toast';
@@ -43,6 +43,7 @@ export const ImageGeneratorPage: React.FC = () => {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [generationStatus, setGenerationStatus] = useState<'idle' | 'validating' | 'generating' | 'completed'>('idle');
+  const [valErrorModal, setValErrorModal] = useState<boolean>(false);
   // Check if user is on free plan (no active subscription)
   const isFreePlan = (profile?.user_type == 'free');
 
@@ -448,7 +449,7 @@ return (
                           validationError ? 'bg-red-500 text-white' : 
                           'bg-green-500 text-white'
                         }`}>
-                          {generationStatus === 'idle' ? '1' :
+                          {generationStatus === 'idle' && !validationError ? '1' :
                            generationStatus === 'validating' ? 
                             <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 
                             validationError ? '!' : '✓'
@@ -461,7 +462,7 @@ return (
                           'text-sm font-medium text-green-600 dark:text-green-400'
                         }>
                           {generationStatus === 'validating' ? 'Validating' : 
-                          validationError ? 'Error' : 'Prompt'}
+                          validationError ? 'Prompt Error' : 'Prompt'}
                         </span>
                       </div>
                       
@@ -492,12 +493,24 @@ return (
                     </div>
 
                   {validationError && (
-                    <div className="flex items-center text-sm text-red-600 dark:text-red-400">
+                    <>
+                    <div className="flex items-center text-sm text-red-600 dark:text-red-400 min-w-48">
                       <svg className="w-4 h-4 mr-1.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                      </svg>
-                      {validationError}
+                      </svg> 
+                      {/* {validationError}  */}
+                      <div>Your prompt was not allowed. Please read our <a href="/terms" className="text-red-600 dark:text-red-400 hover:no-underline underline">Terms of Service</a>. 
+                      
                     </div>
+                    </div>
+                    <button 
+                      onClick={() => setValErrorModal(true)} 
+                      className="flex items-center text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:underline text-sm"
+                    >
+                      <Info className="w-4 h-4 mr-1" />
+                      <span>See more details</span>
+                    </button>
+                    </>
                   )}
                   
                 </div>
@@ -747,7 +760,57 @@ return (
           </div>
         </div>
       </div>
+      {/** Validation error modal */}
+      {valErrorModal && (
+        <AnimatePresence>
+          <motion.div 
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            onClick={() => setValErrorModal(false)}
+          >
+            <motion.div
+              className='bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-md w-full overflow-hidden'
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Error</h3>
+                <button 
+                  onClick={() => setValErrorModal(false)}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="p-4">
+                <div className="flex items-center text-red-600 dark:text-red-400 mb-2">
+                  <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
+                  <span className="font-medium">Validation Error</span>
+                </div>
+<p className="text-sm text-gray-500 dark:text-gray-400">This response is AI generated.</p>
 
+                <p className="text-gray-700 dark:text-gray-300 mt-2">{validationError}</p>
+                <p className="text-gray-700 dark:text-gray-300 mt-2">Please read our <a href="/terms" className="text-red-600 dark:text-red-400 hover:no-underline underline">Terms of Service</a> for more details.</p>
+                <div className="mt-4 flex justify-end">
+                  <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    onClick={() => setValErrorModal(false)}
+                  >
+                    Dismiss
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        </AnimatePresence> 
+      )}
       {/* Image Modal */}
       <AnimatePresence>
         {selectedImage && (
