@@ -170,11 +170,24 @@ export const ImageGeneratorPage: React.FC = () => {
       return;
     }
 
+    // Enforce a maximum of 3 images
+    if (promptImages.length >= 3) {
+      toast.error('You can only upload up to 3 images.');
+      event.target.value = '';
+      return;
+    }
+
+    const availableSlots = 3 - promptImages.length;
+    if (validFiles.length > availableSlots) {
+      toast.error(`You can only upload ${availableSlots} more image${availableSlots > 1 ? 's' : ''}.`);
+    }
+    const filesToUpload = validFiles.slice(0, availableSlots);
+
     setIsUploadingImage(true);
     const newImages: Array<{ url: string; file: File }> = [];
     let processedCount = 0;
 
-    validFiles.forEach((file) => {
+    filesToUpload.forEach((file) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         if (e.target?.result) {
@@ -183,20 +196,17 @@ export const ImageGeneratorPage: React.FC = () => {
             file
           });
         }
-
-        // When all files are processed
         processedCount++;
-        if (processedCount === validFiles.length) {
+        if (processedCount === filesToUpload.length) {
           setPromptImages(prev => [...prev, ...newImages]);
           setIsUploadingImage(false);
-          // Clear the input to allow re-uploading the same files
           event.target.value = '';
         }
       };
       reader.onerror = () => {
         console.error('Error reading file:', file.name);
         processedCount++;
-        if (processedCount === validFiles.length) {
+        if (processedCount === filesToUpload.length) {
           setPromptImages(prev => [...prev, ...newImages]);
           setIsUploadingImage(false);
           event.target.value = '';
@@ -578,6 +588,7 @@ return (
                       <Upload className="h-4 w-4 mr-2 text-gray-500" />
                       <span className="text-sm text-gray-600 dark:text-gray-300">
                         {promptImages.length > 0 ? 'Add more images' : 'Upload reference images'}
+                        <span className="ml-2 text-xs text-gray-400">(Max 3 images)</span>
                       </span>
                       <input
                         id="image-upload"
@@ -586,7 +597,7 @@ return (
                         accept="image/*"
                         className="sr-only"
                         onChange={handleImageUpload}
-                        disabled={isUploadingImage}
+                        disabled={isUploadingImage || promptImages.length >= 3}
                       />
                     </label>
                     
