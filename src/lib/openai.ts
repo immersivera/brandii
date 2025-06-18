@@ -76,11 +76,16 @@ export async function generateImageAssets(
   count: number = 1
 ): Promise<string[]> {
   try {
+    // Add content restrictions to the prompt
+    const restrictedPrompt = `${prompt}. IMPORTANT: DO NOT generate any of the following: ` +
+      `human-like faces (realistic, stylized, or animated), face swaps, ` +
+      `deep fake images, or any content using a person's likeness.`;
+
     const { data, error } = await supabase.functions.invoke('openai', {
       body: {
         action: 'generateImageAssets',
         data: { 
-          prompt,
+          prompt: restrictedPrompt,
           images,
           size,
           count 
