@@ -9,7 +9,7 @@ import { Select } from '../components/ui/Select';
 import { useUser } from '../context/UserContext';
 import { ArrowLeft, Sparkles, Download, X, Calendar, Clock, Upload, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { BrandKitForGeneration, fetchBrandKitForGeneration, hasEnoughCredits, saveGeneratedAssets } from '../lib/supabase';
-import { generateImageAssets, type ImageSize } from '../lib/openai';
+import { generateImageAssets, type ImageSize, validatePrompt as validatePromptApi } from '../lib/openai';
 import toast from 'react-hot-toast';
 
 const IMAGE_SIZES = [
@@ -41,7 +41,8 @@ export const ImageGeneratorPage: React.FC = () => {
   const [imageCount, setImageCount] = useState<number>(1);
   const [promptImages, setPromptImages] = useState<Array<{ url: string; file: File }>>([]);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [generationStatus, setGenerationStatus] = useState<'idle' | 'validating' | 'generating' | 'completed'>('idle');
   // Check if user is on free plan (no active subscription)
   const isFreePlan = (profile?.user_type == 'free');
 
@@ -216,9 +217,39 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
     reader.readAsDataURL(blob);
   });
 };
+  const validatePrompt = async (promptText: string): Promise<boolean> => {
+    if (!promptText.trim()) {
+      setValidationError('Please enter a prompt');
+      return false;
+    }
+
+    setValidationError(null);
+    
+    try {
+      const result = await validatePromptApi(promptText);
+      if (!result.isValid) {
+        setValidationError(result.reason || 'Prompt contains restricted content');
+        toast.error('Prompt contains restricted content');
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Error validating prompt:', error);
+      // If validation fails, still allow generation but log the error
+      return true;
+    }
+  };
+
   const handleGenerate = async () => {
-    if (!prompt.trim() || !brandKit) {
-      toast.error('Please enter a prompt');
+    if (!brandKit) {
+      toast.error('Brand kit not loaded');
+      return;
+    }
+
+    setGenerationStatus('validating');
+    const isValid = await validatePrompt(prompt);
+    if (!isValid) {
+      setGenerationStatus('idle');
       return;
     }
     const hasCredits = await hasEnoughCredits(imageCount); // Check for 5 credits
@@ -226,6 +257,7 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
       toast.error('Not enough credits');
       return;
     }
+    setGenerationStatus('generating');
     setIsGenerating(true);
     setGeneratedImages([]);
     setSelectedImage(null);
@@ -233,7 +265,8 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
     try {
 
       const allImages = [...promptImages];
-      let logoAdded = false;
+      // Track if logo was added
+    let logoAdded = false;
       
       // If logo is included, add it to promptImages
       if (includeLogo) {
@@ -302,10 +335,18 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
       setGeneratedImages(images);
       // Save the generated images with the prompt
       await saveGeneratedAssets(brandKit.id, images, 'image', prompt);
-      toast.success('Images generated and saved successfully!');
       
       if (images.length > 0) {
         setSelectedImage(images[0]);
+      }
+      
+      setGenerationStatus('completed');
+      setTimeout(() => {
+        setGenerationStatus('idle');
+      }, 3000);
+      
+      if (images.length > 0) {
+        toast.success('Images generated and saved successfully!');
       }
     } catch (error) {
       console.error('Error generating images:', error);
@@ -390,13 +431,52 @@ return (
           <Card className="mb-8">
             <CardContent className="p-6">
               <div className="space-y-6">
-                <Textarea
-                  label="Image Prompt"
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Describe the image you want to generate..."
-                  className="h-32"
-                />
+                <div className="space-y-2">
+                  <Textarea
+                    label="Image Prompt"
+                    value={prompt}
+                    onChange={(e) => {
+                      setPrompt(e.target.value);
+                      // Clear validation error when user types
+                      if (validationError) setValidationError(null);
+                    }}
+                    placeholder="Describe the image you want to generate..."
+                    className="h-32"
+                    // error={validationError || undefined}
+                  />
+                  {validationError && (
+                    <div className="flex items-center text-sm text-red-600 dark:text-red-400">
+                      <svg className="w-4 h-4 mr-1.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                      {validationError}
+                    </div>
+                  )}
+                  
+                  {/* Generation Status Indicator */}
+                  <div className="mt-4 space-y-2">
+                    <div className="flex items-center text-sm">
+                      <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mr-2 ${generationStatus === 'idle' ? 'bg-gray-200 dark:bg-gray-700' : generationStatus === 'validating' ? 'bg-blue-500 text-white' : 'bg-green-500 text-white'}`}>
+                        {generationStatus === 'idle' ? '1' : generationStatus === 'validating' ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : '✓'}
+                      </div>
+                      <span className={generationStatus === 'validating' ? 'font-medium text-blue-600 dark:text-blue-400' : generationStatus === 'completed' ? 'font-medium text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}>Validating prompt</span>
+                    </div>
+                    
+                    <div className="flex items-center text-sm">
+                      <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mr-2 ${generationStatus === 'idle' || generationStatus === 'validating' ? 'bg-gray-200 dark:bg-gray-700' : generationStatus === 'generating' ? 'bg-blue-500 text-white' : 'bg-green-500 text-white'}`}>
+                        {generationStatus === 'idle' || generationStatus === 'validating' ? '2' : generationStatus === 'generating' ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : '✓'}
+                      </div>
+                      <span className={generationStatus === 'generating' ? 'font-medium text-blue-600 dark:text-blue-400' : generationStatus === 'completed' ? 'font-medium text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}>Generating images</span>
+                    </div>
+                    
+                    <div className="flex items-center text-sm">
+                      <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mr-2 ${generationStatus !== 'completed' ? 'bg-gray-200 dark:bg-gray-700' : 'bg-green-500 text-white'}`}>
+                        {generationStatus !== 'completed' ? '3' : '✓'}
+                      </div>
+                      <span className={generationStatus === 'completed' ? 'font-medium text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}>Completed</span>
+                    </div>
+                  </div>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Select

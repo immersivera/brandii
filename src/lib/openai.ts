@@ -1,5 +1,53 @@
 import { supabase } from './supabase';
 
+const CONTENT_RESTRICTIONS = [
+  'face swap',
+  'deep fake',
+  'public figure'
+];
+
+/**
+ * Validates if a prompt violates content restrictions
+ * @param prompt The user's prompt to validate
+ * @returns {Promise<{isValid: boolean, reason?: string}>} Validation result with optional reason
+ */
+export async function validatePrompt(prompt: string): Promise<{isValid: boolean, reason?: string}> {
+  try {
+    const lowerPrompt = prompt.toLowerCase();
+    
+    // Check for restricted terms
+    const violation = CONTENT_RESTRICTIONS.find(term => 
+      lowerPrompt.includes(term.toLowerCase())
+    );
+
+    if (violation) {
+      return {
+        isValid: false,
+        reason: `Your prompt contains restricted content (${violation}). Please modify your prompt to comply with our content policy.`
+      };
+    }
+
+    // If we want to be extra cautious, we can use OpenAI to analyze the prompt
+    const { data, error } = await supabase.functions.invoke('openai', {
+      body: {
+        action: 'validatePrompt',
+        data: { prompt }
+      }
+    });
+
+    if (error) {
+      console.warn('Failed to validate prompt with AI, falling back to basic validation');
+      return { isValid: true }; // Fallback to allowing the prompt if validation fails
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error validating prompt:', error);
+    return { isValid: true }; // Fail open to avoid blocking valid requests
+  }
+}
+
+
 export interface AIBrandSuggestion {
   name: string;
   description: string;
@@ -73,9 +121,18 @@ export async function generateImageAssets(
   prompt: string,
   images?: ImageForGeneration[],
   size: ImageSize = '1024x1024',
-  count: number = 1
+  count: number = 1,
+  skipValidation: boolean = false
 ): Promise<string[]> {
   try {
+    // Validate the prompt against content restrictions
+    if (!skipValidation) {
+      const validation = await validatePrompt(prompt);
+      if (!validation.isValid) {
+        throw new Error(validation.reason || 'Prompt violates content restrictions');
+      }
+    }
+
     // Add content restrictions to the prompt
     const restrictedPrompt = `${prompt}. IMPORTANT: DO NOT generate any of the following: ` +
       `human-like faces (realistic, stylized, or animated), face swaps, ` +

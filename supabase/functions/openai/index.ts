@@ -2,6 +2,59 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2.39.7'
 import OpenAI from 'npm:openai@4.28.4'
 
+const CONTENT_RESTRICTIONS = [
+  'face swap',
+  'deep fake',
+  'celebrity',
+  'public figure'
+];
+
+async function validatePromptWithAI(prompt: string): Promise<{isValid: boolean, reason?: string}> {
+  try {
+    const openai = new OpenAI({
+      apiKey: Deno.env.get('OPENAI_API_KEY'),
+    });
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4.1-nano',
+      messages: [
+        {
+          role: 'system',
+          content: `You are a content moderator. Analyze the following prompt and determine if it violates any content restrictions.
+          
+Restrictions to enforce:
+- No human-like faces (realistic, stylized, or animated)
+- No face swaps
+- No deep fake images or videos
+- No content using a person's likeness
+- No celebrities or public figures
+
+Return a JSON response with the following structure:
+{
+  "isValid": boolean,  // true if the prompt is allowed, false if it violates restrictions
+  "reason": string     // Explanation of why the prompt was rejected (if applicable)
+}`
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.1
+    });
+
+    const result = JSON.parse(response.choices[0].message.content || '{}');
+    return {
+      isValid: result.isValid === true,
+      reason: result.reason
+    };
+  } catch (error) {
+    console.error('Error validating prompt with AI:', error);
+    throw error;
+  }
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -20,6 +73,38 @@ serve(async (req) => {
     const { action, data } = await req.json()
 
     switch (action) {
+      case 'validatePrompt': {
+        // First do a quick check against our restricted terms
+        const lowerPrompt = (data.prompt || '').toLowerCase();
+        const violation = CONTENT_RESTRICTIONS.find(term => 
+          lowerPrompt.includes(term.toLowerCase())
+        );
+
+        if (violation) {
+          return new Response(JSON.stringify({
+            isValid: false,
+            reason: `Your prompt contains restricted content (${violation}). Please modify your prompt to comply with our content policy.`
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+
+        // If no obvious violations found, use AI for more nuanced validation
+        try {
+          const validation = await validatePromptWithAI(data.prompt);
+          return new Response(JSON.stringify(validation), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        } catch (error) {
+          console.error('AI validation failed, falling back to basic validation');
+          // If AI validation fails, fall back to allowing the prompt
+          // This is a security decision - you might want to be more strict in production
+          return new Response(JSON.stringify({ isValid: true }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
       case 'generateBrandSuggestion': {
         const completion = await openai.chat.completions.create({
           model: "gpt-4.1-nano",
