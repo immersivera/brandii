@@ -9,6 +9,7 @@ const CONTENT_RESTRICTIONS = [
   'public figure'
 ];
 
+
 async function validatePromptWithAI(prompt: string): Promise<{isValid: boolean, reason?: string}> {
   try {
     const openai = new OpenAI({
