@@ -321,7 +321,7 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
         type: img.file.type || 'image/png' // Default to png if type is not available
       }));
     
-      // Get the brand assets prompt and combine with the user's prompt
+      // // Get the brand assets prompt and combine with the user's prompt
       const brandAssetsPrompt = getBrandAssetsPrompt();
       const fullPrompt = `${prompt.trim()}\n\n${brandAssetsPrompt}`.trim();
     
@@ -336,18 +336,17 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
       // Save the generated images with the prompt
       await saveGeneratedAssets(brandKit.id, images, 'image', prompt);
       
-      // if (images.length > 0) {
-      //   // setSelectedImage(images[0]);
-      // }
-      
-      setGenerationStatus('completed');
-      setTimeout(() => {
-        setGenerationStatus('idle');
-      }, 3000);
-      
       if (images.length > 0) {
-        toast.success('Images generated and saved successfully!');
+        setSelectedImage(images[0]);
       }
+      // setTimeout(() => {
+        setGenerationStatus('completed');
+      // }, 3000);
+
+      
+      // if (images.length > 0) {
+        toast.success('Images generated and saved successfully!');
+      // }
     } catch (error) {
       console.error('Error generating images:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to generate images');
@@ -397,11 +396,7 @@ if (isLoading) {
   );
 }
 
-// if (!brandKitAssets) return null;
 const hasLogo = brandKit?.logo?.image;
-// const hasLogo = (brandKitAssets.logo_selected_asset_id && brandKitAssets.generated_assets?.some(
-//   (asset: any) => asset.id === brandKitAssets.logo_selected_asset_id
-// )) || !!brandKitAssets.logo?.image;
 
 return (
   <Layout>
@@ -444,6 +439,58 @@ return (
                     className="h-32"
                     // error={validationError || undefined}
                   />
+                  {/* Generation Status Indicator */}
+                    <div className="mt-4 flex flex-wrap items-center gap-4">
+                      <div className="flex items-center">
+                        <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mr-2 ${
+                          generationStatus === 'idle' ? 'bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white' :
+                          generationStatus === 'validating' ? 'bg-blue-500 text-white' : 
+                          validationError ? 'bg-red-500 text-white' : 
+                          'bg-green-500 text-white'
+                        }`}>
+                          {generationStatus === 'idle' ? '1' :
+                           generationStatus === 'validating' ? 
+                            <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 
+                            validationError ? '!' : '✓'
+                          }
+                        </div>
+                        <span className={
+                          generationStatus === 'idle' ? 'text-sm font-medium text-gray-600 dark:text-gray-400' :
+                          generationStatus === 'validating' ? 'text-sm font-medium text-blue-600 dark:text-blue-400' : 
+                          validationError ? 'text-sm font-medium text-red-600 dark:text-red-400' : 
+                          'text-sm font-medium text-green-600 dark:text-green-400'
+                        }>
+                          {generationStatus === 'validating' ? 'Validating' : 
+                          validationError ? 'Error' : 'Prompt'}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center">
+                        <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mr-2 ${
+                          generationStatus === 'generating' ? 'bg-yellow-500 text-white' : 
+                          generationStatus === 'completed' ? 'bg-green-500 text-white' : 
+                          'bg-gray-200 dark:bg-gray-700'
+                        }`}>
+                          {generationStatus === 'generating' ? 
+                            <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 
+                            generationStatus === 'completed' ? '✓' : '2'
+                          }
+                        </div>
+                        <span className={
+                          generationStatus === 'generating' ? 'text-sm font-medium text-yellow-600 dark:text-yellow-400' : 
+                          generationStatus === 'completed' ? 'text-sm font-medium text-green-600 dark:text-green-400' : 
+                          'text-sm text-gray-600 dark:text-gray-400'
+                        }>Generating</span>
+                      </div>
+                      
+                      <div className="flex items-center">
+                        <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mr-2 ${generationStatus !== 'completed' ? 'bg-gray-200 dark:bg-gray-700' : 'bg-green-500 text-white'}`}>
+                          {generationStatus !== 'completed' ? '3' : '✓'}
+                        </div>
+                        <span className={generationStatus === 'completed' ? 'text-sm font-medium text-green-600 dark:text-green-400' : 'text-sm text-gray-600 dark:text-gray-400'}>Completed</span>
+                      </div>
+                    </div>
+
                   {validationError && (
                     <div className="flex items-center text-sm text-red-600 dark:text-red-400">
                       <svg className="w-4 h-4 mr-1.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -453,29 +500,6 @@ return (
                     </div>
                   )}
                   
-                  {/* Generation Status Indicator */}
-                  <div className="mt-4 space-y-2">
-                    <div className="flex items-center text-sm">
-                      <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mr-2 ${generationStatus === 'idle' ? 'bg-gray-200 dark:bg-gray-700' : generationStatus === 'validating' ? 'bg-blue-500 text-white' : 'bg-green-500 text-white'}`}>
-                        {generationStatus === 'idle' ? '1' : generationStatus === 'validating' ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : '✓'}
-                      </div>
-                      <span className={generationStatus === 'validating' ? 'font-medium text-blue-600 dark:text-blue-400' : generationStatus === 'completed' ? 'font-medium text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}>Validating prompt</span>
-                    </div>
-                    
-                    <div className="flex items-center text-sm">
-                      <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mr-2 ${generationStatus === 'idle' || generationStatus === 'validating' ? 'bg-gray-200 dark:bg-gray-700' : generationStatus === 'generating' ? 'bg-blue-500 text-white' : 'bg-green-500 text-white'}`}>
-                        {generationStatus === 'idle' || generationStatus === 'validating' ? '2' : generationStatus === 'generating' ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : '✓'}
-                      </div>
-                      <span className={generationStatus === 'generating' ? 'font-medium text-blue-600 dark:text-blue-400' : generationStatus === 'completed' ? 'font-medium text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}>Generating images</span>
-                    </div>
-                    
-                    <div className="flex items-center text-sm">
-                      <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mr-2 ${generationStatus !== 'completed' ? 'bg-gray-200 dark:bg-gray-700' : 'bg-green-500 text-white'}`}>
-                        {generationStatus !== 'completed' ? '3' : '✓'}
-                      </div>
-                      <span className={generationStatus === 'completed' ? 'font-medium text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}>Completed</span>
-                    </div>
-                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
