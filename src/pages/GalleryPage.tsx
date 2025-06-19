@@ -4,11 +4,12 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useDebounce } from '../lib/utils';
 import { Layout } from '../components/layout/Layout';
 import { Button } from '../components/ui/Button';
-import { ArrowLeft, Download, Plus, X, Calendar, Clock, Trash2, MessageSquare, ChevronLeft, ChevronRight, Search } from 'lucide-react';
-import { supabase, deleteGeneratedAsset } from '../lib/supabase';
+import { ArrowLeft, Download, Plus, X, Calendar, Clock, Trash2, MessageSquare, ChevronLeft, ChevronRight, Search, Globe, Lock } from 'lucide-react';
+import { supabase, deleteGeneratedAsset, updateGeneratedAsset } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import Masonry from 'react-masonry-css';
 import OptimizedImage from '../components/ui/OptimizedImage';
+import { useUser } from '../context/UserContext';
 
 const ITEMS_PER_PAGE = 12;
 
@@ -21,11 +22,13 @@ export const GalleryPage: React.FC = () => {
   const [isPageLoading, setIsPageLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<any | null>(null);
   const [isDeletingImage, setIsDeletingImage] = useState(false);
+  const [isTogglingVisibility, setIsTogglingVisibility] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [brandKit, setBrandKit] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  const { profile } = useUser();
 
   const breakpointColumns = {
     default: 4,
@@ -35,6 +38,8 @@ export const GalleryPage: React.FC = () => {
     768: 2,
     640: 1
   };
+
+  const isPro = profile?.user_type === 'pro' || profile?.user_type === 'admin' || profile?.user_type === 'elite';
 
   // Initialize state from URL params on component mount
   useEffect(() => {
@@ -99,6 +104,7 @@ export const GalleryPage: React.FC = () => {
           image_url,
           image_prompt,
           created_at,
+          visibility,
           brand_kit:brand_kit_id (id, name, type, user_id)
           `,
           { count: 'exact' }
@@ -265,6 +271,35 @@ export const GalleryPage: React.FC = () => {
       toast.error('Failed to delete image');
     } finally {
       setIsDeletingImage(false);
+    }
+  };
+
+  const handleToggleVisibility = async (imageId: string, currentVisibility: string) => {
+    try {
+      setIsTogglingVisibility(true);
+      const newVisibility = currentVisibility === 'public' ? 'private' : 'public';
+      
+      await updateGeneratedAsset(imageId, { visibility: newVisibility } as any);
+      
+      // Update the selected image in state
+      if (selectedImage && selectedImage.id === imageId) {
+        setSelectedImage({
+          ...selectedImage,
+          visibility: newVisibility
+        });
+      }
+      
+      // Update the image in the images array
+      setImages(images.map(img => 
+        img.id === imageId ? { ...img, visibility: newVisibility } : img
+      ));
+      
+      toast.success(`Image is now ${newVisibility}`);
+    } catch (error) {
+      console.error('Error toggling image visibility:', error);
+      toast.error('Failed to update image visibility');
+    } finally {
+      setIsTogglingVisibility(false);
     }
   };
 
@@ -528,10 +563,25 @@ export const GalleryPage: React.FC = () => {
                   <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4 sm:mb-6">
                     Image Details
                   </h3>
+                
+                  
                   
                   <div className="space-y-4 sm:space-y-6 flex-grow">
                     <div>
-                      <h4 className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 sm:mb-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 mb-2"
+                      leftIcon={selectedImage.visibility === 'public' ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                      onClick={() => handleToggleVisibility(selectedImage.id, selectedImage.visibility || 'public')}
+                      isLoading={isTogglingVisibility}
+                      disabled={!isPro}
+                    >
+                      {selectedImage.visibility === 'public' ? 'Make Private' : 'Make Public'}
+                      
+                    </Button>
+                    {isPro ? '' : <a href="/profile" className="flex items-center text-xs sm:text-sm font-medium text-brand-500 dark:text-brand-400 mb-1 sm:mb-2 ml-3 py-2"><Lock className="h-4 w-4 mr-2" /> Upgrade to Pro</a> } 
+                      <h4 className="text-xs mt-4 sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 sm:mb-2">
                         Created
                       </h4>
                       <div className="space-y-1 sm:space-y-2">
