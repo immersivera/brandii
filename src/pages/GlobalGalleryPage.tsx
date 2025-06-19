@@ -97,6 +97,7 @@ export const GlobalGalleryPage: React.FC = () => {
             { count: 'exact' }
           )
           .eq('type', 'image')
+          .eq('visibility', 'public')
           // .not('image_url', 'is', null)
           .order('created_at', { ascending: false })
           .range(
