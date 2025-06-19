@@ -64,7 +64,7 @@ export type UserProfile = {
   avatar_url: string | null;
   bio: string | null;
   website: string | null;
-  user_type: 'free' | 'pro' | 'enterprise' | null;
+  user_type: 'free' | 'pro' | 'elite' | 'admin' | null;
   subscription_status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'unpaid' | null;
   subscription_plan_id: string | null;
   social_links: {
