@@ -48,22 +48,30 @@ export const Footer: React.FC = () => {
               logo concepts, and brand guidelines in minutes.
             </p>
             <div className="flex space-x-4">
-              <a href={import.meta.env.VITE_APP_TWITTER || '#'} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400 transition-colors">
-                <Twitter className="h-5 w-5" />
-                <span className="sr-only">Twitter</span>
-              </a>
-              <a href={import.meta.env.VITE_APP_INSTAGRAM || '#'} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400 transition-colors">
-                <Instagram className="h-5 w-5" />
-                <span className="sr-only">Instagram</span>
-              </a>
-              <a href={import.meta.env.VITE_APP_GITHUB || '#'} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400 transition-colors">
-                <GitHub className="h-5 w-5" />
-                <span className="sr-only">GitHub</span>
-              </a>
-              <a href={import.meta.env.VITE_APP_YOUTUBE || '#'} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400 transition-colors">
-                <Youtube className="h-5 w-5" />
-                <span className="sr-only">YouTube</span>
-              </a>
+              {import.meta.env.VITE_APP_TWITTER && (
+                <a href={import.meta.env.VITE_APP_TWITTER} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400 transition-colors">
+                  <Twitter className="h-5 w-5" />
+                  <span className="sr-only">Twitter</span>
+                </a>
+              )}
+              {import.meta.env.VITE_APP_INSTAGRAM && (
+                <a href={import.meta.env.VITE_APP_INSTAGRAM} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400 transition-colors">
+                  <Instagram className="h-5 w-5" />
+                  <span className="sr-only">Instagram</span>
+                </a>
+              )}
+              {import.meta.env.VITE_APP_GITHUB && (
+                <a href={import.meta.env.VITE_APP_GITHUB} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400 transition-colors">
+                  <GitHub className="h-5 w-5" />
+                  <span className="sr-only">GitHub</span>
+                </a>
+              )}
+              {import.meta.env.VITE_APP_YOUTUBE && (
+                <a href={import.meta.env.VITE_APP_YOUTUBE} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-brand-600 dark:text-gray-400 dark:hover:text-brand-400 transition-colors">
+                  <Youtube className="h-5 w-5" />
+                  <span className="sr-only">YouTube</span>
+                </a>
+              )}
 
             </div>
           </div>
