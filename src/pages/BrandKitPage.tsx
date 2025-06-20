@@ -1181,6 +1181,7 @@ export const BrandKitPage: React.FC = () => {
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="hidden"
                       onClick={handleShare}
                       leftIcon={<Share2 className="h-4 w-4" />}
                     >
