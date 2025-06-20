@@ -59,10 +59,14 @@ const featuresList = [
   },
   {
     icon: <ImageIcon className="h-6 w-6 text-brand-600" />,
-    title: 'AI Image Generation',
-    description: 'Create custom/product images that match your brand style with AI-powered image generation.',
+    title: 'Brand-Consistent AI Image Generation',
+    description: 'Generate stunning images that perfectly align with your brand kit (colors, typography, style) and even include your own custom images for prompts.',
   },
-
+  {
+    icon: <Zap className="h-6 w-6 text-brand-600" />,
+    title: 'Efficient Image Creation',
+    description: 'Quickly generate multiple images with customizable sizes and counts, streamlining your content creation process.',
+  },
   {
     icon: <Layers className="h-6 w-6 text-brand-600" />,
     title: 'Complete Brand Guidelines',
@@ -75,8 +79,8 @@ const featuresList = [
   },
   {
     icon: <Wand2 className="h-6 w-6 text-brand-600" />,
-    title: 'Smart Variations',
-    description: 'Generate multiple design variations with different styles and layouts in seconds.',
+    title: 'Remix',
+    description: 'Generate multiple design variations with different styles in seconds.',
   }
 ];
 
@@ -162,18 +166,19 @@ export const HomePage: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              Think&nbsp;it. Brand&nbsp;it. Launch&nbsp;it.
+              Generate <span className="text-brand-600 dark:text-brand-400">On-Brand</span> Images. Instantly.
             </motion.h1>
             
             <motion.p 
-              className="text-xl text-gray-800 dark:text-white/90 mb-8 max-w-2xl mx-auto drop-shadow"
+              className="text-xl text-gray-800 dark:text-white/90 mb-8 max-w-2xl mx-auto"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
-              Generate professional logos, images, and color schemes that work seamlessly together. 
-              Build your complete brand kit in seconds and <span className="text-brand-400">create consistent brand assets</span>. 
-              Ready to dominate your market?
+              Create brand-consistent images, logos, and color schemes on&nbsp;demand. 
+              <span className="text-brand-600 dark:text-brand-400"> Get your complete brand kit ready in seconds. </span> 
+              <br />
+              <span>Think it. Brand it. Launch it.</span>
             </motion.p>
             
             <motion.div 
@@ -617,10 +622,10 @@ export const HomePage: React.FC = () => {
             <div className="px-6 py-16 sm:p-16 md:px-20 md:py-16 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between">
               <div className="max-w-2xl">
                 <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-white">
-                  Ready to transform your brand?
+                  Ready to elevate your brand visuals?
                 </h2>
                 <p className="text-xl text-white/90 mb-4">
-                  Create your professional brand kit in seconds and generate consistent assets for your brand.
+                  Create your professional brand kit in seconds and generate stunning, brand-consistent images.
                 </p>
                 <div className="text-white/80 text-sm mb-8 sm:mb-0 flex flex-wrap gap-3 sm:gap-6">
                   <span>✓ No design skills needed</span>

@@ -15,6 +15,8 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 import { TermsOfServicePage } from './pages/TermsOfServicePage';
 import { PaymentSuccessPage } from './pages/PaymentSuccessPage';
+import BlogPage from './pages/BlogPage';
+import BlogPostPage from './pages/BlogPostPage';
 import { AuthModal } from './components/AuthModal';
 import { ScrollToTop } from './components/ScrollToTop';
 import { useAuthModal } from './context/AuthModalContext';
@@ -56,6 +58,8 @@ function App() {
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<HomePage />} />
+        <Route path="/blog" element={<BlogPage />} />
+        <Route path="/blog/:slug" element={<BlogPostPage />} />
         <Route path="/gallery" element={<GlobalGalleryPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/privacy" element={<PrivacyPolicyPage />} />

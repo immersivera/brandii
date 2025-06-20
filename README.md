@@ -13,8 +13,12 @@ Brandii is a powerful AI-powered brand identity generator that helps businesses 
 - Responsive design
 - Media asset generation for existing brand kits
 - Comprehensive brand kit management
-- Real-time preview and customization
-- Export to multiple formats
+- Text prompt input for image generation
+- Brand asset inclusion options (colors, typography, style)
+- Logo inclusion
+- Custom image upload for prompts
+- Image aspect ratio and count selection
+- Download generated images
 
 ## Tech Stack
 
@@ -34,7 +38,6 @@ Brandii is a powerful AI-powered brand identity generator that helps businesses 
    ```
    VITE_SUPABASE_URL=your_supabase_url
    VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-   VITE_OPENAI_API_KEY=your_openai_api_key
    ```
 4. Start development server: `npm run dev`
 
@@ -56,10 +59,3 @@ src/
 - `npm run preview` - Preview production build
 - `npm run lint` - Run ESLint
 
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a new Pull Request
