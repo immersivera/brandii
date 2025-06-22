@@ -228,7 +228,7 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* Demo Video Section */}
-      <section className="mt-0 pb-10 bg-white dark:bg-gray-900">
+      <section className="mt-0 pb-20 bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900 dark:text-white">

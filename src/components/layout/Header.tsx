@@ -190,7 +190,7 @@ export const Header: React.FC = () => {
                 >
                   <User className="h-4 w-4" />
                   <span className="max-w-[120px] truncate">
-                    {profile?.username || profile?.full_name || profile?.email}
+                    {profile?.full_name || profile?.username || profile?.email}
                   </span>
                   <ChevronDown className={`h-4 w-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
                 </Button>
@@ -206,7 +206,8 @@ export const Header: React.FC = () => {
                     >
                       <div className="px-4 py-3 text-sm">
                         <div className="font-medium text-gray-900 dark:text-white truncate">
-                          {profile?.username || profile?.full_name || profile?.email}
+                          <span className="text-xs text-gray-500 mt-1 ml-1"> {profile?.full_name || profile?.username || profile?.email}</span> <br />
+                          <span className="border border-gray-200 dark:border-gray-700 rounded-full px-2 py-0.5 text-xs text-gray-500 mt-1 ml-0 uppercase"> {profile?.user_type === 'free' ? 'Free Plan' : 'Pro Plan'}</span>
                         </div>
                         {credits !== null && (
                           <div>
