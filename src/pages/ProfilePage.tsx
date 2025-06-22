@@ -56,6 +56,9 @@ export const ProfilePage: React.FC = () => {
   const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([]);
   const [userCredits, setUserCredits] = useState<UserCredits | null>(null);
   const [userSubscription, setUserSubscription] = useState<UserSubscription | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
   const [formData, setFormData] = useState({
     full_name: profile?.full_name || '',
     username: profile?.username || '',
@@ -102,6 +105,47 @@ export const ProfilePage: React.FC = () => {
   const handleAdditionalCredits = async () => {
     window.location.href = `${import.meta.env.VITE_ADDITIONAL_CREDITS_URL}`;
   };
+  
+  const handlePasswordReset = async () => {
+    setIsLoading(true);
+    try {
+      if (newPassword !== confirmNewPassword) {
+        toast.error('New password and confirm password do not match.');
+        return;
+      }
+      if (newPassword.length < 6) {
+        toast.error('Password must be at least 6 characters long.');
+        return;
+      }
+      
+      // First, verify current password
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email: profile!.email,
+        password: currentPassword
+      });
+      
+      if (verifyError) {
+        throw verifyError;
+      }
+  
+      // Update password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      
+      if (updateError) throw updateError;
+      
+      toast.success('Password updated successfully!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+    } catch (error) {
+      console.error('Error updating password:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to update password');
+    } finally {
+      setIsLoading(false);
+    }
+  };  
   
   const handleUpgrade = async (planId: string) => {
     setIsUpgrading(true);
@@ -355,7 +399,7 @@ export const ProfilePage: React.FC = () => {
                         <div className="text-xl font-semibold">
                           {Math.max(0, userCredits.purchased_credits - Math.max(0, userCredits.credits_used - userCredits.monthly_credits))}
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">Never expires*</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Unused purchased credits roll over to next month</div>
                       </div>
                     </div>
                     
@@ -421,7 +465,7 @@ export const ProfilePage: React.FC = () => {
             {profile?.user_type !== 'pro' && (
               <div className="relative mb-8">
                 {/* Most Popular Badge - Moved outside the card */}
-                <div className="absolute lg:-top-[-115px] md:-top-[-115px] top-[430px] lg:left-1/2 md:left-[73%] left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-brand-500 to-accent-500 text-white text-xs font-semibold px-4 py-1.5 rounded-full whitespace-nowrap z-10">
+                <div className="absolute lg:-top-[-115px] md:-top-[-115px] top-[477px] lg:left-1/2 md:left-[73%] left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-brand-500 to-accent-500 text-white text-xs font-semibold px-4 py-1.5 rounded-full whitespace-nowrap z-10">
                   Most Popular
                 </div>
                 <Card className="border-2 border-dashed border-brand-300 bg-brand-50 dark:bg-transparent dark:border-brand-800 pt-2" ref={subscriptionSectionRef}>
@@ -539,10 +583,10 @@ export const ProfilePage: React.FC = () => {
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <Input
-                        label="Full Name"
+                        label="Full Name/Display Name"
                         value={formData.full_name}
                         onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                        placeholder="Your full name"
+                        placeholder="Your name"
                       />
 
                       <Input
@@ -553,71 +597,83 @@ export const ProfilePage: React.FC = () => {
                       />
                     </div>
 
-                    <Textarea
-                      label="Bio"
-                      value={formData.bio}
-                      onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                      placeholder="Tell us about yourself"
-                    />
-
-                    <Input
-                      label="Website"
-                      value={formData.website}
-                      onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                      placeholder="Your website URL"
-                    />
+                      <div className="grid grid-cols-1">
+                        <Input
+                          label="Email"
+                          value={profile?.email || ''}
+                          disabled
+                          readOnly
+                          placeholder="Your email address"
+                          className="w-full disabled:opacity-50"
+                        />
+                        <span
+                          className="w-full disabled:opacity-50 text-xs text-gray-500 dark:text-gray-400 mt-1 ml-1"
+                        >Contact support to change your account email.</span>  
+                      </div>
 
                     <div className="space-y-4">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Social Links
+                        Reset Password
                       </h3>
-
                       <Input
-                        leftIcon={<Twitter className="h-4 w-4" />}
-                        value={formData.social_links.twitter}
-                        onChange={(e) => setFormData({
-                          ...formData,
-                          social_links: {
-                            ...formData.social_links,
-                            twitter: e.target.value
-                          }
-                        })}
-                        placeholder="Twitter profile URL"
+                        label="Current Password"
+                        type="password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        placeholder="Enter your current password"
                       />
-
                       <Input
-                        leftIcon={<Github className="h-4 w-4" />}
-                        value={formData.social_links.github}
-                        onChange={(e) => setFormData({
-                          ...formData,
-                          social_links: {
-                            ...formData.social_links,
-                            github: e.target.value
-                          }
-                        })}
-                        placeholder="GitHub profile URL"
+                        label="New Password"
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Enter new password"
                       />
-
                       <Input
-                        leftIcon={<Linkedin className="h-4 w-4" />}
-                        value={formData.social_links.linkedin}
-                        onChange={(e) => setFormData({
-                          ...formData,
-                          social_links: {
-                            ...formData.social_links,
-                            linkedin: e.target.value
-                          }
-                        })}
-                        placeholder="LinkedIn profile URL"
+                        label="Confirm New Password"
+                        type="password"
+                        value={confirmNewPassword}
+                        onChange={(e) => setConfirmNewPassword(e.target.value)}
+                        placeholder="Confirm new password"
                       />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={handlePasswordReset}
+                        isLoading={isLoading}
+                        disabled={
+                          !currentPassword ||
+                          newPassword !== confirmNewPassword ||
+                          newPassword.length < 6
+                        }
+                      >
+                        Reset Password
+                      </Button>
                     </div>
+                  </div>
 
-                    <div className="space-y-4" ref={accountSettingsSectionRef}>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              <div className="flex justify-end">
+                <Button
+                  type="submit"
+                  leftIcon={<Save className="h-4 w-4" />}
+                  isLoading={isLoading}
+                >
+                  Save Changes
+                </Button>
+              </div>
+                </CardContent>
+              </Card>
+
+              <Card className="mt-6">
+                <CardContent className="p-6">
+
+              <div className="space-y-4" ref={accountSettingsSectionRef}>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white hidden">
                         Preferences
                       </h3>
 
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 hidden">
                         <input
                           type="checkbox"
                           id="emailNotifications"
@@ -648,6 +704,7 @@ export const ProfilePage: React.FC = () => {
                         </p>
                         <Button
                           variant="outline"
+                          size="sm"
                           className="border-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-950 flex items-center gap-2"
                           onClick={() => setShowDeleteConfirmation(true)}
                         >
@@ -655,20 +712,9 @@ export const ProfilePage: React.FC = () => {
                           Delete Account
                         </Button>
                       </div>
-                    </div>
-                  </div>
+              </div>
                 </CardContent>
               </Card>
-
-              <div className="flex justify-end">
-                <Button
-                  type="submit"
-                  leftIcon={<Save className="h-4 w-4" />}
-                  isLoading={isLoading}
-                >
-                  Save Changes
-                </Button>
-              </div>
             </form>
             </div>
           </div>

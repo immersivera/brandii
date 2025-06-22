@@ -190,7 +190,7 @@ export const Header: React.FC = () => {
                 >
                   <User className="h-4 w-4" />
                   <span className="max-w-[120px] truncate">
-                    {profile?.username || profile?.full_name || profile?.email}
+                    {profile?.full_name || profile?.username || profile?.email}
                   </span>
                   <ChevronDown className={`h-4 w-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
                 </Button>
@@ -206,13 +206,14 @@ export const Header: React.FC = () => {
                     >
                       <div className="px-4 py-3 text-sm">
                         <div className="font-medium text-gray-900 dark:text-white truncate">
-                          {profile?.username || profile?.full_name || profile?.email}
+                          <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-1"> {profile?.full_name || profile?.username || profile?.email}</span> <br />
+                          <span className="border border-gray-200 dark:border-gray-700 rounded-full px-2 py-0.5 text-xs text-gray-500 dark:text-gray-400 mt-1 ml-0 uppercase"> {profile?.user_type === 'free' ? 'Free Plan' : 'Pro Plan'}</span>
                         </div>
                         {credits !== null && (
                           <div>
                           <button 
                           onClick={() => navigate('/profile')} 
-                          className="flex items-center mt-1 text-sm text-gray-600 dark:text-gray-400 hover:scale-110 hover:text-brand-600 dark:hover:text-brand-400 ">
+                          className="flex items-center mt-2 text-sm text-gray-600 dark:text-gray-300 hover:scale-110 hover:text-brand-600 dark:hover:text-brand-400">
                             <Sparkles className="h-4 w-4 mr-1 text-yellow-500" />
                             <span>{credits.available_credits} credit{credits.available_credits === 1 ? '' : 's'} available</span>
                           </button>
