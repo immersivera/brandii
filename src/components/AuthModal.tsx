@@ -18,7 +18,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isVerificationSent, setIsVerificationSent] = useState(false);
+
   const [isResetEmailSent, setIsResetEmailSent] = useState(false);
   const [isMagicLinkSent, setIsMagicLinkSent] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -34,8 +34,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         toast.success('Password reset email sent! Please check your inbox.');
       } else if (isSignUp) {
         await signUp(email, password);
-        setIsVerificationSent(true);
-        toast.success('Verification email sent! Please check your inbox.');
+        toast.success('Signed up successfully!');
+        onSuccess();
+        onClose();
       } else if (isMagicLinkSent) {
         // This is the magic link sign-in flow
         await signInWithMagicLink(email);
@@ -55,8 +56,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   };
 
   const handleBackToSignIn = () => {
-    setIsVerificationSent(false);
-    setIsResetEmailSent(false);
+
     setIsMagicLinkSent(false);
     setIsForgotPassword(false);
     setIsSignUp(false);
@@ -122,25 +122,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                   <p className="text-gray-600 dark:text-gray-300 mb-6">
                     We've sent a password reset link to <span className="font-medium">{email}</span>.
                     Please check your inbox and follow the instructions to reset your password.
-                  </p>
-                  <Button
-                    onClick={handleBackToSignIn}
-                    className="w-full"
-                  >
-                    Back to Sign In
-                  </Button>
-                </div>
-              ) : isVerificationSent ? (
-                <div className="text-center">
-                  <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                    <CheckCircle className="h-8 w-8 text-green-600" />
-                  </div>
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                    Check Your Email
-                  </h2>
-                  <p className="text-gray-600 dark:text-gray-300 mb-6">
-                    We've sent a verification link to <span className="font-medium">{email}</span>.
-                    Please check your inbox and click the link to verify your account.
                   </p>
                   <Button
                     onClick={handleBackToSignIn}
