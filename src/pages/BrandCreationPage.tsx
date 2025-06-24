@@ -30,20 +30,21 @@ export const BrandCreationPage: React.FC = () => {
   const navigate = useNavigate();
 
   const handleGenerateWithAI = async () => {
-    if (!brandDetails.name || !brandDetails.description) {
-      toast.error('Please provide a brand name and description');
-      return;
-    }
+    // if (!brandDetails.name || !brandDetails.description) {
+    //   toast.error('Please provide a brand name and description');
+    //   return;
+    // }
     
     setIsGenerating(true);
     
     try {
-      const prompt = `Generate a brand identity for a brand called "${brandDetails.name}". 
-        Description: ${brandDetails.description}`;
+      const prompt = `Generate a brand identity for a brand with the following details:`;
       
-      const suggestion = await generateBrandSuggestion(prompt);
+      const suggestion = await generateBrandSuggestion(prompt, brandDetails.name, brandDetails.description, brandDetails.industry, brandDetails.adjective);
       
       updateBrandDetails({
+        name: suggestion.name,
+        description: suggestion.description,
         industry: suggestion.industry,
         adjective: suggestion.adjective || 'Modern',
         logoStyle: suggestion.logoStyle || 'wordmark',
