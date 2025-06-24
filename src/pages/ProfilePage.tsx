@@ -277,7 +277,7 @@ export const ProfilePage: React.FC = () => {
                     Credits & Subscription
                   </button>
                   
-                  {profile?.user_type !== 'pro' && (
+                  {profile?.user_type === 'free' && (
                     <button 
                       onClick={() => scrollToSection(subscriptionSectionRef)}
                       className="flex items-center w-full px-3 py-2 text-sm rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-left text-gray-700 dark:text-gray-300"
