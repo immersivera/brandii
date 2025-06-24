@@ -205,7 +205,7 @@ export const HomePage: React.FC = () => {
               </Button>
             </motion.div>
             <motion.div 
-              className="grid grid-cols-4 gap-8 max-w-4xl mx-auto border-t border-white/10 mt-20 pt-10"
+              className="grid grid-cols-2 gap-8 md:grid-cols-4 max-w-4xl mx-auto border-t border-white/10 mt-20 pt-10"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
@@ -222,12 +222,12 @@ export const HomePage: React.FC = () => {
                 <div className="text-4xl font-bold dark:text-white text-black mb-1">2.1k+</div>
                 <div className="text-gray-400 text-sm">Assets Generated</div>
               </div>
-              <div className="flex items-center mt-[-10px]">
+              <div className="text-center mt-[-10px]">
               <a 
                 href="https://bolt.new"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center hover:opacity-80 transition-opacity"
+                className="hover:opacity-80 transition-opacity flex items-center justify-center"
               >
                 <img 
                   src="/black_circle_360x360.png" 
