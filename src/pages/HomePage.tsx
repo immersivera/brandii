@@ -205,7 +205,7 @@ export const HomePage: React.FC = () => {
               </Button>
             </motion.div>
             <motion.div 
-              className="grid grid-cols-3 gap-8 max-w-4xl mx-auto border-t border-white/10 mt-20 pt-10"
+              className="grid grid-cols-2 gap-8 md:grid-cols-4 max-w-4xl mx-auto border-t border-white/10 mt-20 pt-10"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
@@ -222,20 +222,36 @@ export const HomePage: React.FC = () => {
                 <div className="text-4xl font-bold dark:text-white text-black mb-1">2.1k+</div>
                 <div className="text-gray-400 text-sm">Assets Generated</div>
               </div>
+              <div className="text-center mt-[-10px]">
+              <a 
+                href="https://bolt.new"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:opacity-80 transition-opacity flex items-center justify-center"
+              >
+                <img 
+                  src="/black_circle_360x360.png" 
+                  alt="Powered by Bolt.new" 
+                  className="h-20 w-20 dark:invert"
+                />
+              </a>
+            </div>
             </motion.div>
           </div>
         </div>
+        
       </section>
+
 
       {/* Demo Video Section */}
       <section className="mt-0 pb-20 bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900 dark:text-white">
-              See Brandii in Action
+              Brandii in 4 Minutes
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
-              Watch our quick demo to see how easy it is to create a complete brand kit with Brandii
+              Watch our quick demo to see how easy it is to create your brand assets with Brandii
             </p>
           </div>
           
@@ -454,18 +470,20 @@ export const HomePage: React.FC = () => {
                 description: 'Perfect for trying out Brandii',
                 monthlyCredits: 10,
                 features: [
-                  '10 one-time credits',
-                  'All assets generated are public',
+                  '10 FREE credits (one-time)',
+                  'PAY AS YOU GO ($15 for 25 credits)',                  
+                  'Private and public image options',
                   'Community support',
+                  'No payment information required'
                 ],
-                buttonText: 'Get Started',
+                buttonText: 'Start Free',
                 popular: false
               },
               {
                 name: 'Pro',
                 price: 15,
                 description: 'For growing brands',
-                monthlyCredits: 90,
+                monthlyCredits: 100,
                 features: [
                   '40 monthly credits',
                   '60 bonus credits (special offer)',
@@ -475,7 +493,7 @@ export const HomePage: React.FC = () => {
                   'Priority support',
                   'Email support'
                 ],
-                buttonText: 'Get Started',
+                buttonText: 'Go Pro',
                 popular: true
               },
               {
@@ -492,7 +510,7 @@ export const HomePage: React.FC = () => {
                   'Priority support',
                   'Email support'
                 ],
-                buttonText: 'Get Started',
+                buttonText: 'Go Elite',
                 popular: false
               }
             ].map((plan, index) => (

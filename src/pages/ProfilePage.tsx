@@ -155,14 +155,14 @@ export const ProfilePage: React.FC = () => {
       const planName = plan?.name || planId;
       
       // Open email client with pre-filled upgrade request
-      const subject = `Upgrade Request: ${planName} Plan`;
-      const body = `I would like to upgrade to the ${planName} plan. My user emails is: ${profile?.email}`;
+      const subject = `Change Request: Update Account Plan to ${planName}`;
+      const body = `I would like to update my account plan to the ${planName} plan. My user emails is: ${profile?.email}`;
       window.location.href = `mailto:${import.meta.env.VITE_APP_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       
-      toast.success('Opening email client to request upgrade');
+      toast.success('Opening email client to request plan change');
     } catch (error) {
       console.error('Error initiating upgrade:', error);
-      toast.error('Failed to initiate plan upgrade - contact support to upgrade your plan');
+      toast.error('Failed to initiate plan change - contact support to change your plan');
     } finally {
       setIsUpgrading(false);
     }
@@ -277,7 +277,7 @@ export const ProfilePage: React.FC = () => {
                     Credits & Subscription
                   </button>
                   
-                  {profile?.user_type !== 'pro' && (
+                  {profile?.user_type === 'free' && (
                     <button 
                       onClick={() => scrollToSection(subscriptionSectionRef)}
                       className="flex items-center w-full px-3 py-2 text-sm rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-left text-gray-700 dark:text-gray-300"
@@ -462,7 +462,6 @@ export const ProfilePage: React.FC = () => {
             </Card>
             
             {/* Subscription Plans */}
-            {profile?.user_type !== 'pro' && (
               <div className="relative mb-8">
                 {/* Most Popular Badge - Moved outside the card */}
                 <div className="absolute lg:-top-[-115px] md:-top-[-115px] top-[477px] lg:left-1/2 md:left-[73%] left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-brand-500 to-accent-500 text-white text-xs font-semibold px-4 py-1.5 rounded-full whitespace-nowrap z-10">
@@ -542,10 +541,9 @@ export const ProfilePage: React.FC = () => {
                               className={`w-full ${plan.name === 'Pro' ? 'shadow-lg shadow-brand-500/20' : ''}`}
                               onClick={() => handleUpgrade(plan.id)}
                               isLoading={isUpgrading}
-                              disabled={plan.name === 'Free' || (userSubscription?.plan_id === plan.id && userSubscription?.status === 'active')}
+                              disabled={plan.name.toLowerCase() === profile?.user_type?.toLowerCase()}
                             >
-                              {plan.name === 'Free' ? 'Current Plan' : 
-                                (userSubscription?.plan_id === plan.id && userSubscription?.status === 'active') ? 'Current Plan' : 'Contact Us'}
+                              {plan.name.toLowerCase() === profile?.user_type?.toLowerCase() ? 'Current Plan' : 'Contact Us'}
                             </Button>
                             {plan.name === 'Free' && ( 
                               <Button 
@@ -575,7 +573,6 @@ export const ProfilePage: React.FC = () => {
                   </CardContent>
                 </Card>
               </div>
-            )}
             
             <form onSubmit={handleSubmit}>
               <Card className="mb-8" ref={userInfoSectionRef}>
