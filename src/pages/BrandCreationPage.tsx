@@ -30,10 +30,10 @@ export const BrandCreationPage: React.FC = () => {
   const navigate = useNavigate();
 
   const handleGenerateWithAI = async () => {
-    // if (!brandDetails.name || !brandDetails.description) {
-    //   toast.error('Please provide a brand name and description');
-    //   return;
-    // }
+    if (brandDetails.name && brandDetails.description && brandDetails.industry && brandDetails.adjective) {
+      toast.error('Form is already filled, proceed to the next step');
+      return;
+    }
     
     setIsGenerating(true);
     
