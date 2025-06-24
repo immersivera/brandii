@@ -470,12 +470,12 @@ export const GlobalGalleryPage: React.FC = () => {
                         )}
                         {isImageOwner(selectedImage) && (
                           <Link
-                            to={`/kit/${selectedImage.brand_kit.id}`}
+                            to={`/kit/${selectedImage.brand_kit.id}/gallery?image=${selectedImage.id}`}
                             className="inline-flex items-center mt-2 text-xs sm:text-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
-                            View Brand Kit
+                            Edit
                           </Link>
                         )}
                       </div>
