@@ -232,7 +232,7 @@ export const HomePage: React.FC = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900 dark:text-white">
-              How It Works
+              Brandii in 4 Minutes
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
               Watch our quick demo to see how easy it is to create your brand assets with Brandii
