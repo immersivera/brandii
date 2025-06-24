@@ -17,103 +17,110 @@ export const PaymentSuccessPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [creditsAdded, setCreditsAdded] = useState(0);
   const [userCredits, setUserCredits] = useState<number | null>(null);
- const [actionMyPayment, setActionMyPayment] = useState(false);
-//   useEffect(() => {
-    const processPayment = async () => {
-      try {
-        //localstorage check
-        if (localStorage.getItem('creditsUpdatedTx')) {
-            navigate('/profile');
-        }
-        // Get parameters from URL
-        const transactionId = searchParams.get('tx');
-        const status = searchParams.get('st');
-        const amount = searchParams.get('amt');  
-        const currency = searchParams.get('cc'); 
-        const itemNumber = searchParams.get('item_number');
+  const [actionMyPayment, setActionMyPayment] = useState(false);
+  const [isFromPayPal, setIsFromPayPal] = useState(false);
 
-        // Validate required parameters
-        if (!transactionId || !status || !itemNumber) {
-          setErrorMessage('Missing required payment information');
-          setSuccess(false);
-          setIsProcessing(false);
-          return;
-        }
+  useEffect(() => {
+    // Check if user came from PayPal
+    const referrer = document.referrer.toLowerCase();
+    setIsFromPayPal(referrer.includes('paypal.com') || referrer.includes('checkout.paypal'));
+  }, []);
 
-        // Check if payment was successful
-        if (status !== 'Completed') {
-          setErrorMessage(`Payment was not completed. Status: ${status}`);
-          setSuccess(false);
-          setIsProcessing(false);
-          return;
-        }
-
-        // Get the number of credits to add based on the item_number
-        const creditsToAdd = import.meta.env.VITE_BRANDII_CREDITS;
-        if (!creditsToAdd) {
-          setErrorMessage(`Invalid item number: ${itemNumber}`);
-          setSuccess(false);
-          setIsProcessing(false);
-          return;
-        }
-
-        // Make sure we have a user profile
-        if (!profile?.id) {
-          setErrorMessage('User not authenticated');
-          setSuccess(false);
-          setIsProcessing(false);
-          return;
-        }
-
-        // Add credits to the user's account
-        // await addPurchasedCredits(profile.id, creditsToAdd, transactionId);
-        
-        // // Refresh user profile to get updated credit information
-        // await refreshProfile();
-        
-        // // Get updated credit information
-        // const updatedCredits = await fetchUserCredits();
-        // setUserCredits(updatedCredits?.available_credits || null);
-        
-        //create payment record
-        
-         const paymentRecord = await createPaymentRecord({
-            user_id: profile.id,
-            provider: 'paypal',
-            provider_payment_id: transactionId,
-            amount: Number(amount),
-            currency: currency || 'USD',
-            status: 'completed',
-            metadata: { payment_method: 'paypal', product_id: itemNumber, credits_added: creditsToAdd }
-          });
-
-          if (!paymentRecord) {
-            throw new Error('Failed to create payment record');
-          }
-
-        //savetolocalstorage
-        localStorage.setItem('creditsUpdatedTx', transactionId);
-        // Set success state
-        setCreditsAdded(creditsToAdd);
-        setSuccess(true);
-        refreshProfile();
-        // console.log('Payment processed successfully');
-        toast.success(`Successfully added ${creditsToAdd} credits to your account!`);
-      } catch (error) {
-        console.error('Error processing payment:', error);
-        setErrorMessage('An error occurred while processing your payment. Please contact support.');
-        setSuccess(false);
-      } finally {
-        setIsProcessing(false);
+  const processPayment = async () => {
+    try {
+      //localstorage check
+      if (localStorage.getItem('creditsUpdatedTx')) {
+          navigate('/profile');
       }
-    };
+      // Get parameters from URL
+      const transactionId = searchParams.get('tx');
+      const status = searchParams.get('st');
+      const amount = searchParams.get('amt');  
+      const currency = searchParams.get('cc'); 
+      const itemNumber = searchParams.get('item_number');
 
-    //localstorage check
-    useEffect(() => {
-    if (localStorage.getItem('creditsUpdatedTx')) {
-      navigate('/profile');
+      // Validate required parameters
+      if (!transactionId || !status || !itemNumber) {
+        setErrorMessage('Missing required payment information');
+        setSuccess(false);
+        setIsProcessing(false);
+        return;
+      }
+
+      // Check if payment was successful
+      if (status !== 'Completed') {
+        setErrorMessage(`Payment was not completed. Status: ${status}`);
+        setSuccess(false);
+        setIsProcessing(false);
+        return;
+      }
+
+      // Get the number of credits to add based on the item_number
+      const creditsToAdd = import.meta.env.VITE_BRANDII_CREDITS;
+      if (!creditsToAdd) {
+        setErrorMessage(`Invalid item number: ${itemNumber}`);
+        setSuccess(false);
+        setIsProcessing(false);
+        return;
+      }
+
+      // Make sure we have a user profile
+      if (!profile?.id) {
+        setErrorMessage('User not authenticated');
+        setSuccess(false);
+        setIsProcessing(false);
+        return;
+      }
+
+      // Add credits to the user's account
+      // await addPurchasedCredits(profile.id, creditsToAdd, transactionId);
+      
+      // // Refresh user profile to get updated credit information
+      // await refreshProfile();
+      
+      // // Get updated credit information
+      // const updatedCredits = await fetchUserCredits();
+      // setUserCredits(updatedCredits?.available_credits || null);
+      
+      //create payment record
+        
+       const paymentRecord = await createPaymentRecord({
+          user_id: profile.id,
+          provider: 'paypal',
+          provider_payment_id: transactionId,
+          amount: Number(amount),
+          currency: currency || 'USD',
+          status: 'completed',
+          metadata: { payment_method: 'paypal', product_id: itemNumber, credits_added: creditsToAdd }
+        });
+
+        if (!paymentRecord) {
+          throw new Error('Failed to create payment record');
+        }
+
+      //savetolocalstorage
+      localStorage.setItem('creditsUpdatedTx', transactionId);
+      // Set success state
+      setCreditsAdded(creditsToAdd);
+      setSuccess(true);
+      refreshProfile();
+      // console.log('Payment processed successfully');
+      toast.success(`Successfully added ${creditsToAdd} credits to your account!`);
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      setErrorMessage('An error occurred while processing your payment. Please contact support.');
+      setSuccess(false);
+    } finally {
+      setIsProcessing(false);
     }
-    }, [refreshProfile]);
+  };
+
+  //localstorage check
+  useEffect(() => {
+  if (localStorage.getItem('creditsUpdatedTx')) {
+    navigate('/profile');
+  }
+  }, [refreshProfile]);
 
   return (
     <Layout>
@@ -156,7 +163,15 @@ export const PaymentSuccessPage: React.FC = () => {
                     <Button 
                     variant="primary"
                     className="w-full"
-                    onClick={processPayment}>Process My Payment</Button>
+                    disabled={!isFromPayPal}
+                    onClick={processPayment}>
+                      {isFromPayPal ? 'Process My Payment' : 'Please complete your payment on PayPal first'}
+                    </Button>
+                    {!isFromPayPal && (
+                      <p className="text-sm text-red-500 dark:text-red-400 mt-2">
+                        If you believe you are seeing this message in error, please contact support for assistance if you have not received your credits. <a href="mailto:brandii@immersivera.dev?subject=Payment%20Issue&body=I%20did%20not%20receive%20my%20credits." className="text-blue-500 dark:text-blue-400 underline hover:text-blue-600 dark:hover:text-blue-500 hover:no-underline">Email support.</a>
+                      </p>
+                    )}
                 </CardContent>
                 )}
             </CardHeader>
