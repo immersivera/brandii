@@ -1209,7 +1209,7 @@ export const BrandKitPage: React.FC = () => {
                     >
                       Logo Concepts
                     </h3>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 gap-2 flex-wrap">
                       {logoAssets.length > 0 && (
                         <Button
                           variant="outline"
@@ -1218,7 +1218,7 @@ export const BrandKitPage: React.FC = () => {
                           leftIcon={<Trash2 className="h-4 w-4" />}
                           isLoading={isDeletingAllLogos}
                           disabled={isDeletingAllLogos}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 hidden"
                         >
                           Delete All
                         </Button>
@@ -1231,7 +1231,7 @@ export const BrandKitPage: React.FC = () => {
                         isLoading={isGeneratingLogos}
                         disabled={isGeneratingLogos}
                       >
-                        Generate More
+                        Generate More Logos
                       </Button>
                     </div>
                   </div>

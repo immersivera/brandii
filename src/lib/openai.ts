@@ -67,11 +67,26 @@ export interface AIBrandSuggestion {
   };
 }
 
-export async function generateBrandSuggestion(prompt: string): Promise<AIBrandSuggestion> {
+export async function generateBrandSuggestion(prompt: string, brandName?: string, brandDescription?: string, brandIndustry?: string, brandAdjective?: string): Promise<AIBrandSuggestion> {
+  // If brand name and description are provided but not in the prompt, add them
+  let enhancedPrompt = prompt;
+  if (brandName && !prompt.toLowerCase().includes(brandName.toLowerCase())) {
+    enhancedPrompt = `Brand Name: ${brandName}\n${enhancedPrompt}`;
+  }
+  if (brandDescription && !prompt.toLowerCase().includes(brandDescription.toLowerCase())) {
+    enhancedPrompt = `${enhancedPrompt}\nBrand Description: ${brandDescription}`;
+  }
+  if (brandIndustry && !prompt.toLowerCase().includes(brandIndustry.toLowerCase())) {
+    enhancedPrompt = `${enhancedPrompt}\nBrand Industry: ${brandIndustry}`;
+  }
+  if (brandAdjective && !prompt.toLowerCase().includes(brandAdjective.toLowerCase())) {
+    enhancedPrompt = `${enhancedPrompt}\nBrand Adjective: ${brandAdjective}`;
+  }
+
   const { data, error } = await supabase.functions.invoke('openai', {
     body: {
       action: 'generateBrandSuggestion',
-      data: { prompt }
+      data: { prompt: enhancedPrompt }
     }
   });
 

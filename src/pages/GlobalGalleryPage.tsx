@@ -24,6 +24,9 @@ interface ImageDetails {
     description: string;
     type: string;
     user_id: string;
+    logo: {
+      image?: string;
+    };
   } | null;
 }
 
@@ -92,7 +95,7 @@ export const GlobalGalleryPage: React.FC = () => {
             image_url,
             image_prompt,
             created_at,
-            brand_kit:brand_kit_id (id, name, type, user_id)
+            brand_kit:brand_kit_id (id, name, type, user_id, logo)
             `,
             { count: 'exact' }
           )
@@ -457,27 +460,47 @@ export const GlobalGalleryPage: React.FC = () => {
                   <div className="space-y-4 sm:space-y-6 flex-grow">
                     {selectedImage.brand_kit && (
                       <div>
+
+                      {isImageOwner(selectedImage) && (
+                        <Link
+                          to={`/kit/${selectedImage.brand_kit.id}/gallery?image=${selectedImage.id}`}
+                          className="inline-flex items-center mt-0 text-xs sm:text-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
+                          Edit in Brand Kit
+                        </Link>
+                      )}
                         <h4 className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                          Brand Kit
+                          Brand
                         </h4>
-                        <p className="text-sm sm:text-base text-gray-900 dark:text-white font-medium">
-                          {selectedImage.brand_kit.name}
-                        </p>
-                        {selectedImage.brand_kit.description && (
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1">
-                            {selectedImage.brand_kit.description}
-                          </p>
-                        )}
-                        {isImageOwner(selectedImage) && (
-                          <Link
-                            to={`/kit/${selectedImage.brand_kit.id}`}
-                            className="inline-flex items-center mt-2 text-xs sm:text-sm text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
-                            View Brand Kit
-                          </Link>
-                        )}
+                        <div className="mt-2 mb-3 flex items-center">
+                          <div>
+                          {selectedImage.brand_kit.logo.image && (
+                            <OptimizedImage
+                              src={selectedImage.brand_kit.logo.image}
+                              alt={`${selectedImage.brand_kit.name} logo`}
+                              className="h-20 w-20 mr-2 object-contain rounded-md shadow-sm"
+                              isThumbnail={true}
+                            />
+                          )}
+                          </div>
+                          <div>
+                            <p className="text-sm sm:text-base text-gray-900 dark:text-white font-medium">
+                              {selectedImage.brand_kit.name}
+                            </p>
+                            {selectedImage.brand_kit.type && (
+                              <span className="inline-flex items-center mt-1">
+                                <span className="text-xs text-gray-500 dark:text-gray-400 mr-1.5">
+                                  Industry:
+                                </span>
+                                <span className="text-xs font-medium px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full">
+                                  {selectedImage.brand_kit.type}
+                                </span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     )}
 
