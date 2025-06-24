@@ -39,7 +39,7 @@ export const GalleryPage: React.FC = () => {
     640: 1
   };
 
-  const isPro = profile?.user_type === 'pro' || profile?.user_type === 'admin' || profile?.user_type === 'elite';
+  const isPro = true;
 
   // Initialize state from URL params on component mount
   useEffect(() => {
