@@ -15,7 +15,7 @@ import toast from 'react-hot-toast';
 export const ResultPage: React.FC = () => {
   const { brandDetails, resetBrandDetails } = useBrand();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+    const [searchParams] = useSearchParams();
   const brandKitId = searchParams.get('brandKitId') || '';
   const [isDownloading, setIsDownloading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -72,46 +72,11 @@ export const ResultPage: React.FC = () => {
 
   const handleDownload = async () => {
     try {
-      setIsDownloading(true);
-      
-      const kitData = {
-        id: brandKit?.id || 'preview',
-        user_id: brandKit?.user_id || 'preview',
-        name: brandKit?.name || brandDetails.name,
-        description: brandKit?.description || brandDetails.description,
-        type: brandKit?.type || brandDetails.industry,
-        created_at: brandKit?.created_at || new Date().toISOString(),
-        updated_at: brandKit?.updated_at || new Date().toISOString(),
-        colors: brandKit?.colors || brandDetails.colors,
-        logo: {
-          type: brandKit?.logo?.type || brandDetails.logoStyle || 'wordmark',
-          text: brandKit?.logo?.text || brandDetails.name,
-          image: selectedLogo || brandKit?.logo?.image || undefined,
-          personality: brandKit?.logo?.personality || brandDetails.adjective || 'Modern',
-        },
-        typography: brandKit?.typography || brandDetails.typography,
-      };
-
-      const zipBlob = await generateBrandKitZip(kitData);
-      
-      const url = URL.createObjectURL(zipBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${kitData.name.toLowerCase().replace(/\s+/g, '-')}-brand-kit.zip`;
-      
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      URL.revokeObjectURL(url);
-      
-      toast.success('Brand kit downloaded successfully!');
+      navigate(`/kit/${brandKitId}`);
     } catch (error) {
       console.error('Error downloading brand kit:', error);
       toast.error('Failed to download brand kit');
-    } finally {
-      setIsDownloading(false);
-    }
+    } 
   };
 
   const handleCopy = () => {
